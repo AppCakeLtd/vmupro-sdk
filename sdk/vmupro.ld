@@ -2,7 +2,7 @@ ENTRY(vmupro_main)
 
 MEMORY
 {
-  psram (rxw) : ORIGIN = 0x00000000, LENGTH = 0x400000  /* 4MB */
+  iram (rx) : ORIGIN = 0x00000000, LENGTH = 0x2800  /* 10KB IRAM (loader loads at address 0) */
 }
 
 SECTIONS
@@ -13,7 +13,7 @@ SECTIONS
     *(.literal*)
     *(.text*)
     _text_end = .;
-  } > psram
+  } > iram
 
   .rodata : ALIGN(4)
   {
@@ -21,20 +21,20 @@ SECTIONS
     *(.rodata*)
     *(.rodata.*)
     _rodata_end = .;
-  } > psram
+  } > iram
 
   .data : ALIGN(4)
   {
     _data_start = .;
     *(.data*)
     _data_end = .;
-  } > psram
+  } > iram
 
-  .bss : ALIGN(4)
+  .bss (NOLOAD) : ALIGN(4)
   {
     _bss_start = .;
     *(.bss*)
     *(COMMON)
     _bss_end = .;
-  } > psram
+  } > iram
 }

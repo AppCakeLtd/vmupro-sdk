@@ -1,4 +1,4 @@
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-common -fno-jump-tables -mlongcalls -fdata-sections -ffunction-sections")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -fno-common -fno-jump-tables -mlongcalls -fdata-sections -ffunction-sections")
 
 add_executable(minimal.elf vmupro_main.c)
 target_include_directories(minimal.elf PRIVATE ${CMAKE_SOURCE_DIR}/sdk/include)
