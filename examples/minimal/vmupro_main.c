@@ -1,13 +1,8 @@
 #include "vmu_sdk.h"
 
-void vmupro_main(void)
+__attribute__((section(".text"))) void vmupro_main(sdk_api_t *sdk_ptr)
 {
-  vmu_log("Hello from VMUPro SDK minimal example!\n");
-  // for (int y = 0; y < 20; ++y)
-  // {
-  //   for (int x = 0; x < 20; ++x)
-  //   {
-  //     vmu_draw_pixel(100 + x, 100 + y, 0x07E0); // green square
-  //   }
-  // }
+  // Use a volatile string pointer to avoid literal section generation
+  volatile const char *msg = "Hello from VMUPro SDK minimal example!\n";
+  sdk_ptr->log((const char *)msg);
 }

@@ -7,13 +7,11 @@ extern "C"
 {
 #endif
 
-  static inline void vmu_log(const char *fmt, ...)
-  {
-    va_list args;
-    va_start(args, fmt);
-    sdk->log(fmt, args);
-    va_end(args);
-  }
+#define vmu_log(sdk, msg) \
+  do                      \
+  {                       \
+    (sdk)->log(msg);      \
+  } while (0)
 
 #ifdef __cplusplus
 }
