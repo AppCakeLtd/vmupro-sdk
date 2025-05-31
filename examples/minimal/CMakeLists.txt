@@ -1,31 +1,10 @@
-cmake_minimum_required(VERSION 3.13)
-project(vmu_sdk_minimal_example C)
+cmake_minimum_required(VERSION 3.16)
 
-set(CMAKE_C_STANDARD 11)
+# 👇 Register your sdk folder as a component directory
+set(EXTRA_COMPONENT_DIRS ${CMAKE_CURRENT_LIST_DIR}/../../sdk)
 
-# Flags to avoid linker relaxation and unsafe instruction usage
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} \
-  -fPIC \
-  -fno-common \
-  -fno-jump-tables \
-  -mlongcalls \
-  -mtext-section-literals \
-  -fdata-sections \
-  -ffunction-sections \
-  -fvisibility=hidden \
-  -Wall -Wextra \
-  -Wl,--no-relax")
+include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+project(vmupro_minimal)
 
-add_executable(minimal.elf vmupro_main.c)
-
-target_include_directories(minimal.elf PRIVATE ${CMAKE_SOURCE_DIR}/sdk/include)
-target_link_libraries(minimal.elf vmu_stub)
-
-# Use custom linker script
-target_link_options(minimal.elf PRIVATE "-T${CMAKE_SOURCE_DIR}/sdk/vmupro.ld")
-
-# Convert ELF to BIN
-add_custom_command(TARGET minimal.elf POST_BUILD
-    COMMAND ${CMAKE_OBJCOPY} -O binary minimal.elf minimal.bin
-    COMMENT "Converting minimal.elf to minimal.bin"
-)
+include(elf_loader)
+project_elf(hello_world)
