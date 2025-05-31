@@ -8,3 +8,5 @@ project(vmupro_minimal)
 
 include(elf_loader)
 project_elf(hello_world)
+
+target_link_options(${CMAKE_PROJECT_NAME}.elf PRIVATE -Wl,--unresolved-symbols=ignore-all)

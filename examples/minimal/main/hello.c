@@ -1,10 +1,6 @@
 #include "vmupro_sdk.h"
 
-#include <stdio.h>
-
-int main(int argc, char *argv[])
+void app_main(void)
 {
-  printf("Hello from ELF app!");
-
-  return 0;
+  vmupro_log("Hello from ELF app!");
 }
