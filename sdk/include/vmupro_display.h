@@ -25,9 +25,13 @@ extern "C"
     VMUPRO_COLOR_VMUINK = 0x288a,
   } vmupro_color_t;
 
-  // Draw API
+  // Display API
   void vmupro_display_clear(vmupro_color_t color);
   void vmupro_display_refresh();
+
+  // Drawing API
+  void vmupro_draw_rect(int x1, int y1, int x2, int y2, vmupro_color_t color);
+  void vmupro_draw_fill_rect(int x1, int y1, int x2, int y2, vmupro_color_t color);
 
 #ifdef __cplusplus
 }
