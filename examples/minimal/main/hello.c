@@ -8,4 +8,15 @@ void app_main(void)
 
   // Clear the display
   vmupro_display_clear(VMUPRO_COLOR_BLACK);
+
+  // Forces the display to refresh with everything that's in
+  // it's current framebuffer
+  vmupro_display_refresh();
+
+  // Wait a bit to actually show the changes
+  int counter = 1000000;
+  while (counter-- > 0)
+  {
+    // dork
+  }
 }

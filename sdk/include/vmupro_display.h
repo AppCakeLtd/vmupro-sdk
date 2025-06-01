@@ -27,6 +27,7 @@ extern "C"
 
   // Draw API
   void vmupro_display_clear(vmupro_color_t color);
+  void vmupro_display_refresh();
 
 #ifdef __cplusplus
 }
