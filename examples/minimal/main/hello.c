@@ -14,9 +14,10 @@ void app_main(void)
   vmupro_display_refresh();
 
   // Wait a bit to actually show the changes
-  int counter = 1000000;
+  int counter = 10;
   while (counter-- > 0)
   {
-    // dork
+
+    vmupro_sleep_ms(1000);
   }
 }
