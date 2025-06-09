@@ -1,0 +1,678 @@
+# 8BM Copyright/License notice
+
+import sys
+import argparse
+import crcmod
+import os
+import json
+import struct
+from typing import Any, Dict
+from PIL import Image
+from pathlib import Path
+
+# Rough outline
+# - load the .elf into ram
+# - parse the json metadata (name, author, icon trans)
+# - load and encode the icon
+
+headerVersion = 1
+encryptionVersion = 0
+
+# save the raw binary for each section to a file
+# (set via args)
+debugOutput = False
+
+# Binary section
+sect_mainElf = bytearray()
+
+# Icon section
+sect_icon = bytearray()
+
+# Metadata section
+outMetaJSON = {}
+sect_outMeta = bytearray()
+
+# Resources (all combined)
+sect_allResources = bytearray()
+
+# Individual resource info
+# (names and offsets within the master resources data blob)
+resourceNameOffsetKeyVals = []
+
+# Device binding
+sect_binding = bytearray()
+
+sect_header = bytearray()
+
+finalBinary = bytearray()
+
+
+class MetadataError(Exception):
+    pass
+
+
+class PathException(Exception):
+    pass
+
+
+def main():
+
+    global debugOutput
+
+    print("\n")
+    print("8BM VMUPro Packer")
+    print("Run py packer.py-h for help or a full list of supported arguments")
+    print("\n")
+
+    print("Executing command line args:")
+    print("  ".join(sys.argv))
+    print("\n")
+
+    #
+    # Parse arguments
+    #
+
+    parser = argparse.ArgumentParser(
+        description="Pack a VMUPro binary with optional icon")
+    parser.add_argument("--basedir", required=True,
+                        help="Root folder, one beneath build")
+    parser.add_argument("--elf", required=True,
+                        help="Relative path to input elf file: build/mything.elf from basedir")
+    parser.add_argument("--meta", required=True,
+                        help="Relative path .JSON metadata for your package: metadata.json from basedir")
+    parser.add_argument("--sdkversion", required=True,
+                        help="In the format format: x.x.x")
+    parser.add_argument("--icon", required=True,
+                        help="Relative path to a 76x76 icon from basedir")
+    parser.add_argument("--debug", required=False,
+                        help="true = Save the raw binary for each section to a file in the 'debug' folder")
+
+    args = parser.parse_args()
+
+    if args.debug:
+        debugOutput = True
+
+    #
+    # Validate paths
+    #
+
+    print("Validating paths...")
+
+    baseDir = args.basedir
+    if not os.path.isdir(baseDir):
+        print("  basedir doesn't appear to exist at {}".format(baseDir))
+        sys.exit(1)
+    baseDir = Path(baseDir)
+
+    absBaseDir = baseDir.resolve()
+    if not os.path.isdir(absBaseDir):
+        print("  Can't confirm absolute path to base dir {}".format(absBaseDir))
+
+    try:
+        absElfPath = ValidatePath(absBaseDir, args.elf)
+        print("  Using abs elf path: {}".format(absElfPath))
+
+        absMetaPath = ValidatePath(absBaseDir, args.meta)
+        print("  Using abs metadata path: {}".format(absMetaPath))
+
+        absIconPath = ValidatePath(absBaseDir, args.icon)
+        print("  Using abs icon path: {}".format(absIconPath))
+
+    except Exception as e:
+        print("  Exception: {}".format(e))
+        print("  Failed to combine paths, see above errors")
+        sys.exit(1)
+
+    #
+    # Read and validate the .elf file
+    #
+
+    res = PrepareElf(absElfPath)
+
+    if not res:
+        print("Failed to prepare the binary, see previous errors")
+        sys.exit(1)
+
+    #
+    # Read and validate the metadata.json
+    #
+
+    res = ParseMetadata(absMetaPath, absBaseDir)
+    if not res:
+        print("Failed to prepare the metadata, see previous errors")
+
+    #
+    # Read or create the icon
+    #
+
+    res = AddIcon(absIconPath, outMetaJSON["icon_transparency"])
+    if not res:
+        print("Failed to prepare the icon, see previous errors")
+        sys.exit(1)
+
+    #
+    # Add device-specific bindings (stub)
+    #
+    res = AddBinding()
+    if not res:
+        print("Failed to add device bindings, see previous errors")
+        sys.exit(1)
+
+    res = CreateHeader()
+    if not res:
+        print("Failed to create header, see previous errors")
+        sys.exit(1)
+
+    print("Exiting with code 0 (success!)")
+    sys.exit(0)
+
+
+def ValidatePath(base, tail):
+    # type: (Union[str, Path], Union[str, Path]) -> str
+
+    joined = base / tail
+    resolved = Path.resolve(joined)
+
+    if not os.path.isfile(resolved):
+        raise PathException(
+            "basedir ({}) + tail ({}) didn't form a valid absolute path!".format(base, tail))
+
+    return str(joined)
+
+
+def PrepareElf(elfPath):
+    # type: (str)->bool
+
+    global sect_mainElf
+
+    print("Loading elf file")
+    print("  Path: {}".format(elfPath))
+
+    if not os.path.isfile(elfPath):
+        print("Elf file not found!")
+        return False
+
+    try:
+        with open(elfPath, "rb") as f:
+            sect_mainElf = bytearray(f.read())
+            sect_mainElfSize = len(sect_mainElf)
+
+    except Exception as e:
+        print("Error {}".format(e))
+        return False
+
+    print("  Loaded main elf")
+    print("  Size: {:,} / {} bytes".format(sect_mainElfSize,
+          hex(sect_mainElfSize)))
+
+    return True
+
+
+def AddIcon(iconPath, transparentBit):
+    # type: (str, bool)->bool
+
+    global sect_icon
+
+    print("  Loading icon")
+    print("    Path: {}".format(iconPath))
+
+    if not os.path.isfile(iconPath):
+        print("Failed to load icon at path {}".format(iconPath))
+        return False
+
+    try:
+
+        im = Image.open(iconPath)
+        pix = im.load()
+
+        width = im.size[0]
+        height = im.size[1]
+        dummy = 0
+
+        if (width != 76 or height != 76):
+            print("Error, expecting a 76x76px icon")
+            return False
+
+        numPixels = width * height
+
+        # add width, height, trans bit and a dummy field
+        sect_icon.extend(width.to_bytes(4, byteorder='little'))
+        sect_icon.extend(height.to_bytes(4, byteorder='little'))
+        sect_icon.extend(transparentBit.to_bytes(4, byteorder='little'))
+        sect_icon.extend(dummy.to_bytes(4, byteorder='little'))
+
+        for row in range(height):
+            for col in range(width):
+
+                activeByte = 0
+
+                x = col
+                y = row
+
+                if y < height:
+                    rgb = pix[x, y]
+                else:
+                    egb = (0, 0, 0)
+
+                # Convert the RGB value into a 16 bit 565 value
+                red = (rgb[0] >> 3) & 0x1F  # 5 bits for red
+                green = (rgb[1] >> 2) & 0x3F  # 6 bits for green
+                blue = (rgb[2] >> 3) & 0x1F  # 5 bits for blue
+
+                # Pack the RGB 565 into 16 bits
+                pixVal = (red << 11) | (green << 5) | blue
+
+                # Append the high and low bytes of the 16-bit value
+                sect_icon.append((pixVal >> 8) & 0xFF)
+                sect_icon.append(pixVal & 0xFF)
+
+    except Exception as e:
+        print("Error {}".format(e))
+        return False
+
+    sect_iconSize = len(sect_icon)
+
+    print("    Encoded icon from {}".format(iconPath))
+    print(
+        "    Size: {:,} / {} bytes".format(sect_iconSize, hex(sect_iconSize)))
+
+    if debugOutput:
+        if not os.path.isdir("debug"):
+            os.makedirs("debug")
+        with open("debug/icon.bin", "wb") as f:
+            f.write(sect_icon)
+        print("    DEBUG: Wrote debug/icon.bin")
+
+    return True
+
+
+def ParseMetadata(absMetaPath, absBaseDir):
+    # type: (str, str)->bool
+
+    print("Loading metadata json")
+    print("  path {}".format(absMetaPath))
+
+    if not os.path.isfile(absMetaPath):
+        print("Metadata file not found!")
+        return False
+
+    jsonData = None
+    try:
+        with open(absMetaPath, "r") as f:
+            jsonData = json.load(f)
+    except Exception as e:
+        print("Error {}".format(e))
+        return False
+
+    res = ValidateMetadata(jsonData, absMetaPath, absBaseDir)
+
+    if not res:
+        print("Failed to validate metadata json @ {}".format(absMetaPath))
+        return False
+
+    return True
+
+# We could use jsonschema here, but due to legibility
+# and flexibility concerns, let's manually review and
+# try to throw meaningful errors, to help the user
+
+
+def ValidateMetadata(inJsonData, absMetaFileName, absBaseDir):
+    # type: (Dict[str,any], str, str) -> bool
+
+    global outMetaJSON
+    global sect_outMeta
+    global debugOutput
+
+    print("  Parsing metadata from {}".format(absMetaFileName))
+
+    try:
+        metaVersion = inJsonData["metadata_version"]
+    except Exception as e:
+        print("Failed to read 'metadata_version' from {}".format(absMetaFileName))
+        return False
+
+    if metaVersion != 1:
+        print("Unexpected metadata_version '{}', expected '1'".format(metaVersion))
+        return False
+
+    # version looks good, let's validate the rest
+
+    def readStr(key, minLength):
+        # type: (str, int) -> str
+        try:
+            print("  Reading '{}'".format(key))
+            val = inJsonData[key]
+            if (len(val) < minLength or len(val) > 255):
+                raise MetadataError(
+                    "Expected key '{}' between 1 and 255 chars")
+
+        except Exception as e:
+            raise MetadataError(
+                "Failed to parse key string '{}' from {}".format(key, absMetaFileName))
+
+        outMetaJSON[key] = val
+        print("    {} = {}".format(key, val))
+        return val
+
+    def readBool(key):
+        # type: (str) -> bool
+        try:
+            print("  Reading '{}'".format(key))
+            val = inJsonData[key]
+        except Exception as e:
+            raise MetadataError(
+                "Failed to parse key bool '{}' from {}".format(
+                    key, absMetaFileName)
+            )
+        outMetaJSON[key] = val
+        print("    {} = {}".format(key, val))
+        return val
+
+    #
+    # Read in the main vals
+    #
+
+    try:
+        app_name = readStr("app_name", 1)
+        app_author = readStr("app_author", 1)
+        app_version = readStr("app_version", 5)
+        app_entry_point = readStr("app_entry_point", 1)
+        icon_trans = readBool("icon_transparency")
+
+    except Exception as e:
+        print("Parse error: {}".format(e))
+        return False
+
+    #
+    # Validate the version string
+    #
+
+    versionSplits = app_version.split(".")
+    if len(versionSplits) != 3:
+        return False
+    validVersion = all(split.isdigit() for split in versionSplits)
+    if not validVersion:
+        print("Expected version in the form ?.?.?")
+        return False
+
+    res = ParseResources(inJsonData, absMetaFileName, absBaseDir)
+    if not res:
+        return False
+
+    jsonString = json.dumps(outMetaJSON, indent=4)
+    jsonBytes = bytearray(jsonString, "ascii")
+    sect_outMeta.extend(jsonBytes)
+
+    if debugOutput:
+        # The accompanying json
+        with open("debug/resources.json", "w") as f:
+            f.write(jsonString)
+        print("    DEBUG: Wrote debug/resources.json")
+
+    return True
+
+
+def ParseResources(inJsonData, absMetaFileName, absBaseDir):
+    # type: (Dict[str,any], str, str) -> bool
+
+    global outMetaJSON
+    # all resources combined
+    global sect_allResources
+    # individual resources offsets
+    global resourceNameOffsetKeyVals
+
+    print("  Parsing metadata resources...")
+
+    if (inJsonData["resources"] is None):
+        print("    No resources section, skipping")
+        return True
+
+    inJsonResArray = inJsonData["resources"]
+    outMetaJSON["resources"] = []
+
+    for r in inJsonResArray:
+        print("    Reading resource {}".format(r))
+
+        absResPath = absBaseDir / r
+        absResPath = Path(absResPath)
+        absResPath = absResPath.resolve()
+
+        if not os.path.isfile(absResPath):
+            print("      Couldn't locate resource {} from base path: {} and tail: {}".format(
+                absResPath, absBaseDir, r))
+            return False
+
+        print("      Located @: {}".format(absResPath))
+
+        try:
+            with open(absResPath, "rb") as f:
+                data = bytearray(f.read())
+                dataLen = len(data)
+                # append to the master list
+                print("      Read {} / {} bytes".format(dataLen, hex(dataLen)))
+
+                # name and location
+                # mything.png : 200
+                startOffset = len(sect_allResources)
+                kvp = (r, startOffset)
+                resourceNameOffsetKeyVals.append(kvp)
+
+                # Add the key value pair to the output json
+                outMetaJSON["resources"].append(kvp)
+
+                # Add the file to the blob
+                sect_allResources.extend(data)
+
+                print(
+                    "      Data starts at {} / {} bytes".format(startOffset, hex(startOffset)))
+
+                # pad the data out to 512 byte boundaries for much faster SD access
+                writeHead = len(sect_allResources)
+                modulo = writeHead % 512
+                if (modulo != 0):
+                    paddingLength = 512 - modulo
+                    paddingBytes = bytearray(paddingLength)
+                    sect_allResources.extend(paddingBytes)
+                    print("      Padding data start by {} bytes to 512 boundary".format(
+                        paddingLength))
+
+        except Exception as e:
+            print("Failed to open file @ {}".format(absResPath))
+            print("Exception: {}".format(e))
+            return False
+
+    sect_allResourcesSize = len(sect_allResources)
+    numResources = len(resourceNameOffsetKeyVals)
+    print("    Created resource blob of size {} / {} with {} files".format(
+        sect_allResourcesSize, hex(sect_allResourcesSize), numResources))
+
+    if debugOutput:
+        if not os.path.isdir("debug"):
+            os.makedirs("debug")
+
+        # The binary data
+        # (the json offsets will be amongst the metadata)
+        with open("debug/resources.bin", "wb") as f:
+            f.write(sect_allResources)
+        print("    DEBUG: Wrote debug/resources.bin")
+
+    return True
+
+
+def AddBinding():
+    # type: () -> bool
+
+    global sect_binding
+
+    print("  Adding dummy binding")
+
+    sect_binding = bytearray(16)
+
+    return True
+
+
+def PadByteArray512(inArray):
+
+    modulo = len(inArray) % 512
+    if (modulo != 0):
+        paddingLen = 512 - modulo
+        paddingBytes = bytearray(paddingLen)
+        inArray.extend(paddingBytes)
+
+
+def PrintSectionSizes(printVal):
+    # type: (str)->None
+
+    global debugOutput
+    global sect_header
+    global sect_icon
+    global sect_outMeta
+    global sect_binding
+    global sect_mainElf
+
+    if not debugOutput:
+        return
+
+    print(printVal)
+    print("  Header   : {} / {}".format(len(sect_header), hex(len(sect_header))))
+    print("  Icon     : {} / {}".format(len(sect_icon), hex(len(sect_icon))))
+    print("  MetaData : {} / {}".format(len(sect_outMeta), hex(len(sect_outMeta))))
+    print("  Binding  : {} / {}".format(len(sect_binding), hex(len(sect_binding))))
+    print("  Elf      : {} / {}".format(len(sect_mainElf), hex(len(sect_mainElf))))
+
+
+# adds to the header in the final binary
+# not the header stub
+def AddToArray(targ, pos, val):
+    # type: (bytearray, int,int)->int
+
+    global finalBinary
+
+    bVal = struct.pack("<I", val)
+    targ[pos:pos+4] = bVal
+
+    return 4
+
+
+def CreateHeader():
+    # type: () -> bool
+
+    global headerVersion
+    global encryptionVersion
+    #
+    global sect_header
+    global sect_icon
+    global sect_outMeta
+    global sect_binding
+    global sect_mainElf
+    #
+    global finalBinary
+
+    # magic
+    magic = b"VMUPACK\0"
+    sect_header.extend(magic)
+
+    # Add the values we know immediately
+
+    # version
+    sect_header.extend(headerVersion.to_bytes(4, 'little'))
+
+    # encryption
+    sect_header.extend(encryptionVersion.to_bytes(4, 'little'))
+
+    #
+    # Pad out some byte arrays and then let's start piecing them together
+    #
+
+    PrintSectionSizes("Section sizes:")
+    PadByteArray512(sect_header)
+    PadByteArray512(sect_icon)
+    PadByteArray512(sect_outMeta)
+    PadByteArray512(sect_binding)
+    PadByteArray512(sect_mainElf)
+    PrintSectionSizes("Padded section sizes:")
+
+    #
+    # Write Header
+    #
+
+    print(" Creating header...")
+
+    # uint8_t magic[8] = "VMUPACK\0"
+    # uint32_t version = 1
+    # uint32_t encryptionVersion = 0 (not encrypted)
+    #
+    # uint32_t iconOffset
+    # uint32_t iconLength
+    #
+    # uint32_t metadataOffset
+    # uint32_t metadataLength
+    #
+    # uint32_t resourceOffset
+    # uint32_t resourceLength
+    #
+    # V---- Encrypted section ----V
+    #
+    # uint32_t bindingOffset
+    # uint32_t bindingLength
+    #
+    # uint32_t elfOffset
+    # uint32_t elfLength
+    #
+    # padded to 512 bytes
+
+    finalBinary.extend(sect_header)
+    headerFieldPos = 16
+
+    iconStart = len(finalBinary)
+    headerFieldPos += AddToArray(finalBinary, headerFieldPos, iconStart)
+    headerFieldPos += AddToArray(finalBinary, headerFieldPos, len(sect_icon))
+    finalBinary.extend(sect_icon)
+    print("  Wrote icon at pos {} size {}".format(
+        hex(iconStart), hex(len(sect_icon))))
+
+    metaStart = len(finalBinary)
+    headerFieldPos += AddToArray(finalBinary, headerFieldPos, metaStart)
+    headerFieldPos += AddToArray(finalBinary,
+                                 headerFieldPos, len(sect_outMeta))
+    finalBinary.extend(sect_outMeta)
+    print("  Wrote metadata at pos {} size {}".format(
+        hex(metaStart), hex(len(sect_outMeta))))
+
+    resStart = len(finalBinary)
+    headerFieldPos += AddToArray(finalBinary, headerFieldPos, resStart)
+    headerFieldPos += AddToArray(finalBinary,
+                                 headerFieldPos, len(sect_allResources))
+    finalBinary.extend(sect_allResources)
+    print("  Wrote resources at pos {} size {}".format(
+        hex(resStart), hex(len(sect_allResources))))
+
+    bindingStart = len(finalBinary)
+    headerFieldPos += AddToArray(finalBinary, headerFieldPos, bindingStart)
+    headerFieldPos += AddToArray(finalBinary,
+                                 headerFieldPos, len(sect_binding))
+    finalBinary.extend(sect_binding)
+    print("  Wrote binding at pos {} size {}".format(
+        hex(bindingStart), hex(len(sect_binding))))
+
+    elfStart = len(finalBinary)
+    headerFieldPos += AddToArray(finalBinary, headerFieldPos, elfStart)
+    headerFieldPos += AddToArray(finalBinary,
+                                 headerFieldPos, len(sect_binding))
+    finalBinary.extend(sect_mainElf)
+    print("  Wrote elf at pos {} size {}".format(
+        hex(elfStart), hex(len(sect_mainElf))))
+
+    sect_finalBinarySize = len(finalBinary)
+    print("Final binary size: {} / {}".format(
+        sect_finalBinarySize, hex(sect_finalBinarySize)))
+
+    with open("thing.bin", "wb") as f:
+        f.write(finalBinary)
+
+    return True
+
+
+if __name__ == "__main__":
+    main()
