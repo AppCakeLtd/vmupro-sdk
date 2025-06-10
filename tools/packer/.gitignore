@@ -3,3 +3,4 @@ dev_*.*
 __pycache__/
 *.pyc
 debug/
+*.vmupack
