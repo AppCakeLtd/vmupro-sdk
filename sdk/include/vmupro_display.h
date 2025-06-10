@@ -29,6 +29,13 @@ extern "C"
   void vmupro_display_clear(vmupro_color_t color);
   void vmupro_display_refresh();
 
+  uint8_t *vmupro_get_front_fb();
+  uint8_t *vmupro_get_back_fb();
+
+  void vmupro_start_double_buffer_renderer();
+  void vmupro_stop_double_buffer_renderer();
+  void vmupro_push_double_buffer_frame(uint8_t *frame);
+
   // Drawing API
   void vmupro_draw_rect(int x1, int y1, int x2, int y2, vmupro_color_t color);
   void vmupro_draw_fill_rect(int x1, int y1, int x2, int y2, vmupro_color_t color);
