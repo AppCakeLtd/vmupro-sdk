@@ -2,6 +2,7 @@
 
 #include "vmupro_log.h"
 #include "vmupro_display.h"
+#include "vmupro_utils.h"
 
 #ifdef __cplusplus
 extern "C"
