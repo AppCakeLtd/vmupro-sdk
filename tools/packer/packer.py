@@ -182,11 +182,13 @@ def main():
     print("Exiting with code 0 (success!)")
     sys.exit(0)
 
+
 def GetOutputFilenameAbs(absBaseDir, relElfNameNoExt):
     # type: (str,str)->Path
-    absOutputVMUPack = os.path.join( absBaseDir, relElfNameNoExt + ".vmupack")
+    absOutputVMUPack = os.path.join(absBaseDir, relElfNameNoExt + ".vmupack")
     absOutputVMUPack = Path(absOutputVMUPack).resolve()
     return absOutputVMUPack
+
 
 def ValidatePath(base, tail):
     # type: (Union[str, Path], Union[str, Path]) -> str
@@ -272,7 +274,6 @@ def RemoveUnwantedBuildFiles(absBaseDir, elfNameNoExt):
         print("  Exception: {}".format(e))
 
 
-
 def AddIcon(iconPath, transparentBit):
     # type: (str, bool)->bool
 
@@ -349,6 +350,10 @@ def AddIcon(iconPath, transparentBit):
         print("    DEBUG: Wrote debug/icon.bin")
 
     return True
+
+# Read metadata such as the app name and author
+# we then repackage this with some extra info
+# such as the offsets of each asset into the resources blob
 
 
 def ParseMetadata(absMetaPath, absBaseDir):
@@ -578,7 +583,8 @@ def AddBinding():
 
 
 def PadByteArray512(inArray):
-
+    # type: (bytearray)->None
+    
     modulo = len(inArray) % 512
     if (modulo != 0):
         paddingLen = 512 - modulo
@@ -738,7 +744,8 @@ def CreateHeader(absBaseDir, relElfNameNoExt):
         with open(absOutPath, "wb") as f:
             f.write(finalBinary)
     except Exception as e:
-        print("The .vmupack was successfully built but the file could not be saved to {}".format(absOutPath))
+        print("The .vmupack was successfully built but the file could not be saved to {}".format(
+            absOutPath))
         print("Please ensure that the file is not currently open!")
         return False
 
