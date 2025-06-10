@@ -34,7 +34,7 @@ extern "C"
 
   void vmupro_start_double_buffer_renderer();
   void vmupro_stop_double_buffer_renderer();
-  void vmupro_push_double_buffer_frame(uint8_t *frame);
+  void vmupro_push_double_buffer_frame();
 
   // Drawing API
   void vmupro_draw_rect(int x1, int y1, int x2, int y2, vmupro_color_t color);
