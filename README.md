@@ -28,7 +28,8 @@ In a GUI manager like git-fork (strong recommend), this would be something like
 `Ctrl + O -> c:\idfvmusdk\`
 `Cmd + O -> /stuff/idfvmusdk/`
 
-then locate `release/v5.4` and `r.click` -> `origin/release/v5.4` -> `Checkout`
+Then locate `release/v5.4` and `r.click` -> `origin/release/v5.4` -> `Checkout`
+It could take 5 minutes to complete; good time for a cup of tea.
 
 ### Run the install script
 
