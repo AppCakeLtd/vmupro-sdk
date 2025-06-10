@@ -538,14 +538,11 @@ def ParseResources(inJsonData, absMetaFileName, absBaseDir):
                     "      Data starts at {} / {} bytes".format(startOffset, hex(startOffset)))
 
                 # pad the data out to 512 byte boundaries for much faster SD access
-                writeHead = len(sect_allResources)
-                modulo = writeHead % 512
-                if (modulo != 0):
-                    paddingLength = 512 - modulo
-                    paddingBytes = bytearray(paddingLength)
-                    sect_allResources.extend(paddingBytes)
-                    print("      Padding data start by {} bytes to 512 boundary".format(
-                        paddingLength))
+                # writeHead = len(sect_allResources)
+
+                paddingLength = PadByteArray(sect_allResources, 512)
+                print("      Padding data end by {} bytes to 512 boundary @ {}".format(
+                    paddingLength, hex(len(sect_allResources))))
 
         except Exception as e:
             print("Failed to open file @ {}".format(absResPath))
@@ -583,16 +580,20 @@ def AddBinding():
 
 # Pad a byte array to e.g. 512 bytes for
 # faster loading from SD card, or header alignment
+# returns: number of padding bytes
 
 
-def PadByteArray512(inArray, boundary):
-    # type: (bytearray, int)->None
+def PadByteArray(inArray, boundary):
+    # type: (bytearray, int)->int
 
     modulo = len(inArray) % boundary
     if (modulo != 0):
         paddingLen = boundary - modulo
         paddingBytes = bytearray(paddingLen)
         inArray.extend(paddingBytes)
+        return paddingLen
+
+    return 0
 
 
 def PrintSectionSizes(printVal):
@@ -660,11 +661,11 @@ def CreateHeader(absBaseDir, relElfNameNoExt):
     #
 
     PrintSectionSizes("Section sizes:")
-    PadByteArray512(sect_header, 512)
-    PadByteArray512(sect_icon, 512)
-    PadByteArray512(sect_outMeta, 512)
-    PadByteArray512(sect_binding, 512)
-    PadByteArray512(sect_mainElf, 512)
+    PadByteArray(sect_header, 512)
+    PadByteArray(sect_icon, 512)
+    PadByteArray(sect_outMeta, 512)
+    PadByteArray(sect_binding, 512)
+    PadByteArray(sect_mainElf, 512)
     PrintSectionSizes("Padded section sizes:")
 
     #
