@@ -537,9 +537,7 @@ def ParseResources(inJsonData, absMetaFileName, absBaseDir):
                 print(
                     "      Data starts at {} / {} bytes".format(startOffset, hex(startOffset)))
 
-                # pad the data out to 512 byte boundaries for much faster SD access
-                # writeHead = len(sect_allResources)
-
+                # pad the data out to 512 byte boundaries for much faster SD access                
                 paddingLength = PadByteArray(sect_allResources, 512)
                 print("      Padding data end by {} bytes to 512 boundary @ {}".format(
                     paddingLength, hex(len(sect_allResources))))
@@ -656,6 +654,17 @@ def CreateHeader(absBaseDir, relElfNameNoExt):
     # encryption
     sect_header.extend(encryptionVersion.to_bytes(4, 'little'))
 
+    # little label for quick reading without json parsing:
+    appName  = outMetaJSON["app_name"]
+    appName = bytearray(appName, "ascii")
+    # clamp it at 31 chars
+    if (len(appName) > 31 ):
+        appName = appName[:31]
+    # pad it to exactly 32 chars
+    PadByteArray(appName, 32)
+    sect_header.extend(appName)
+
+
     #
     # Pad out some byte arrays and then let's start piecing them together
     #
@@ -698,7 +707,7 @@ def CreateHeader(absBaseDir, relElfNameNoExt):
     # padded to 512 bytes
 
     finalBinary.extend(sect_header)
-    headerFieldPos = 16
+    headerFieldPos = 16 + 32
 
     iconStart = len(finalBinary)
     headerFieldPos += AddToArray(finalBinary, headerFieldPos, iconStart)
