@@ -4,7 +4,7 @@
 
 import sys
 import argparse
-import crcmod
+#import crcmod
 import os
 import json
 import struct
