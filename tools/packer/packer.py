@@ -179,7 +179,7 @@ def main():
         print("Failed to create header, see previous errors")
         sys.exit(1)
 
-    print("Exiting with code 0 (success!)")
+    print("\nExiting with code 0 (success!)\n")
     sys.exit(0)
 
 
@@ -235,7 +235,7 @@ def DeleteFileNoError(absPath, label):
     # type: (Path, str)->None
 
     try:
-        print("  Checking {}...".format(absPath))
+        print("  Checking '{}' ...".format(absPath))
         if os.path.isfile(absPath):
             os.remove(absPath)
         print("  deleted...")
@@ -581,13 +581,16 @@ def AddBinding():
 
     return True
 
+# Pad a byte array to e.g. 512 bytes for
+# faster loading from SD card, or header alignment
 
-def PadByteArray512(inArray):
-    # type: (bytearray)->None
-    
-    modulo = len(inArray) % 512
+
+def PadByteArray512(inArray, boundary):
+    # type: (bytearray, int)->None
+
+    modulo = len(inArray) % boundary
     if (modulo != 0):
-        paddingLen = 512 - modulo
+        paddingLen = boundary - modulo
         paddingBytes = bytearray(paddingLen)
         inArray.extend(paddingBytes)
 
@@ -657,11 +660,11 @@ def CreateHeader(absBaseDir, relElfNameNoExt):
     #
 
     PrintSectionSizes("Section sizes:")
-    PadByteArray512(sect_header)
-    PadByteArray512(sect_icon)
-    PadByteArray512(sect_outMeta)
-    PadByteArray512(sect_binding)
-    PadByteArray512(sect_mainElf)
+    PadByteArray512(sect_header, 512)
+    PadByteArray512(sect_icon, 512)
+    PadByteArray512(sect_outMeta, 512)
+    PadByteArray512(sect_binding, 512)
+    PadByteArray512(sect_mainElf, 512)
     PrintSectionSizes("Padded section sizes:")
 
     #
