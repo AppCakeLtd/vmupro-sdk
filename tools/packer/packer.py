@@ -132,6 +132,7 @@ def main():
     except Exception as e:
         print("  Exception: {}".format(e))
         print("  Failed to combine paths, see above errors")
+        print("\n  Hint: check <yourelfname>.app.elf exists in the `build` folder\n")
         sys.exit(1)
 
     #
@@ -195,6 +196,8 @@ def ValidatePath(base, tail):
 
     joined = base / tail
     resolved = Path.resolve(joined)
+
+    print("  Validating path: {}".format(resolved))
 
     if not os.path.isfile(resolved):
         raise PathException(
@@ -761,6 +764,8 @@ def CreateHeader(absBaseDir, relElfNameNoExt):
             absOutPath))
         print("Please ensure that the file is not currently open!")
         return False
+    
+    print("Write file to: {}".format(absOutPath))
 
     return True
 
