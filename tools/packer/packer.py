@@ -76,8 +76,8 @@ def main():
         description="Pack a VMUPro binary with optional icon")
     parser.add_argument("--basedir", required=True,
                         help="Root folder, one beneath build")
-    parser.add_argument("--elf", required=True,
-                        help="Relative path to input elf file: build/mything.elf from basedir")
+    parser.add_argument("--elfname", required=True,
+                        help="In basedir/build, e.g. 'vmupro_minimal' for 'build/vmupro_minimal.app.elf'")
     parser.add_argument("--meta", required=True,
                         help="Relative path .JSON metadata for your package: metadata.json from basedir")
     parser.add_argument("--sdkversion", required=True,
@@ -109,7 +109,9 @@ def main():
         print("  Can't confirm absolute path to base dir {}".format(absBaseDir))
 
     try:
-        absElfPath = ValidatePath(absBaseDir, args.elf)
+        # "vmupro_minimal" -> "build/vmupro_minimal.app.elf"
+        elfPart = os.path.join("build", args.elfname + ".app.elf")
+        absElfPath = ValidatePath(absBaseDir, elfPart)
         print("  Using abs elf path: {}".format(absElfPath))
 
         absMetaPath = ValidatePath(absBaseDir, args.meta)
@@ -132,6 +134,12 @@ def main():
     if not res:
         print("Failed to prepare the binary, see previous errors")
         sys.exit(1)
+
+    #
+    # We've validated that the .elf exists
+    # good time to remove some auto built firmwares
+    #
+    RemoveUnwantedBuildFiles(absBaseDir, args.elfname)
 
     #
     # Read and validate the metadata.json
@@ -206,6 +214,47 @@ def PrepareElf(elfPath):
           hex(sect_mainElfSize)))
 
     return True
+
+# the IDF generates a firmware by default as well as your app
+# this will be unusable on its own, so to avoid confusion, let's delete it
+# note: this is not the minimal yourfile.app.elf, it's yourfile.elf
+
+
+def RemoveUnwantedBuildFiles(absBaseDir, elfName):
+    # type: (str, str)->None
+
+    print("Cleaning up unwanted build files")
+
+    try:
+        # "vmupro_minimal" -> "build/vmupro_minimal.elf"
+        delElf = os.path.join(absBaseDir, "build", elfName + ".elf")
+        delElf = Path(delElf)
+        resolvedDelElf = delElf.resolve()
+        print("  Checking unused elf @: {}".format(resolvedDelElf))
+        if os.path.isfile(resolvedDelElf):
+            os.remove(resolvedDelElf)
+        print("  done...")
+        
+    except Exception as e:
+        print("  Couldn't remove auto built firmware elf (non fatal error)")
+        print("  Exception: {}".format(e))
+
+    
+
+    try:
+        # "vmupro_minimal" -> "build/vmupro_minimal.bin"
+        delBin = os.path.join(absBaseDir, "build", elfName + ".bin")
+        delBin = Path(delBin)
+        resolvedDelBin = delBin.resolve()
+        print("  Checking unused bin @: {}".format(resolvedDelBin))
+        if os.path.isfile(resolvedDelBin):
+            os.remove(resolvedDelBin)
+        print("  done...")
+        
+    except Exception as e:
+        print("  Couldn't remove auto built firmware bin (non fatal error)")
+        print("  Exception: {}".format(e))
+
 
 
 def AddIcon(iconPath, transparentBit):
