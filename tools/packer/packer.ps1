@@ -15,7 +15,7 @@ param (
 # Write-Host base=$basedir elfname=$elfname icon=$icon meta=$meta debug=$debug
 
 # Need the parent folder to create abs paths for pip, venv
-# e.g. c:\myprojects\vmusdk\examples\minimal\
+# e.g. the location where THIS script resides
 $parentfolder = Split-Path -Parent $PSCommandPath
 Write-Host Packer dir: $parentfolder
 
@@ -27,18 +27,20 @@ if ([string]::IsNullOrEmpty($basedir)){
 Write-Host Base dir: $basedir
 
 write-host VMUPacker: checking virtual environment
-if ($env:VIRTUAL_ENV) {
+if (-not $env:VIRTUAL_ENV) {
+
+    write-host VMUPacker: creating python3 venv
+    python -m venv $parentfolder\.venv
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Failed to create venv"
+        exit 1
+    }
+
+} else {
     Write-Host "Already inside a virtual environment: $env:VIRTUAL_ENV"
     Write-Host "Type `deactivate` to start a fresh environment"
-    exit 0
 }
 
-write-host VMUPacker: creating python3 venv
-python -m venv $parentfolder\.venv
-if ($LASTEXITCODE -ne 0) {
-    Write-Error "Failed to create venv"
-    exit 1
-}
 
 # call .venv\Scripts\activate
 . $parentfolder\.venv\Scripts\Activate.ps1
