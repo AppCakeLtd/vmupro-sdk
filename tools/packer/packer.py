@@ -1,4 +1,6 @@
 # 8BM Copyright/License notice
+# For use with ESP IDF Python 3.10.x
+# Note: suggested use with Python 3.6 or later due to handling of Path.resolve
 
 import sys
 import argparse
@@ -98,6 +100,8 @@ def main():
 
     print("Validating paths...")
 
+    # ensure something like ../../examples/minimal/
+    # is resolved to d:\mystuff\examples\minimal, etc
     baseDir = args.basedir
     if not os.path.isdir(baseDir):
         print("  basedir doesn't appear to exist at {}".format(baseDir))
@@ -107,10 +111,15 @@ def main():
     absBaseDir = baseDir.resolve()
     if not os.path.isdir(absBaseDir):
         print("  Can't confirm absolute path to base dir {}".format(absBaseDir))
+        sys.exit(1)
+
+    # e.g. "my_lovely_game" as part of "<baseDir>/build/my_lovely_game.app.elf"
+    # which will become "<baseDir>/my_lovely_game.vmupack"
+    relElfNameNoExt = args.elfname
 
     try:
         # "vmupro_minimal" -> "build/vmupro_minimal.app.elf"
-        elfPart = os.path.join("build", args.elfname + ".app.elf")
+        elfPart = os.path.join("build", relElfNameNoExt + ".app.elf")
         absElfPath = ValidatePath(absBaseDir, elfPart)
         print("  Using abs elf path: {}".format(absElfPath))
 
@@ -128,7 +137,6 @@ def main():
     #
     # Read and validate the .elf file
     #
-
     res = PrepareElf(absElfPath)
 
     if not res:
@@ -139,7 +147,7 @@ def main():
     # We've validated that the .elf exists
     # good time to remove some auto built firmwares
     #
-    RemoveUnwantedBuildFiles(absBaseDir, args.elfname)
+    RemoveUnwantedBuildFiles(absBaseDir, relElfNameNoExt)
 
     #
     # Read and validate the metadata.json
@@ -166,7 +174,7 @@ def main():
         print("Failed to add device bindings, see previous errors")
         sys.exit(1)
 
-    res = CreateHeader()
+    res = CreateHeader(absBaseDir, relElfNameNoExt)
     if not res:
         print("Failed to create header, see previous errors")
         sys.exit(1)
@@ -174,6 +182,11 @@ def main():
     print("Exiting with code 0 (success!)")
     sys.exit(0)
 
+def GetOutputFilenameAbs(absBaseDir, relElfNameNoExt):
+    # type: (str,str)->Path
+    absOutputVMUPack = os.path.join( absBaseDir, relElfNameNoExt + ".vmupack")
+    absOutputVMUPack = Path(absOutputVMUPack).resolve()
+    return absOutputVMUPack
 
 def ValidatePath(base, tail):
     # type: (Union[str, Path], Union[str, Path]) -> str
@@ -215,44 +228,47 @@ def PrepareElf(elfPath):
 
     return True
 
+
+def DeleteFileNoError(absPath, label):
+    # type: (Path, str)->None
+
+    try:
+        print("  Checking {}...".format(absPath))
+        if os.path.isfile(absPath):
+            os.remove(absPath)
+        print("  deleted...")
+
+    except Exception as e:
+        print("  Couldn't remove {} (non fatal error)".format(label))
+        print("  Exception: {}".format(e))
+
+
 # the IDF generates a firmware by default as well as your app
 # this will be unusable on its own, so to avoid confusion, let's delete it
 # note: this is not the minimal yourfile.app.elf, it's yourfile.elf
 
-
-def RemoveUnwantedBuildFiles(absBaseDir, elfName):
-    # type: (str, str)->None
+def RemoveUnwantedBuildFiles(absBaseDir, elfNameNoExt):
+    # type: (str, str, str)->None
 
     print("Cleaning up unwanted build files")
 
     try:
-        # "vmupro_minimal" -> "build/vmupro_minimal.elf"
-        delElf = os.path.join(absBaseDir, "build", elfName + ".elf")
-        delElf = Path(delElf)
-        resolvedDelElf = delElf.resolve()
-        print("  Checking unused elf @: {}".format(resolvedDelElf))
-        if os.path.isfile(resolvedDelElf):
-            os.remove(resolvedDelElf)
-        print("  done...")
-        
+        # "your_game_name" -> "build/your_game_name.elf"
+        delElf = os.path.join(absBaseDir, "build", elfNameNoExt + ".elf")
+        delElf = Path(delElf).resolve()
+        DeleteFileNoError(delElf, "auto built firmware (elf)")
+
+        # "your_game_name" -> "build/your_game_name.bin"
+        delBin = os.path.join(absBaseDir, "build", elfNameNoExt + ".bin")
+        delBin = Path(delBin).resolve()
+        DeleteFileNoError(delBin, "auto built fiwmare (bin)")
+
+        # delete the old output file (if it exists)
+        absPrevBuild = GetOutputFilenameAbs(absBaseDir, elfNameNoExt)
+        DeleteFileNoError(absPrevBuild, "previous build (vmupack)")
+
     except Exception as e:
         print("  Couldn't remove auto built firmware elf (non fatal error)")
-        print("  Exception: {}".format(e))
-
-    
-
-    try:
-        # "vmupro_minimal" -> "build/vmupro_minimal.bin"
-        delBin = os.path.join(absBaseDir, "build", elfName + ".bin")
-        delBin = Path(delBin)
-        resolvedDelBin = delBin.resolve()
-        print("  Checking unused bin @: {}".format(resolvedDelBin))
-        if os.path.isfile(resolvedDelBin):
-            os.remove(resolvedDelBin)
-        print("  done...")
-        
-    except Exception as e:
-        print("  Couldn't remove auto built firmware bin (non fatal error)")
         print("  Exception: {}".format(e))
 
 
@@ -604,8 +620,8 @@ def AddToArray(targ, pos, val):
     return 4
 
 
-def CreateHeader():
-    # type: () -> bool
+def CreateHeader(absBaseDir, relElfNameNoExt):
+    # type: (str, str) -> bool
 
     global headerVersion
     global encryptionVersion
@@ -717,8 +733,14 @@ def CreateHeader():
     print("Final binary size: {} / {}".format(
         sect_finalBinarySize, hex(sect_finalBinarySize)))
 
-    with open("thing.bin", "wb") as f:
-        f.write(finalBinary)
+    absOutPath = GetOutputFilenameAbs(absBaseDir, relElfNameNoExt)
+    try:
+        with open(absOutPath, "wb") as f:
+            f.write(finalBinary)
+    except Exception as e:
+        print("The .vmupack was successfully built but the file could not be saved to {}".format(absOutPath))
+        print("Please ensure that the file is not currently open!")
+        return False
 
     return True
 
