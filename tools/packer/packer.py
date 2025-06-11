@@ -698,6 +698,8 @@ def CreateHeader(absProjectDir, relElfNameNoExt):
     # uint32_t version = 1
     # uint32_t encryptionVersion = 0 (not encrypted)
     #
+    # uint8_t appName[32] = "My awesome app\0"
+    #
     # uint32_t iconOffset
     # uint32_t iconLength
     #
@@ -714,6 +716,8 @@ def CreateHeader(absProjectDir, relElfNameNoExt):
     #
     # uint32_t elfOffset
     # uint32_t elfLength
+    #
+    # uint32_t reserved[4]
     #
     # padded to 512 bytes
 
