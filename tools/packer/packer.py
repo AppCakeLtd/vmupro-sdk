@@ -758,7 +758,7 @@ def CreateHeader(absProjectDir, relElfNameNoExt):
     elfStart = len(finalBinary)
     headerFieldPos += AddToArray(finalBinary, headerFieldPos, elfStart)
     headerFieldPos += AddToArray(finalBinary,
-                                 headerFieldPos, len(sect_binding))
+                                 headerFieldPos, len(sect_mainElf))
     finalBinary.extend(sect_mainElf)
     print("  Wrote elf at pos {} size {}".format(
         hex(elfStart), hex(len(sect_mainElf))))
