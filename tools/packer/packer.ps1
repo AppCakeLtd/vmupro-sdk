@@ -3,57 +3,65 @@
 # 2025, 8BM
 #
 param (
-    [string]$basedir,   # c:\myprojects\vmusdk\examples\minimal
-    [string]$elfname,   # "vmupro_minimal" (matches your .elf filename in basedir/build/<yourfile>.app.elf)
-    [string]$icon,      # usually "icon.bmp"
-    [string]$meta,      # usually "metadata.json"
-    [string]$debug      # set to true for extra spam
+    # c:\myprojects\vmusdk\examples\minimal
+    [string]$projectdir, 
+    # "vmupro_minimal" (matches your .elf filename in projectdir/build/<yourfile>.app.elf)
+    [string]$elfname, 
+    # usually "icon.bmp"
+    [string]$icon, 
+    # usually "metadata.json"
+    [string]$meta, 
+    # set to true for extra spam
+    [string]$debug       
 )
 
 # Debug
 # Write-Host "args: $args"
-# Write-Host base=$basedir elfname=$elfname icon=$icon meta=$meta debug=$debug
+# Write-Host base=$projectdir elfname=$elfname icon=$icon meta=$meta debug=$debug
 
-# Need the parent folder to create abs paths for pip, venv
-# e.g. the location where THIS script resides
-$parentfolder = Split-Path -Parent $PSCommandPath
-Write-Host Packer dir: $parentfolder
+# Need the tool's folder path to properly locate requirements.txxt
+# i.e. the location where THIS script resides
+$tooldir = Split-Path -Parent $PSCommandPath
+Write-Host "Packer tool's dir: $tooldir"
 
-if ([string]::IsNullOrEmpty($basedir)){
+if ([string]::IsNullOrEmpty($projectdir)) {
     # base directory of your project, where it was invoked from
-    $basedir = Get-Location 
-    Write-Host Inferring basedir
+    $projectdir = Get-Location 
+    Write-Host WARNING: Inferring project dir from current directory
 }
-Write-Host Base dir: $basedir
+Write-Host "Project's dir: $projectdir"
 
-write-host VMUPacker: checking virtual environment
+$venvname="vmupacker_venv"
+$venvdir="$projectdir\$venvname"
+
+write-host "VMUPacker: checking virtual environment"
 if (-not $env:VIRTUAL_ENV) {
 
-    write-host VMUPacker: creating python3 venv
-    python -m venv $parentfolder\.venv
+    write-host "VMUPacker: creating python3 venv @ $venvdir"
+    python -m venv $venvdir
     if ($LASTEXITCODE -ne 0) {
         Write-Error "Failed to create venv"
         exit 1
     }
 
-} else {
-    Write-Host "Already inside a virtual environment: $env:VIRTUAL_ENV"
-    Write-Host "Type `deactivate` to start a fresh environment"
+}
+else {
+    Write-Host "Already inside a virtual environment: $env:VIRTUAL_ENV"    
 }
 
 
-# call .venv\Scripts\activate
-. $parentfolder\.venv\Scripts\Activate.ps1
+# source $projectdir\Scripts\activate
+. $projectdir\vmupacker_venv\Scripts\Activate.ps1
 
 # Add crcmod, pillow, etc
-pip install -r $parentfolder\requirements.txt
+pip install -r $tooldir\requirements.txt
 
-Write-Host VMUPacker env created
-Write-Host Ready!
+Write-Host "VMUPacker env created"
+Write-Host "Ready!"
 
 # Running `where.exe python` should point at the ESP IDF's python
 # this will be automatic if you've ran the idf export script before building
-python $parentfolder/packer.py --basedir $basedir --elfname $elfname --icon $icon --meta $meta --sdkversion 1.0.0 --debug true
+python $tooldir/packer.py --projectdir $projectdir --elfname $elfname --icon $icon --meta $meta --sdkversion 1.0.0 --debug true
 
-Write-Host closing the python environmet
-#deactivate
+Write-Host "closing the python vmupacker venv"
+deactivate

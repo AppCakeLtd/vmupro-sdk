@@ -76,16 +76,16 @@ def main():
 
     parser = argparse.ArgumentParser(
         description="Pack a VMUPro binary with optional icon")
-    parser.add_argument("--basedir", required=True,
+    parser.add_argument("--projectdir", required=True,
                         help="Root folder, one beneath build")
     parser.add_argument("--elfname", required=True,
-                        help="In basedir/build, e.g. 'vmupro_minimal' for 'build/vmupro_minimal.app.elf'")
+                        help="In projectdir/build, e.g. 'vmupro_minimal' for 'build/vmupro_minimal.app.elf'")
     parser.add_argument("--meta", required=True,
-                        help="Relative path .JSON metadata for your package: metadata.json from basedir")
+                        help="Relative path .JSON metadata for your package: metadata.json from projectdir")
     parser.add_argument("--sdkversion", required=True,
                         help="In the format format: x.x.x")
     parser.add_argument("--icon", required=True,
-                        help="Relative path to a 76x76 icon from basedir")
+                        help="Relative path to a 76x76 icon from projectdir")
     parser.add_argument("--debug", required=False,
                         help="true = Save the raw binary for each section to a file in the 'debug' folder")
 
@@ -102,31 +102,31 @@ def main():
 
     # ensure something like ../../examples/minimal/
     # is resolved to d:\mystuff\examples\minimal, etc
-    baseDir = args.basedir
-    if not os.path.isdir(baseDir):
-        print("  basedir doesn't appear to exist at {}".format(baseDir))
+    projectDir = args.projectdir
+    if not os.path.isdir(projectDir):
+        print("  projectdir doesn't appear to exist at {}".format(projectDir))
         sys.exit(1)
-    baseDir = Path(baseDir)
+    projectDir = Path(projectDir)
 
-    absBaseDir = baseDir.resolve()
-    if not os.path.isdir(absBaseDir):
-        print("  Can't confirm absolute path to base dir {}".format(absBaseDir))
+    absProjectDir = projectDir.resolve()
+    if not os.path.isdir(absProjectDir):
+        print("  Can't confirm absolute path to base dir {}".format(absProjectDir))
         sys.exit(1)
 
-    # e.g. "my_lovely_game" as part of "<baseDir>/build/my_lovely_game.app.elf"
-    # which will become "<baseDir>/my_lovely_game.vmupack"
+    # e.g. "my_lovely_game" as part of "<projectDir>/build/my_lovely_game.app.elf"
+    # which will become "<projectDir>/my_lovely_game.vmupack"
     relElfNameNoExt = args.elfname
 
     try:
         # "vmupro_minimal" -> "build/vmupro_minimal.app.elf"
         elfPart = os.path.join("build", relElfNameNoExt + ".app.elf")
-        absElfPath = ValidatePath(absBaseDir, elfPart)
+        absElfPath = ValidatePath(absProjectDir, elfPart)
         print("  Using abs elf path: {}".format(absElfPath))
 
-        absMetaPath = ValidatePath(absBaseDir, args.meta)
+        absMetaPath = ValidatePath(absProjectDir, args.meta)
         print("  Using abs metadata path: {}".format(absMetaPath))
 
-        absIconPath = ValidatePath(absBaseDir, args.icon)
+        absIconPath = ValidatePath(absProjectDir, args.icon)
         print("  Using abs icon path: {}".format(absIconPath))
 
     except Exception as e:
@@ -148,13 +148,13 @@ def main():
     # We've validated that the .elf exists
     # good time to remove some auto built firmwares
     #
-    RemoveUnwantedBuildFiles(absBaseDir, relElfNameNoExt)
+    RemoveUnwantedBuildFiles(absProjectDir, relElfNameNoExt)
 
     #
     # Read and validate the metadata.json
     #
 
-    res = ParseMetadata(absMetaPath, absBaseDir)
+    res = ParseMetadata(absMetaPath, absProjectDir)
     if not res:
         print("Failed to prepare the metadata, see previous errors")
 
@@ -162,7 +162,7 @@ def main():
     # Read or create the icon
     #
 
-    res = AddIcon(absIconPath, outMetaJSON["icon_transparency"])
+    res = AddIcon(absProjectDir, absIconPath, outMetaJSON["icon_transparency"])
     if not res:
         print("Failed to prepare the icon, see previous errors")
         sys.exit(1)
@@ -175,7 +175,7 @@ def main():
         print("Failed to add device bindings, see previous errors")
         sys.exit(1)
 
-    res = CreateHeader(absBaseDir, relElfNameNoExt)
+    res = CreateHeader(absProjectDir, relElfNameNoExt)
     if not res:
         print("Failed to create header, see previous errors")
         sys.exit(1)
@@ -184,9 +184,9 @@ def main():
     sys.exit(0)
 
 
-def GetOutputFilenameAbs(absBaseDir, relElfNameNoExt):
+def GetOutputFilenameAbs(absProjectDir, relElfNameNoExt):
     # type: (str,str)->Path
-    absOutputVMUPack = os.path.join(absBaseDir, relElfNameNoExt + ".vmupack")
+    absOutputVMUPack = os.path.join(absProjectDir, relElfNameNoExt + ".vmupack")
     absOutputVMUPack = Path(absOutputVMUPack).resolve()
     return absOutputVMUPack
 
@@ -201,7 +201,7 @@ def ValidatePath(base, tail):
 
     if not os.path.isfile(resolved):
         raise PathException(
-            "basedir ({}) + tail ({}) didn't form a valid absolute path!".format(base, tail))
+            "projectdir ({}) + tail ({}) didn't form a valid absolute path!".format(base, tail))
 
     return str(joined)
 
@@ -252,24 +252,24 @@ def DeleteFileNoError(absPath, label):
 # this will be unusable on its own, so to avoid confusion, let's delete it
 # note: this is not the minimal yourfile.app.elf, it's yourfile.elf
 
-def RemoveUnwantedBuildFiles(absBaseDir, elfNameNoExt):
+def RemoveUnwantedBuildFiles(absProjectDir, elfNameNoExt):
     # type: (str, str, str)->None
 
     print("Cleaning up unwanted build files")
 
     try:
         # "your_game_name" -> "build/your_game_name.elf"
-        delElf = os.path.join(absBaseDir, "build", elfNameNoExt + ".elf")
+        delElf = os.path.join(absProjectDir, "build", elfNameNoExt + ".elf")
         delElf = Path(delElf).resolve()
         DeleteFileNoError(delElf, "auto built firmware (elf)")
 
         # "your_game_name" -> "build/your_game_name.bin"
-        delBin = os.path.join(absBaseDir, "build", elfNameNoExt + ".bin")
+        delBin = os.path.join(absProjectDir, "build", elfNameNoExt + ".bin")
         delBin = Path(delBin).resolve()
         DeleteFileNoError(delBin, "auto built fiwmare (bin)")
 
         # delete the old output file (if it exists)
-        absPrevBuild = GetOutputFilenameAbs(absBaseDir, elfNameNoExt)
+        absPrevBuild = GetOutputFilenameAbs(absProjectDir, elfNameNoExt)
         DeleteFileNoError(absPrevBuild, "previous build (vmupack)")
 
     except Exception as e:
@@ -277,21 +277,31 @@ def RemoveUnwantedBuildFiles(absBaseDir, elfNameNoExt):
         print("  Exception: {}".format(e))
 
 
-def AddIcon(iconPath, transparentBit):
-    # type: (str, bool)->bool
+def PrepDebugDir(absProjectDir, fileName):
+    # type (str, str)->str
+
+    absDebugDir = os.path.join(absProjectDir, "vmupacker_debug")     
+    if not os.path.isdir(absDebugDir):
+        os.makedirs(absDebugDir)
+    absFilePath = os.path.join(absDebugDir, fileName)
+    return absFilePath
+    
+
+def AddIcon(absProjectDir, absIconPath, transparentBit):
+    # type: (str, str, bool)->bool
 
     global sect_icon
 
     print("  Loading icon")
-    print("    Path: {}".format(iconPath))
+    print("    Path: {}".format(absIconPath))
 
-    if not os.path.isfile(iconPath):
-        print("Failed to load icon at path {}".format(iconPath))
+    if not os.path.isfile(absIconPath):
+        print("Failed to load icon at path {}".format(absIconPath))
         return False
 
     try:
 
-        im = Image.open(iconPath)
+        im = Image.open(absIconPath)
         pix = im.load()
 
         width = im.size[0]
@@ -341,16 +351,15 @@ def AddIcon(iconPath, transparentBit):
 
     sect_iconSize = len(sect_icon)
 
-    print("    Encoded icon from {}".format(iconPath))
+    print("    Encoded icon from {}".format(absIconPath))
     print(
         "    Size: {:,} / {} bytes".format(sect_iconSize, hex(sect_iconSize)))
 
     if debugOutput:
-        if not os.path.isdir("debug"):
-            os.makedirs("debug")
-        with open("debug/icon.bin", "wb") as f:
+        absFilePath = PrepDebugDir(absProjectDir, "icon.bin")
+        with open(absFilePath, "wb") as f:
             f.write(sect_icon)
-        print("    DEBUG: Wrote debug/icon.bin")
+        print("    DEBUG: Wrote {}".format(absFilePath))
 
     return True
 
@@ -359,7 +368,7 @@ def AddIcon(iconPath, transparentBit):
 # such as the offsets of each asset into the resources blob
 
 
-def ParseMetadata(absMetaPath, absBaseDir):
+def ParseMetadata(absMetaPath, absProjectDir):
     # type: (str, str)->bool
 
     print("Loading metadata json")
@@ -377,7 +386,7 @@ def ParseMetadata(absMetaPath, absBaseDir):
         print("Error {}".format(e))
         return False
 
-    res = ValidateMetadata(jsonData, absMetaPath, absBaseDir)
+    res = ValidateMetadata(jsonData, absMetaPath, absProjectDir)
 
     if not res:
         print("Failed to validate metadata json @ {}".format(absMetaPath))
@@ -390,7 +399,7 @@ def ParseMetadata(absMetaPath, absBaseDir):
 # try to throw meaningful errors, to help the user
 
 
-def ValidateMetadata(inJsonData, absMetaFileName, absBaseDir):
+def ValidateMetadata(inJsonData, absMetaFileName, absProjectDir):
     # type: (Dict[str,any], str, str) -> bool
 
     global outMetaJSON
@@ -469,7 +478,7 @@ def ValidateMetadata(inJsonData, absMetaFileName, absBaseDir):
         print("Expected version in the form ?.?.?")
         return False
 
-    res = ParseResources(inJsonData, absMetaFileName, absBaseDir)
+    res = ParseResources(inJsonData, absMetaFileName, absProjectDir)
     if not res:
         return False
 
@@ -478,15 +487,16 @@ def ValidateMetadata(inJsonData, absMetaFileName, absBaseDir):
     sect_outMeta.extend(jsonBytes)
 
     if debugOutput:
+        absFilePath = PrepDebugDir(absProjectDir, "resources.json")
         # The accompanying json
-        with open("debug/resources.json", "w") as f:
+        with open(absFilePath, "w") as f:
             f.write(jsonString)
-        print("    DEBUG: Wrote debug/resources.json")
+        print("    DEBUG: Wrote {}".format(absFilePath))
 
     return True
 
 
-def ParseResources(inJsonData, absMetaFileName, absBaseDir):
+def ParseResources(inJsonData, absMetaFileName, absProjectDir):
     # type: (Dict[str,any], str, str) -> bool
 
     global outMetaJSON
@@ -507,13 +517,13 @@ def ParseResources(inJsonData, absMetaFileName, absBaseDir):
     for r in inJsonResArray:
         print("    Reading resource {}".format(r))
 
-        absResPath = absBaseDir / r
+        absResPath = absProjectDir / r
         absResPath = Path(absResPath)
         absResPath = absResPath.resolve()
 
         if not os.path.isfile(absResPath):
             print("      Couldn't locate resource {} from base path: {} and tail: {}".format(
-                absResPath, absBaseDir, r))
+                absResPath, absProjectDir, r))
             return False
 
         print("      Located @: {}".format(absResPath))
@@ -555,15 +565,13 @@ def ParseResources(inJsonData, absMetaFileName, absBaseDir):
     print("    Created resource blob of size {} / {} with {} files".format(
         sect_allResourcesSize, hex(sect_allResourcesSize), numResources))
 
-    if debugOutput:
-        if not os.path.isdir("debug"):
-            os.makedirs("debug")
-
+    if debugOutput:    
+        absFilePath = PrepDebugDir(absProjectDir, "resources.bin")
         # The binary data
         # (the json offsets will be amongst the metadata)
-        with open("debug/resources.bin", "wb") as f:
+        with open(absFilePath, "wb") as f:
             f.write(sect_allResources)
-        print("    DEBUG: Wrote debug/resources.bin")
+        print("    DEBUG: Wrote {}".format(absFilePath))
 
     return True
 
@@ -631,7 +639,7 @@ def AddToArray(targ, pos, val):
     return 4
 
 
-def CreateHeader(absBaseDir, relElfNameNoExt):
+def CreateHeader(absProjectDir, relElfNameNoExt):
     # type: (str, str) -> bool
 
     global headerVersion
@@ -755,7 +763,7 @@ def CreateHeader(absBaseDir, relElfNameNoExt):
     print("Final binary size: {} / {}".format(
         sect_finalBinarySize, hex(sect_finalBinarySize)))
 
-    absOutPath = GetOutputFilenameAbs(absBaseDir, relElfNameNoExt)
+    absOutPath = GetOutputFilenameAbs(absProjectDir, relElfNameNoExt)
     try:
         with open(absOutPath, "wb") as f:
             f.write(finalBinary)

@@ -5,71 +5,68 @@
 # 2025, 8BM
 #
 
-# args:
-# $1 = basedir
-# $2 = elfname
-# $3 = icon
-# $4 = metadata
-# $5 = debug
-
-BASEDIR="$1"
+# c:\myprojects\vmusdk\examples\minimal
+PROJECTDIR="$1"
+# "vmupro_minimal" (matches your .elf filename in projectdir/build/<yourfile>.app.elf)
 ELFNAME="$2"
+# usually "icon.bmp"
 ICON="$3"
+# usually "metadata.json"
 META="$4"
+# set to true for extra spam
 DEBUG="$5"
 
-# Need the parent folder to create abs paths for pip, venv
-# e.g. the location where THIS script resides
-# should work even with relative path
+# Need the tool's folder path to properly locate requirements.txxt
+# i.e. the location where THIS script resides
+# relative/abs pathssupported
 SCRIPT_PATH="$0"
 while [ -L "$SCRIPT_PATH" ]; do
-  SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+    SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
 done
-echo "--------------------"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
-echo "$SCRIPT_DIR"
+TOOLDIR="$SCRIPT_DIR"
+echo "Packer tool's dir: $TOOLDIR"
 
-PARENTFOLDER="$SCRIPT_DIR"
-echo "Packer dir: $PARENTFOLDER"
-
-# if [ -z "$BASEDIR" ]; then
-#     echo "Inferring basedir..."
-#     BASEDIR="$(pwd)"
+# if [ -z "$PROJECTDIR" ]; then
+#     echo "Inferring projectdir..."
+#     PROJECTDIR="$(pwd)"
 # fi
-echo "Base dir: $BASEDIR"
+
+echo "Project's dir: $PROJECTDIR"
+
+VENVNAME="vmupacker_venv"
+VENVDIR="$PROJECTDIR/$VENVNAME"
 
 echo "VMUPacker: checking virtual environment"
 if [ -z "$VIRTUAL_ENV" ]; then
-    echo "VMUPacker: creating python3 venv"
-    python3 -m venv "$PARENTFOLDER/.venv"
+    echo "VMUPacker: creating python3 venv @ $VENVDIR"
+    python3 -m venv "$VENVDIR"
     if [ $? -ne 0 ]; then
         echo "Failed to create venv"
         exit 1
     fi
 else
     echo "Already inside a virtual environment: $VIRTUAL_ENV"
-    echo "Type 'deactivate' to start a fresh environment"    
 fi
 
-# call .venv\Scripts\activate
-. "$PARENTFOLDER/.venv/bin/activate"
+# source $PROJECTDIR/vmupacker_venv/bin/activate
+. "$VENVDIR/bin/activate"
 
 # Add crcmod, pillow, etc
-pip install -r "$PARENTFOLDER/requirements.txt"
+pip install -r "$TOOLDIR/requirements.txt"
 
 echo "VMUPacker env created"
 echo "Ready!"
 
-# Running `where.exe python` should point at the ESP IDF's python
+# Running `which python` should point at the ESP IDF's python
 # this will be automatic if you've ran the idf export script before building
-python "$PARENTFOLDER/packer.py" \
---basedir "$BASEDIR" \
+python3 "$TOOLDIR/packer.py" \
+--projectdir "$PROJECTDIR" \
 --elfname "$ELFNAME" \
 --icon "$ICON" \
 --meta "$META" \
 --sdkversion 1.0.0 \
 --debug "$DEBUG"
 
-echo "closing the python environment"
-# Optional manual deactivate
-# deactivate
+echo "closing the python vmupacker venv"
+deactivate
