@@ -1,6 +1,7 @@
 # Note: example only
 # - assumes it's being called from the packer directory
 # - installs requirements into active python instance (no venv)
+#   (so may require ESP IDF import or sudo depending on your config)
 
 pip install -r "requirements.txt"
 
