@@ -53,7 +53,7 @@ fi
 . "$VENVDIR/bin/activate"
 
 # Add crcmod, pillow, etc
-pip install -r "$TOOLDIR/requirements.txt"
+pip3 install -r "$TOOLDIR/requirements.txt"
 
 echo "VMUPacker env created"
 echo "Ready!"
