@@ -31,17 +31,23 @@ if ([string]::IsNullOrEmpty($projectdir)) {
 }
 Write-Host "Project's dir: $projectdir"
 
-$venvname="vmupacker_venv"
-$venvdir="$projectdir\$venvname"
+$venvname = "vmupacker_venv"
+$venvdir = "$projectdir\$venvname"
 
 write-host "VMUPacker: checking virtual environment"
 if (-not $env:VIRTUAL_ENV) {
 
-    write-host "VMUPacker: creating python3 venv @ $venvdir"
-    python -m venv $venvdir
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error "Failed to create venv"
-        exit 1
+    if (-not (test-path $venvdir)) {
+        write-host "VMUPacker: creating python3 venv @ $venvdir"
+        python -m venv $venvdir
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "Failed to create venv"
+            Write-Error "Hint: VSCode may be using the vmupacker_venv directory"
+            exit 1
+        }
+    }
+    else {
+        Write-Host "VMUPacker: env already exists at $venvdir"
     }
 
 }

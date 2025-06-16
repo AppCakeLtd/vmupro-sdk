@@ -43,6 +43,7 @@ if [ -z "$VIRTUAL_ENV" ]; then
     python3 -m venv "$VENVDIR"
     if [ $? -ne 0 ]; then
         echo "Failed to create venv"
+        echo "Hint: VSCode may be using the vmupacker_venv directory"
         exit 1
     fi
 else
