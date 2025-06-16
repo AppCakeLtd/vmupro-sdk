@@ -51,7 +51,7 @@ def ListenerThread():
 
 def AddToBuffer(newChar):
     """
-    Add each char to the ring buffer as we read it in
+    Add each char to the fifo buffer as we read it in
     so after each byte we can check if it matches a
     known command such as "SEND_BIN" or "MOREDATA"
     while filtering noise bytes before and after
@@ -100,10 +100,10 @@ def LoopMonitorMode():
 def MonitorBytes():
     """ 
     Read incoming bytes from the VMUPro.
-    Automatically added to the ring buffer
+    Automatically added to the fifo buffer
     So you can 
     A: see incoming bytes from VMUPro printed to screen
-    B: check if the last x ringbuffer bytes were a command like SEND_BIN
+    B: check if the last x fifo buffer bytes were a command like SEND_BIN
     """
 
     if uart.in_waiting:
