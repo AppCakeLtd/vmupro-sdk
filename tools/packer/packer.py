@@ -458,9 +458,10 @@ def ValidateMetadata(inJsonData, absMetaFileName, absProjectDir):
     try:
         app_name = readStr("app_name", 1)
         app_author = readStr("app_author", 1)
-        app_version = readStr("app_version", 5)
+        app_version = readStr("app_version", 5)        
         app_entry_point = readStr("app_entry_point", 1)
         icon_trans = readBool("icon_transparency")
+        app_exclusive = readBool("app_exclusive")
 
     except Exception as e:
         print("Parse error: {}".format(e))
@@ -675,6 +676,18 @@ def CreateHeader(absProjectDir, relElfNameNoExt):
     PadByteArray(appName, 32)
     sect_header.extend(appName)
 
+    # We may add other flags later
+    if outMetaJSON["app_exclusive"]:
+        isExclusive = 1
+    else:
+        isExclusive = 0
+
+    # 4 bytes for app flags
+    exclusivePacked = struct.pack("<I", isExclusive)
+    sect_header.extend(exclusivePacked)
+    # 12 more bytes for alignment
+    PadByteArray(sect_header, 16)
+
 
     #
     # Pad out some byte arrays and then let's start piecing them together
@@ -700,6 +713,9 @@ def CreateHeader(absProjectDir, relElfNameNoExt):
     #
     # uint8_t appName[32] = "My awesome app\0"
     #
+    # uint32_t appFlags     # 1= exclusive
+    # uint32_t reserved[3]    
+    #
     # uint32_t iconOffset
     # uint32_t iconLength
     #
@@ -722,7 +738,7 @@ def CreateHeader(absProjectDir, relElfNameNoExt):
     # padded to 512 bytes
 
     finalBinary.extend(sect_header)
-    headerFieldPos = 16 + 32
+    headerFieldPos = 16 + 16 + 32
 
     iconStart = len(finalBinary)
     headerFieldPos += AddToArray(finalBinary, headerFieldPos, iconStart)
