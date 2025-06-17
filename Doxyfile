@@ -6,7 +6,7 @@
 
 DOXYFILE_ENCODING      = UTF-8
 PROJECT_NAME           = "VMUPro SDK"
-PROJECT_NUMBER         = "1.0.0"
+PROJECT_NUMBER         = "v1.0.0"
 PROJECT_BRIEF          = "Application Development SDK for the VMUPro"
 PROJECT_LOGO           = 
 OUTPUT_DIRECTORY       = docs
