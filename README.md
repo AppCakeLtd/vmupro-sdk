@@ -1,126 +1,277 @@
-# vmupro-sdk
+# VMU Pro SDK
 
+The VMU Pro SDK is a development kit for creating applications for the VMU Pro device using the ESP-IDF framework.
 
+## Table of Contents
 
-## Setting up your environment
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Getting Started](#getting-started)
+- [Examples](#examples)
+- [Building Applications](#building-applications)
+- [Packaging Applications](#packaging-applications)
+- [IDE Integration](#ide-integration)
+- [Troubleshooting](#troubleshooting)
 
-The ESP SDK is called the IDF.
-It's a fairly straightforward 2-step proces where you 
-- first run an export script to set your current shell/terminal session's environment vars up properly
-- run `idf.py build` *
+## Prerequisites
 
-### Download the ESP IDF (SDK)
+Before you begin, ensure you have the following installed:
 
-This is the Espressif SDK for the ESP series.
-For this guide we'll be using c:\idfvmusdk\ or /stuff/idfvmusdk/
+- **Python 3.8 or higher**
+- **Git**
+- **CMake 3.16 or higher**
+- **Build tools for your platform:**
+  - Windows: Visual Studio Build Tools or MinGW
+  - Linux: GCC toolchain (`build-essential` package)
+  - macOS: Xcode Command Line Tools
 
-Start by cloing the repo:
-`cd c:\`
-`git clone https://github.com/espressif/esp-idf idfvmusdk`
+## Installation
 
-or
+### 1. Download and Install ESP-IDF
 
-`cd /stuff/`
-`git clone https://github.com/espressif/esp-idf idfvmusdk`
+The VMU Pro SDK is based on the ESP-IDF framework. You'll need to install ESP-IDF v5.4.
 
-### Check out the latest 4.5 branch
-In a GUI manager like git-fork (strong recommend), this would be something like
-`Ctrl + O -> c:\idfvmusdk\`
-`Cmd + O -> /stuff/idfvmusdk/`
+**Windows:**
+```bash
+cd C:\
+git clone https://github.com/espressif/esp-idf.git idfvmusdk
+cd idfvmusdk
+git checkout release/v5.4
+install.bat
+```
 
-Then locate `release/v5.4` and `r.click` -> `origin/release/v5.4` -> `Checkout`
-It could take 5 minutes to complete; good time for a cup of tea.
+**Linux/macOS:**
+```bash
+cd /opt  # or your preferred directory
+git clone https://github.com/espressif/esp-idf.git idfvmusdk
+cd idfvmusdk
+git checkout release/v5.4
+./install.sh
+```
 
-### Run the install script
+### 2. Set Up Environment Variables
 
-`c:\idfvmusdk\export.ps1`
-or
-`/stuff/idfvmusdk/install.sh`
+Before building any project, you need to set up the ESP-IDF environment:
 
-On Ubuntu/WSL you may be prompted to install python-venv for 3.8
-(It's a good idea to update apt-get while you're here or the download may fail)
-`apt-get update`
-`sudo apt install python3.8-venv`
+**Windows (PowerShell):**
+```powershell
+C:\idfvmusdk\export.ps1
+```
 
-Assuming everything went well, this is a one-time process and you're good to go.
+**Linux/macOS:**
+```bash
+. /opt/idfvmusdk/export.sh
+```
 
-## Building your first .app.elf and .vmupack
+> **Note:** Remember the leading dot (`.`) on Linux/macOS - it's required for proper environment setup.
 
-It's important to CD to your project root
-e.g.
-`cd c:\idfvmusdk\examples\minimal`
-`cd /stuff/idfvmusdk/examples/minimal`
+### 3. Clone the VMU Pro SDK
 
-Load in the environment
-`c:\idfvmusdk\export.ps1`
-`. /stuff/idfvmusdk/export.sh` *
+```bash
+git clone https://github.com/8BitMods/vmupro-sdk.git
+cd vmupro-sdk
+```
 
-* don't forget the leading dot, it'll warn you though! `.`
+## Getting Started
 
-And finally:
-`idf.py build`
+The SDK includes a minimal example to help you get started quickly.
 
-Note: on windows `idf.py` is a frozen .exe file: `idf.py.exe`
-You *don't* need to prefix with `py` / `python` / `python3` etc
+### Project Structure
 
-## packing your app.elf into a .vmupack
+```
+vmupro-sdk/
+├── examples/           # Example applications
+│   └── minimal/       # Basic example application
+├── sdk/               # VMU Pro SDK headers and utilities
+└── tools/             # Build and packaging tools
+    └── packer/        # VMU package creation tools
+```
 
+## Examples
 
+### Minimal Example
 
-# Questions:
+The `examples/minimal` directory contains a basic VMU Pro application that demonstrates:
+- Basic application structure
+- Resource management (images and text assets)
+- Application metadata configuration
 
-### Can I intergrate with VSCode?
-Yes, there are at least 2 ways to achieve this:
+## Building Applications
 
-1: install the vscode ESP IDF extension.
+### 1. Navigate to Example Directory
 
-2: Have the VSCode console scrape the terminal's output.
-It's not perfect, but it's lightweight.
+```bash
+cd examples/minimal
+```
 
-Assuming your project is `c:\projects\myproject\` or `/projects/myproject`
+### 2. Set Up ESP-IDF Environment
 
-Create or modify 
-`c:\projects\myproject\.vscode\tasks.json`
-or
-`/projects/myproject/vscode/task.json`
+**Windows:**
+```powershell
+C:\idfvmusdk\export.ps1
+```
 
-And add the following:
+**Linux/macOS:**
+```bash
+. /opt/idfvmusdk/export.sh
+```
 
-```{
+### 3. Build the Application
+
+```bash
+idf.py build
+```
+
+This will create an `.elf` file in the `build/` directory.
+
+### 4. Clean Build (if needed)
+
+```bash
+idf.py fullclean
+```
+
+## Packaging Applications
+
+After building your application, you need to package it into a `.vmupack` file for deployment to the VMU Pro device.
+
+### Prerequisites for Packaging
+
+Install Python dependencies:
+```bash
+cd tools/packer
+pip install -r requirements.txt
+```
+
+### Creating a .vmupack File
+
+**Windows:**
+```powershell
+./pack.ps1
+```
+
+**Linux/macOS:**
+```bash
+./pack.sh
+```
+
+The packer tool will:
+1. Extract the built ELF file
+2. Process assets defined in `metadata.json`
+3. Create a `.vmupack` file ready for deployment
+
+### Metadata Configuration
+
+Each application requires a `metadata.json` file with the following structure:
+
+```json
+{
+    "metadata_version": 1,
+    "app_name": "Your App Name",
+    "app_author": "Your Name",
+    "app_version": "1.0.0",
+    "app_exclusive": true,
+    "icon_transparency": true,
+    "app_entry_point": "app_main",
+    "resources": [
+        "assets/ImageAsset.png",
+        "assets/TextAsset.txt"
+    ]
+}
+```
+
+## IDE Integration
+
+### Visual Studio Code
+
+The SDK supports VSCode integration through the ESP-IDF extension or custom task configuration.
+
+#### Method 1: ESP-IDF Extension
+
+1. Install the ESP-IDF extension from the VSCode marketplace
+2. Configure the extension to use your ESP-IDF installation path
+3. Open your project and use the extension's build commands
+
+#### Method 2: Custom Tasks
+
+Create `.vscode/tasks.json` in your project root:
+
+```json
+{
     "tasks": [
-
         {
-          "type": "cppbuild",
-          "label": "idf.py build NO FLASH",
-          "detail": "detail for build NO FLASH",
-          "command": "idf.py",
-          "args": [
-              "build"
-          ],
-          "options": {
-              "cwd": "${workspaceFolder}"
-          },
-          "problemMatcher": [
-              "$gcc"
-          ],
-          "group": {
-              "kind": "build",
-              "isDefault": true
-          }
-          
+            "type": "cppbuild",
+            "label": "idf.py build",
+            "detail": "Build VMU Pro application",
+            "command": "idf.py",
+            "args": ["build"],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": ["$gcc"],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
         }
     ],
     "version": "2.0.0"
 }
 ```
 
-After running your `export.ps1` `export.sh`
-run
-`Start-Process code -ArgumentList "yourproject.code-workspace" -windowstyle hidden`
-or `code .`
-for vscode to inherit the IDF environment.
-Build your project via `Ctrl+Shift+B` or via the `F1` key task palette.
+After setting up your ESP-IDF environment, launch VSCode:
 
-Add extra tasks for e.g. `idf.py build flash monitor -p YOURCOMPORT`, `idf.py fullclean`, etc
+**Windows:**
+```powershell
+Start-Process code -ArgumentList "." -WindowStyle Hidden
+```
 
+**Linux/macOS:**
+```bash
+code .
+```
 
+Build using `Ctrl+Shift+B` or the Command Palette (`F1` → "Tasks: Run Task").
+
+## Troubleshooting
+
+### Common Issues
+
+#### ESP-IDF Environment Not Set
+**Problem:** `idf.py: command not found` or similar errors.
+
+**Solution:** Ensure you've run the export script in your current terminal session:
+- Windows: `C:\idfvmusdk\export.ps1`
+- Linux/macOS: `. /opt/idfvmusdk/export.sh`
+
+#### Python Virtual Environment Issues
+**Problem:** Permission errors or missing Python packages.
+
+**Solution:** On Ubuntu/WSL, install python-venv:
+```bash
+sudo apt-get update
+sudo apt-get install python3.8-venv
+```
+
+#### Build Failures
+**Problem:** Compilation errors or missing dependencies.
+
+**Solution:** 
+1. Clean the build: `idf.py fullclean`
+2. Ensure all submodules are updated: `git submodule update --init --recursive`
+3. Verify ESP-IDF version: `idf.py --version`
+
+#### Packaging Errors
+**Problem:** `.vmupack` creation fails.
+
+**Solution:**
+1. Ensure Python dependencies are installed: `pip install -r tools/packer/requirements.txt`
+2. Verify `metadata.json` is properly formatted
+3. Check that all referenced assets exist in the project
+
+### Getting Help
+
+If you encounter issues not covered here:
+
+1. Check the ESP-IDF documentation for general build issues
+2. Verify your project structure matches the examples
+3. Ensure all file paths in `metadata.json` are correct and files exist
