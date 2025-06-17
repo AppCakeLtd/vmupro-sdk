@@ -68,7 +68,7 @@ C:\idfvmusdk\export.ps1
 ### 3. Clone the VMU Pro SDK
 
 ```bash
-git clone https://github.com/8BitMods/vmupro-sdk.git
+git clone https://github.com/appcakeltd/vmupro-sdk.git
 cd vmupro-sdk
 ```
 
