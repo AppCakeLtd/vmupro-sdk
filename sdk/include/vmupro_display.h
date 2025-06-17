@@ -1,8 +1,8 @@
 /**
  * @file vmupro_display.h
- * @brief VMU Pro Display and Graphics API
+ * @brief VMUPro Display and Graphics API
  * 
- * This header provides the display and graphics API for the VMU Pro SDK.
+ * This header provides the display and graphics API for the VMUPro SDK.
  * It includes functions for display management, color definitions,
  * framebuffer operations, and basic drawing primitives.
  * 
@@ -22,10 +22,10 @@ extern "C"
 #endif
 
 /**
- * @brief Predefined color values for VMU Pro display
+ * @brief Predefined color values for VMUPro display
  * 
  * This enumeration provides commonly used color values in RGB565 format
- * for the VMU Pro display system.
+ * for the VMUPro display system.
  */
 typedef enum
 {

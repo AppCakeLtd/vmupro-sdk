@@ -1,8 +1,8 @@
 /**
  * @file vmupro_utils.h
- * @brief VMU Pro Utility Functions
+ * @brief VMUPro Utility Functions
  * 
- * This header provides utility functions for the VMU Pro SDK.
+ * This header provides utility functions for the VMUPro SDK.
  * It includes common helper functions for timing, delays,
  * and other general-purpose operations.
  * 

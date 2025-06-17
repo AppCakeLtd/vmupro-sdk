@@ -1,8 +1,8 @@
 /**
  * @file vmupro_log.h
- * @brief VMU Pro Logging API
+ * @brief VMUPro Logging API
  * 
- * This header provides the logging API for the VMU Pro SDK.
+ * This header provides the logging API for the VMUPro SDK.
  * It includes functions for setting log levels and outputting
  * formatted log messages with different severity levels.
  * 
@@ -22,7 +22,7 @@ extern "C"
 /**
  * @brief Log level enumeration
  * 
- * Defines the different logging levels available in the VMU Pro SDK.
+ * Defines the different logging levels available in the VMUPro SDK.
  * Higher values indicate more verbose logging.
  */
 typedef enum

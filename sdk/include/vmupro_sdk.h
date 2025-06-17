@@ -1,9 +1,9 @@
 /**
  * @file vmupro_sdk.h
- * @brief VMU Pro SDK Main Header
+ * @brief VMUPro SDK Main Header
  * 
- * This is the main header file for the VMU Pro SDK. It provides the primary
- * interface for developing applications for the VMU Pro device.
+ * This is the main header file for the VMUPro SDK. It provides the primary
+ * interface for developing applications for the VMUPro device.
  * 
  * @author 8BitMods
  * @version 1.0.0
@@ -23,9 +23,9 @@ extern "C"
 #endif
 
 /**
- * @brief Main entry point for VMU Pro applications
+ * @brief Main entry point for VMUPro applications
  * 
- * This function is called by the VMU Pro loader after the application
+ * This function is called by the VMUPro loader after the application
  * has been successfully loaded into memory. All application initialization
  * and main logic should be implemented in this function.
  * 

@@ -1,6 +1,6 @@
-# VMU Pro SDK
+# VMUPro SDK
 
-The VMU Pro SDK is a development kit for creating applications for the VMU Pro device using the ESP-IDF framework.
+The VMUPro SDK is a development kit for creating applications for the VMUPro device using the ESP-IDF framework.
 
 ## Table of Contents
 
@@ -29,7 +29,7 @@ Before you begin, ensure you have the following installed:
 
 ### 1. Download and Install ESP-IDF
 
-The VMU Pro SDK is based on the ESP-IDF framework. You'll need to install ESP-IDF v5.4.
+The VMUPro SDK is based on the ESP-IDF framework. You'll need to install ESP-IDF v5.4.
 
 **Windows:**
 ```bash
@@ -65,7 +65,7 @@ C:\idfvmusdk\export.ps1
 
 > **Note:** Remember the leading dot (`.`) on Linux/macOS - it's required for proper environment setup.
 
-### 3. Clone the VMU Pro SDK
+### 3. Clone the VMUPro SDK
 
 ```bash
 git clone https://github.com/appcakeltd/vmupro-sdk.git
@@ -91,7 +91,7 @@ vmupro-sdk/
 
 ### Minimal Example
 
-The `examples/minimal` directory contains a basic VMU Pro application that demonstrates:
+The `examples/minimal` directory contains a basic VMUPro application that demonstrates:
 - Basic application structure
 - Resource management (images and text assets)
 - Application metadata configuration
@@ -132,7 +132,7 @@ idf.py fullclean
 
 ## Packaging Applications
 
-After building your application, you need to package it into a `.vmupack` file for deployment to the VMU Pro device.
+After building your application, you need to package it into a `.vmupack` file for deployment to the VMUPro device.
 
 ### Prerequisites for Packaging
 
@@ -201,7 +201,7 @@ Create `.vscode/tasks.json` in your project root:
         {
             "type": "cppbuild",
             "label": "idf.py build",
-            "detail": "Build VMU Pro application",
+            "detail": "Build VMUPro application",
             "command": "idf.py",
             "args": ["build"],
             "options": {
