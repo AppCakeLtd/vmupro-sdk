@@ -315,6 +315,10 @@ def AddIcon(absProjectDir, absIconPath, transparentBit):
         numPixels = width * height
 
         # add width, height, trans bit and a dummy field
+        sect_icon.extend(b'ICON')
+        sect_icon.extend(dummy.to_bytes(4, byteorder='little'))
+        sect_icon.extend(dummy.to_bytes(4, byteorder='little'))
+        sect_icon.extend(dummy.to_bytes(4, byteorder='little'))
         sect_icon.extend(width.to_bytes(4, byteorder='little'))
         sect_icon.extend(height.to_bytes(4, byteorder='little'))
         sect_icon.extend(transparentBit.to_bytes(4, byteorder='little'))
