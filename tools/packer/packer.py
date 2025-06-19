@@ -312,7 +312,7 @@ def AddIcon(absProjectDir, absIconPath, transparentBit):
             print("Error, expecting a 76x76px icon")
             return False
 
-        numPixels = width * height
+        # numPixels = width * height
 
         # add width, height, trans bit and a dummy field
         sect_icon.extend(b'ICON')
@@ -327,15 +327,13 @@ def AddIcon(absProjectDir, absIconPath, transparentBit):
         for row in range(height):
             for col in range(width):
 
-                activeByte = 0
-
                 x = col
                 y = row
 
                 if y < height:
                     rgb = pix[x, y]
                 else:
-                    egb = (0, 0, 0)
+                    rgb = (0, 0, 0)
 
                 # Convert the RGB value into a 16 bit 565 value
                 red = (rgb[0] >> 3) & 0x1F  # 5 bits for red
