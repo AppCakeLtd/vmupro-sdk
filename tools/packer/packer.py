@@ -697,7 +697,11 @@ def CreateHeader(absProjectDir, relElfNameNoExt):
     PadByteArray(appName, 32)
     sect_header.extend(appName)
 
-    # We may add other flags later
+    # 0 = AUTO (not applicable for ext apps)
+    # 1 = APPLET (WIP)
+    # 2 = FULLSCREEN
+    # 3 = EXCLUSIVE (not applicable)
+    # Pick 2 for now!
     appMode = outMetaJSON["app_mode"]
 
     # 4 bytes for app flags
