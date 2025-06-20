@@ -4,7 +4,7 @@
     "app_name":"8BM Minimal Example",
     "app_author":"8BitMods",
     "app_version": "1.0.1",
-    "app_exclusive": true,
+    "app_mode": 1,
     "icon_transparency": true,    
     "app_entry_point":"app_main",    
     "resources": [

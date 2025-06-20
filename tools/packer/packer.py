@@ -4,7 +4,7 @@
 
 import sys
 import argparse
-#import crcmod
+# import crcmod
 import os
 import json
 import struct
@@ -186,7 +186,8 @@ def main():
 
 def GetOutputFilenameAbs(absProjectDir, relElfNameNoExt):
     # type: (str,str)->Path
-    absOutputVMUPack = os.path.join(absProjectDir, relElfNameNoExt + ".vmupack")
+    absOutputVMUPack = os.path.join(
+        absProjectDir, relElfNameNoExt + ".vmupack")
     absOutputVMUPack = Path(absOutputVMUPack).resolve()
     return absOutputVMUPack
 
@@ -280,12 +281,12 @@ def RemoveUnwantedBuildFiles(absProjectDir, elfNameNoExt):
 def PrepDebugDir(absProjectDir, fileName):
     # type (str, str)->str
 
-    absDebugDir = os.path.join(absProjectDir, "vmupacker_debug")     
+    absDebugDir = os.path.join(absProjectDir, "vmupacker_debug")
     if not os.path.isdir(absDebugDir):
         os.makedirs(absDebugDir)
     absFilePath = os.path.join(absDebugDir, fileName)
     return absFilePath
-    
+
 
 def AddIcon(absProjectDir, absIconPath, transparentBit):
     # type: (str, str, bool)->bool
@@ -453,6 +454,24 @@ def ValidateMetadata(inJsonData, absMetaFileName, absProjectDir):
         print("    {} = {}".format(key, val))
         return val
 
+    def readUInt32(key):
+        # type (str) -> int
+        try:
+            print("  Reading '{}'".format(key))
+            val = inJsonData[key]
+            if not isinstance(val, int):
+                raise MetadataError(
+                    "Expected key '{}' to be an int".format(key))
+            if val < 0 or val > 0xFFFFFFFF:
+                raise MetadataError(
+                    "Expected key '{}' to be an unsigned 32 bit int"(key))
+        except Exception as e:
+            raise MetadataError(
+                "Failed to parse key uint32_t '{}' from {}".format(key, absMetaFileName))
+        outMetaJSON[key] = val
+        print("    {} = {}".format(key, val))
+        return val
+
     #
     # Read in the main vals
     #
@@ -460,10 +479,10 @@ def ValidateMetadata(inJsonData, absMetaFileName, absProjectDir):
     try:
         app_name = readStr("app_name", 1)
         app_author = readStr("app_author", 1)
-        app_version = readStr("app_version", 5)        
+        app_version = readStr("app_version", 5)
         app_entry_point = readStr("app_entry_point", 1)
         icon_trans = readBool("icon_transparency")
-        app_exclusive = readBool("app_exclusive")
+        app_mode = readUInt32("app_mode")
 
     except Exception as e:
         print("Parse error: {}".format(e))
@@ -553,7 +572,7 @@ def ParseResources(inJsonData, absMetaFileName, absProjectDir):
                 print(
                     "      Data starts at {} / {} bytes".format(startOffset, hex(startOffset)))
 
-                # pad the data out to 512 byte boundaries for much faster SD access                
+                # pad the data out to 512 byte boundaries for much faster SD access
                 paddingLength = PadByteArray(sect_allResources, 512)
                 print("      Padding data end by {} bytes to 512 boundary @ {}".format(
                     paddingLength, hex(len(sect_allResources))))
@@ -568,7 +587,7 @@ def ParseResources(inJsonData, absMetaFileName, absProjectDir):
     print("    Created resource blob of size {} / {} with {} files".format(
         sect_allResourcesSize, hex(sect_allResourcesSize), numResources))
 
-    if debugOutput:    
+    if debugOutput:
         absFilePath = PrepDebugDir(absProjectDir, "resources.bin")
         # The binary data
         # (the json offsets will be amongst the metadata)
@@ -669,27 +688,23 @@ def CreateHeader(absProjectDir, relElfNameNoExt):
     sect_header.extend(encryptionVersion.to_bytes(4, 'little'))
 
     # little label for quick reading without json parsing:
-    appName  = outMetaJSON["app_name"]
+    appName = outMetaJSON["app_name"]
     appName = bytearray(appName, "ascii")
     # clamp it at 31 chars
-    if (len(appName) > 31 ):
+    if (len(appName) > 31):
         appName = appName[:31]
     # pad it to exactly 32 chars
     PadByteArray(appName, 32)
     sect_header.extend(appName)
 
     # We may add other flags later
-    if outMetaJSON["app_exclusive"]:
-        isExclusive = 1
-    else:
-        isExclusive = 0
+    appMode = outMetaJSON["app_mode"]
 
     # 4 bytes for app flags
-    exclusivePacked = struct.pack("<I", isExclusive)
-    sect_header.extend(exclusivePacked)
+    modePacked = struct.pack("<I", appMode)
+    sect_header.extend(modePacked)
     # 12 more bytes for alignment
     PadByteArray(sect_header, 16)
-
 
     #
     # Pad out some byte arrays and then let's start piecing them together
@@ -716,7 +731,7 @@ def CreateHeader(absProjectDir, relElfNameNoExt):
     # uint8_t appName[32] = "My awesome app\0"
     #
     # uint32_t appFlags     # 1= exclusive
-    # uint32_t reserved[3]    
+    # uint32_t reserved[3]
     #
     # uint32_t iconOffset
     # uint32_t iconLength
@@ -794,7 +809,7 @@ def CreateHeader(absProjectDir, relElfNameNoExt):
             absOutPath))
         print("Please ensure that the file is not currently open!")
         return False
-    
+
     print("Write file to: {}".format(absOutPath))
 
     return True
