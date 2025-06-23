@@ -1,10 +1,13 @@
 var searchData=
 [
-  ['table_20of_20contents_0',['Table of Contents',['../index.html#autotoc_md1',1,'']]],
-  ['tag_1',['TAG',['../hello_8c.html#a5a85b9c772bbeb480b209a3e6ea92b4c',1,'hello.c']]],
-  ['tasks_2',['Method 2: Custom Tasks',['../index.html#autotoc_md23',1,'']]],
-  ['the_20application_3',['3. Build the Application',['../index.html#autotoc_md14',1,'']]],
-  ['the_20vmupro_20sdk_4',['3. Clone the VMUPro SDK',['../index.html#autotoc_md6',1,'']]],
-  ['to_20example_20directory_5',['1. Navigate to Example Directory',['../index.html#autotoc_md12',1,'']]],
-  ['troubleshooting_6',['Troubleshooting',['../index.html#autotoc_md24',1,'']]]
+  ['sdk_0',['SDK',['../index.html#autotoc_md6',1,'3. Clone the VMUPro SDK'],['../index.html',1,'VMUPro SDK']]],
+  ['send_20py_1',['Manual Deployment with send.py',['../index.html#autotoc_md23',1,'']]],
+  ['serial_20communication_20features_2',['Serial Communication Features',['../index.html#autotoc_md27',1,'']]],
+  ['serial_20monitor_3',['2-Way Serial Monitor',['../index.html#autotoc_md28',1,'']]],
+  ['set_4',['ESP-IDF Environment Not Set',['../index.html#autotoc_md39',1,'']]],
+  ['set_20up_20environment_20variables_5',['2. Set Up Environment Variables',['../index.html#autotoc_md5',1,'']]],
+  ['set_20up_20esp_20idf_20environment_6',['2. Set Up ESP-IDF Environment',['../index.html#autotoc_md13',1,'']]],
+  ['started_7',['Getting Started',['../index.html#autotoc_md7',1,'']]],
+  ['structure_8',['Project Structure',['../index.html#autotoc_md8',1,'']]],
+  ['studio_20code_9',['Visual Studio Code',['../index.html#autotoc_md34',1,'']]]
 ];

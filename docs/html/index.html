@@ -107,6 +107,7 @@ Table of Contents</h1>
 <li><a class="el" href="dir_d28a4824dc47e487b107a5db32ef43c4.html">Examples</a></li>
 <li>Building Applications</li>
 <li>Packaging Applications</li>
+<li>Deploying Applications</li>
 <li>IDE Integration</li>
 <li>Troubleshooting</li>
 </ul>
@@ -220,18 +221,104 @@ Metadata Configuration</h2>
 <div class="line">    ]</div>
 <div class="line">}</div>
 </div><!-- fragment --><h1 class="doxsection"><a class="anchor" id="autotoc_md20"></a>
-IDE Integration</h1>
+Deploying Applications</h1>
+<p>After packaging your application into a <span class="tt">.vmupack</span> file, you can deploy it to your VMUPro device using the included serial communication tool.</p>
 <h2 class="doxsection"><a class="anchor" id="autotoc_md21"></a>
+Prerequisites for Deployment</h2>
+<p>Install additional Python dependencies for serial communication: </p><div class="fragment"><div class="line">cd tools/packer</div>
+<div class="line">pip install -r requirements.txt</div>
+</div><!-- fragment --><p>The requirements include:</p><ul>
+<li><span class="tt">pyserial</span> - For serial communication</li>
+<li><span class="tt">pynput</span> - For keyboard input handling during monitoring</li>
+</ul>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md22"></a>
+Quick Deployment (Recommended)</h2>
+<p>From the <span class="tt">examples/minimal</span> directory, use the convenience scripts:</p>
+<p><b>Windows:</b> </p><div class="fragment"><div class="line">./send.ps1</div>
+</div><!-- fragment --><p><b>Linux/macOS:</b> </p><div class="fragment"><div class="line">./send.sh</div>
+</div><!-- fragment --><p>These scripts will automatically:</p><ol type="1">
+<li>Upload the <span class="tt">vmupro_minimal.vmupack</span> file to the device</li>
+<li>Place it in the <span class="tt">apps/</span> directory on the VMUPro</li>
+<li>Execute the application immediately</li>
+<li>Open a 2-way serial monitor for debugging</li>
+</ol>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md23"></a>
+Manual Deployment with send.py</h2>
+<p>For more control over the deployment process, use the <span class="tt">send.py</span> tool directly:</p>
+<h3 class="doxsection"><a class="anchor" id="autotoc_md24"></a>
+Upload and Execute Application</h3>
+<div class="fragment"><div class="line">python tools/packer/send.py \</div>
+<div class="line">    --func send \</div>
+<div class="line">    --localfile &quot;vmupro_minimal.vmupack&quot; \</div>
+<div class="line">    --remotefile &quot;apps/vmupro_minimal.vmupack&quot; \</div>
+<div class="line">    --comport COM3 \</div>
+<div class="line">    --exec true</div>
+</div><!-- fragment --><h3 class="doxsection"><a class="anchor" id="autotoc_md25"></a>
+Upload Without Executing</h3>
+<div class="fragment"><div class="line">python tools/packer/send.py \</div>
+<div class="line">    --func send \</div>
+<div class="line">    --localfile &quot;vmupro_minimal.vmupack&quot; \</div>
+<div class="line">    --remotefile &quot;apps/vmupro_minimal.vmupack&quot; \</div>
+<div class="line">    --comport COM3</div>
+</div><!-- fragment --><h3 class="doxsection"><a class="anchor" id="autotoc_md26"></a>
+Reset VMUPro Device</h3>
+<div class="fragment"><div class="line">python tools/packer/send.py \</div>
+<div class="line">    --func reset \</div>
+<div class="line">    --comport COM3</div>
+</div><!-- fragment --><h2 class="doxsection"><a class="anchor" id="autotoc_md27"></a>
+Serial Communication Features</h2>
+<p>The <span class="tt">send.py</span> tool provides several useful features:</p>
+<h3 class="doxsection"><a class="anchor" id="autotoc_md28"></a>
+2-Way Serial Monitor</h3>
+<p>After uploading, the tool automatically opens an interactive serial monitor where you can:</p><ul>
+<li>View real-time output from your VMUPro application</li>
+<li>Send keystrokes to your application for testing</li>
+<li>Press <span class="tt">Ctrl+C</span> or <span class="tt">ESC</span> to exit the monitor</li>
+</ul>
+<h3 class="doxsection"><a class="anchor" id="autotoc_md29"></a>
+Chunked File Transfer</h3>
+<p>Large files are automatically transferred in chunks with progress tracking: </p><div class="fragment"><div class="line">PC: Writing chunk 0 / 4.5</div>
+<div class="line">PC: Sent: 16384 of 73728</div>
+<div class="line">PC: Writing chunk 1 / 4.5</div>
+<div class="line">PC: Sent: 32768 of 73728</div>
+<div class="line">...</div>
+</div><!-- fragment --><h3 class="doxsection"><a class="anchor" id="autotoc_md30"></a>
+Error Handling</h3>
+<p>The tool automatically detects and reports common errors:</p><ul>
+<li>Invalid commands (firmware version mismatch)</li>
+<li>File handling errors (insufficient space, invalid paths)</li>
+<li>Communication timeouts</li>
+</ul>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md31"></a>
+Finding Your COM Port</h2>
+<p><b>Windows:</b></p><ul>
+<li>Open Device Manager</li>
+<li>Look under "Ports (COM &amp; LPT)" for your VMUPro device</li>
+<li>Note the COM port number (e.g., COM3, COM18)</li>
+</ul>
+<p><b>Linux:</b> </p><div class="fragment"><div class="line">ls /dev/ttyUSB* /dev/ttyACM*</div>
+</div><!-- fragment --><p><b>macOS:</b> </p><div class="fragment"><div class="line">ls /dev/tty.usb* /dev/tty.uart*</div>
+</div><!-- fragment --><h2 class="doxsection"><a class="anchor" id="autotoc_md32"></a>
+Complete Development Workflow</h2>
+<ol type="1">
+<li><b>Build:</b> <span class="tt">idf.py build</span></li>
+<li><b>Package:</b> <span class="tt">./pack.sh</span> (or <span class="tt">./pack.ps1</span>)</li>
+<li><b>Deploy:</b> <span class="tt">./send.sh</span> (or <span class="tt">./send.ps1</span>)</li>
+<li><b>Debug:</b> Use the built-in serial monitor</li>
+</ol>
+<h1 class="doxsection"><a class="anchor" id="autotoc_md33"></a>
+IDE Integration</h1>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md34"></a>
 Visual Studio Code</h2>
 <p>The SDK supports VSCode integration through the ESP-IDF extension or custom task configuration.</p>
-<h3 class="doxsection"><a class="anchor" id="autotoc_md22"></a>
+<h3 class="doxsection"><a class="anchor" id="autotoc_md35"></a>
 Method 1: ESP-IDF Extension</h3>
 <ol type="1">
 <li>Install the ESP-IDF extension from the VSCode marketplace</li>
 <li>Configure the extension to use your ESP-IDF installation path</li>
 <li>Open your project and use the extension's build commands</li>
 </ol>
-<h3 class="doxsection"><a class="anchor" id="autotoc_md23"></a>
+<h3 class="doxsection"><a class="anchor" id="autotoc_md36"></a>
 Method 2: Custom Tasks</h3>
 <p>Create <span class="tt">.vscode/tasks.json</span> in your project root:</p>
 <div class="fragment"><div class="line">{</div>
@@ -258,23 +345,23 @@ Method 2: Custom Tasks</h3>
 <p><b>Windows:</b> </p><div class="fragment"><div class="line">Start-Process code -ArgumentList &quot;.&quot; -WindowStyle Hidden</div>
 </div><!-- fragment --><p><b>Linux/macOS:</b> </p><div class="fragment"><div class="line">code .</div>
 </div><!-- fragment --><p>Build using <span class="tt">Ctrl+Shift+B</span> or the Command Palette (<span class="tt">F1</span> → "Tasks: Run Task").</p>
-<h1 class="doxsection"><a class="anchor" id="autotoc_md24"></a>
+<h1 class="doxsection"><a class="anchor" id="autotoc_md37"></a>
 Troubleshooting</h1>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md25"></a>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md38"></a>
 Common Issues</h2>
-<h3 class="doxsection"><a class="anchor" id="autotoc_md26"></a>
+<h3 class="doxsection"><a class="anchor" id="autotoc_md39"></a>
 ESP-IDF Environment Not Set</h3>
 <p><b>Problem:</b> <span class="tt">idf.py: command not found</span> or similar errors.</p>
 <p><b>Solution:</b> Ensure you've run the export script in your current terminal session:</p><ul>
 <li>Windows: <span class="tt">C:\idfvmusdk\export.ps1</span></li>
 <li>Linux/macOS: <span class="tt">. /opt/idfvmusdk/export.sh</span></li>
 </ul>
-<h3 class="doxsection"><a class="anchor" id="autotoc_md27"></a>
+<h3 class="doxsection"><a class="anchor" id="autotoc_md40"></a>
 Python Virtual Environment Issues</h3>
 <p><b>Problem:</b> Permission errors or missing Python packages.</p>
 <p><b>Solution:</b> On Ubuntu/WSL, install python-venv: </p><div class="fragment"><div class="line">sudo apt-get update</div>
 <div class="line">sudo apt-get install python3.8-venv</div>
-</div><!-- fragment --><h3 class="doxsection"><a class="anchor" id="autotoc_md28"></a>
+</div><!-- fragment --><h3 class="doxsection"><a class="anchor" id="autotoc_md41"></a>
 Build Failures</h3>
 <p><b>Problem:</b> Compilation errors or missing dependencies.</p>
 <p><b>Solution:</b></p><ol type="1">
@@ -282,7 +369,7 @@ Build Failures</h3>
 <li>Ensure all submodules are updated: <span class="tt">git submodule update --init --recursive</span></li>
 <li>Verify ESP-IDF version: <span class="tt">idf.py --version</span></li>
 </ol>
-<h3 class="doxsection"><a class="anchor" id="autotoc_md29"></a>
+<h3 class="doxsection"><a class="anchor" id="autotoc_md42"></a>
 Packaging Errors</h3>
 <p><b>Problem:</b> <span class="tt">.vmupack</span> creation fails.</p>
 <p><b>Solution:</b></p><ol type="1">
@@ -290,7 +377,33 @@ Packaging Errors</h3>
 <li>Verify <span class="tt">metadata.json</span> is properly formatted</li>
 <li>Check that all referenced assets exist in the project</li>
 </ol>
-<h2 class="doxsection"><a class="anchor" id="autotoc_md30"></a>
+<h3 class="doxsection"><a class="anchor" id="autotoc_md43"></a>
+Deployment Issues</h3>
+<p><b>Problem:</b> Port access denied or port in use errors.</p>
+<p><b>Solution:</b></p><ul>
+<li><b>Linux:</b> Add user to dialout group: <span class="tt">sudo usermod -a -G dialout $USER</span> (requires logout/login)</li>
+<li><b>All platforms:</b> Ensure no other terminal or ESP-IDF monitor is using the port</li>
+<li><b>Windows:</b> Try running as administrator if needed</li>
+<li>Close any open serial monitors or ESP-IDF console connections</li>
+</ul>
+<p><b>Problem:</b> Connection timeouts or tool hangs waiting for device response.</p>
+<p><b>Solution:</b></p><ol type="1">
+<li>Verify correct COM port using Device Manager (Windows) or <span class="tt">ls /dev/tty*</span> (Linux/macOS)</li>
+<li>Check physical USB connection</li>
+<li>Try resetting the device first: <span class="tt">python tools/packer/send.py --func reset --comport COM3</span></li>
+<li>Ensure VMUPro firmware supports the serial commands</li>
+<li>Check if device is in bootloader mode (may need manual reset)</li>
+</ol>
+<p><b>Problem:</b> File transfer fails, corrupts, or shows "FILE_ERR".</p>
+<p><b>Solution:</b></p><ol type="1">
+<li>Check available space on VMUPro SD card</li>
+<li>Verify the target directory exists (create <span class="tt">apps/</span> folder if needed)</li>
+<li>Try a smaller test file first to verify connection</li>
+<li>Check for proper <span class="tt">.vmupack</span> file format (ensure packaging completed successfully)</li>
+<li>Verify file permissions on both local file and target directory</li>
+<li>Try using a different file name to avoid conflicts</li>
+</ol>
+<h2 class="doxsection"><a class="anchor" id="autotoc_md44"></a>
 Getting Help</h2>
 <p>If you encounter issues not covered here:</p>
 <ol type="1">

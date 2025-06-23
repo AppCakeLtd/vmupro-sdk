@@ -1,8 +1,10 @@
 var searchData=
 [
-  ['variables_0',['2. Set Up Environment Variables',['../index.html#autotoc_md5',1,'']]],
-  ['virtual_20environment_20issues_1',['Python Virtual Environment Issues',['../index.html#autotoc_md27',1,'']]],
-  ['visual_20studio_20code_2',['Visual Studio Code',['../index.html#autotoc_md21',1,'']]],
-  ['vmupack_20file_3',['Creating a .vmupack File',['../index.html#autotoc_md18',1,'']]],
-  ['vmupro_20sdk_4',['VMUPro SDK',['../index.html#autotoc_md6',1,'3. Clone the VMUPro SDK'],['../index.html',1,'VMUPro SDK']]]
+  ['table_20of_20contents_0',['Table of Contents',['../index.html#autotoc_md1',1,'']]],
+  ['tasks_1',['Method 2: Custom Tasks',['../index.html#autotoc_md36',1,'']]],
+  ['the_20application_2',['3. Build the Application',['../index.html#autotoc_md14',1,'']]],
+  ['the_20vmupro_20sdk_3',['3. Clone the VMUPro SDK',['../index.html#autotoc_md6',1,'']]],
+  ['to_20example_20directory_4',['1. Navigate to Example Directory',['../index.html#autotoc_md12',1,'']]],
+  ['transfer_5',['Chunked File Transfer',['../index.html#autotoc_md29',1,'']]],
+  ['troubleshooting_6',['Troubleshooting',['../index.html#autotoc_md37',1,'']]]
 ];

@@ -49,20 +49,37 @@ var NAVTREE =
       [ "Creating a .vmupack File", "index.html#autotoc_md18", null ],
       [ "Metadata Configuration", "index.html#autotoc_md19", null ]
     ] ],
-    [ "IDE Integration", "index.html#autotoc_md20", [
-      [ "Visual Studio Code", "index.html#autotoc_md21", [
-        [ "Method 1: ESP-IDF Extension", "index.html#autotoc_md22", null ],
-        [ "Method 2: Custom Tasks", "index.html#autotoc_md23", null ]
+    [ "Deploying Applications", "index.html#autotoc_md20", [
+      [ "Prerequisites for Deployment", "index.html#autotoc_md21", null ],
+      [ "Quick Deployment (Recommended)", "index.html#autotoc_md22", null ],
+      [ "Manual Deployment with send.py", "index.html#autotoc_md23", [
+        [ "Upload and Execute Application", "index.html#autotoc_md24", null ],
+        [ "Upload Without Executing", "index.html#autotoc_md25", null ],
+        [ "Reset VMUPro Device", "index.html#autotoc_md26", null ]
+      ] ],
+      [ "Serial Communication Features", "index.html#autotoc_md27", [
+        [ "2-Way Serial Monitor", "index.html#autotoc_md28", null ],
+        [ "Chunked File Transfer", "index.html#autotoc_md29", null ],
+        [ "Error Handling", "index.html#autotoc_md30", null ]
+      ] ],
+      [ "Finding Your COM Port", "index.html#autotoc_md31", null ],
+      [ "Complete Development Workflow", "index.html#autotoc_md32", null ]
+    ] ],
+    [ "IDE Integration", "index.html#autotoc_md33", [
+      [ "Visual Studio Code", "index.html#autotoc_md34", [
+        [ "Method 1: ESP-IDF Extension", "index.html#autotoc_md35", null ],
+        [ "Method 2: Custom Tasks", "index.html#autotoc_md36", null ]
       ] ]
     ] ],
-    [ "Troubleshooting", "index.html#autotoc_md24", [
-      [ "Common Issues", "index.html#autotoc_md25", [
-        [ "ESP-IDF Environment Not Set", "index.html#autotoc_md26", null ],
-        [ "Python Virtual Environment Issues", "index.html#autotoc_md27", null ],
-        [ "Build Failures", "index.html#autotoc_md28", null ],
-        [ "Packaging Errors", "index.html#autotoc_md29", null ]
+    [ "Troubleshooting", "index.html#autotoc_md37", [
+      [ "Common Issues", "index.html#autotoc_md38", [
+        [ "ESP-IDF Environment Not Set", "index.html#autotoc_md39", null ],
+        [ "Python Virtual Environment Issues", "index.html#autotoc_md40", null ],
+        [ "Build Failures", "index.html#autotoc_md41", null ],
+        [ "Packaging Errors", "index.html#autotoc_md42", null ],
+        [ "Deployment Issues", "index.html#autotoc_md43", null ]
       ] ],
-      [ "Getting Help", "index.html#autotoc_md30", null ]
+      [ "Getting Help", "index.html#autotoc_md44", null ]
     ] ],
     [ "Files", "files.html", [
       [ "File List", "files.html", "files_dup" ],

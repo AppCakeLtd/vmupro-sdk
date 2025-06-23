@@ -64,10 +64,20 @@ Required for every application:
 - **Asset directory:** `assets/` folder in project root
 
 ## Documentation
-- Uses Doxygen for API documentation with doxygen-awesome theme
-- Generate docs: `doxygen Doxyfile`
-- View docs: Open `docs/html/index.html` in browser
-- Documentation includes all SDK headers with detailed API reference
+- **Doxygen API docs:** Uses doxygen-awesome theme, covers SDK headers and C API
+- **README.md:** Comprehensive setup, build, packaging, and deployment instructions
+- **CLAUDE.md:** Development notes and quick reference for AI assistants
+
+### Generate Documentation
+- `doxygen Doxyfile` - Generate API documentation
+- View at `docs/html/index.html` in browser
+- Includes: SDK headers, example code, API reference
+
+### Documentation Coverage
+- **API Reference:** All SDK headers with detailed C function documentation (Doxygen)
+- **User Guide:** Complete development workflow in README.md including send.py usage
+- **Troubleshooting:** Common issues and solutions for all development phases
+- **Tools Guide:** Packaging and deployment instructions in README.md
 
 ## Future Expansion Areas
 The SDK is designed to grow with additional APIs for:

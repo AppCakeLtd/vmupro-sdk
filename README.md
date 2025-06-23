@@ -10,6 +10,7 @@ The VMUPro SDK is a development kit for creating applications for the VMUPro dev
 - [Examples](#examples)
 - [Building Applications](#building-applications)
 - [Packaging Applications](#packaging-applications)
+- [Deploying Applications](#deploying-applications)
 - [IDE Integration](#ide-integration)
 - [Troubleshooting](#troubleshooting)
 
@@ -179,6 +180,125 @@ Each application requires a `metadata.json` file with the following structure:
 }
 ```
 
+## Deploying Applications
+
+After packaging your application into a `.vmupack` file, you can deploy it to your VMUPro device using the included serial communication tool.
+
+### Prerequisites for Deployment
+
+Install additional Python dependencies for serial communication:
+```bash
+cd tools/packer
+pip install -r requirements.txt
+```
+
+The requirements include:
+- `pyserial` - For serial communication
+- `pynput` - For keyboard input handling during monitoring
+
+### Quick Deployment (Recommended)
+
+From the `examples/minimal` directory, use the convenience scripts:
+
+**Windows:**
+```powershell
+./send.ps1
+```
+
+**Linux/macOS:**
+```bash
+./send.sh
+```
+
+These scripts will automatically:
+1. Upload the `vmupro_minimal.vmupack` file to the device
+2. Place it in the `apps/` directory on the VMUPro
+3. Execute the application immediately
+4. Open a 2-way serial monitor for debugging
+
+### Manual Deployment with send.py
+
+For more control over the deployment process, use the `send.py` tool directly:
+
+#### Upload and Execute Application
+
+```bash
+python tools/packer/send.py \
+    --func send \
+    --localfile "vmupro_minimal.vmupack" \
+    --remotefile "apps/vmupro_minimal.vmupack" \
+    --comport COM3 \
+    --exec true
+```
+
+#### Upload Without Executing
+
+```bash
+python tools/packer/send.py \
+    --func send \
+    --localfile "vmupro_minimal.vmupack" \
+    --remotefile "apps/vmupro_minimal.vmupack" \
+    --comport COM3
+```
+
+#### Reset VMUPro Device
+
+```bash
+python tools/packer/send.py \
+    --func reset \
+    --comport COM3
+```
+
+### Serial Communication Features
+
+The `send.py` tool provides several useful features:
+
+#### 2-Way Serial Monitor
+After uploading, the tool automatically opens an interactive serial monitor where you can:
+- View real-time output from your VMUPro application
+- Send keystrokes to your application for testing
+- Press `Ctrl+C` or `ESC` to exit the monitor
+
+#### Chunked File Transfer
+Large files are automatically transferred in chunks with progress tracking:
+```
+PC: Writing chunk 0 / 4.5
+PC: Sent: 16384 of 73728
+PC: Writing chunk 1 / 4.5
+PC: Sent: 32768 of 73728
+...
+```
+
+#### Error Handling
+The tool automatically detects and reports common errors:
+- Invalid commands (firmware version mismatch)
+- File handling errors (insufficient space, invalid paths)
+- Communication timeouts
+
+### Finding Your COM Port
+
+**Windows:**
+- Open Device Manager
+- Look under "Ports (COM & LPT)" for your VMUPro device
+- Note the COM port number (e.g., COM3, COM18)
+
+**Linux:**
+```bash
+ls /dev/ttyUSB* /dev/ttyACM*
+```
+
+**macOS:**
+```bash
+ls /dev/tty.usb* /dev/tty.uart*
+```
+
+### Complete Development Workflow
+
+1. **Build:** `idf.py build`
+2. **Package:** `./pack.sh` (or `./pack.ps1`)
+3. **Deploy:** `./send.sh` (or `./send.ps1`)
+4. **Debug:** Use the built-in serial monitor
+
 ## IDE Integration
 
 ### Visual Studio Code
@@ -267,6 +387,35 @@ sudo apt-get install python3.8-venv
 1. Ensure Python dependencies are installed: `pip install -r tools/packer/requirements.txt`
 2. Verify `metadata.json` is properly formatted
 3. Check that all referenced assets exist in the project
+
+#### Deployment Issues
+
+**Problem:** Port access denied or port in use errors.
+
+**Solution:**
+- **Linux:** Add user to dialout group: `sudo usermod -a -G dialout $USER` (requires logout/login)
+- **All platforms:** Ensure no other terminal or ESP-IDF monitor is using the port
+- **Windows:** Try running as administrator if needed
+- Close any open serial monitors or ESP-IDF console connections
+
+**Problem:** Connection timeouts or tool hangs waiting for device response.
+
+**Solution:**
+1. Verify correct COM port using Device Manager (Windows) or `ls /dev/tty*` (Linux/macOS)
+2. Check physical USB connection
+3. Try resetting the device first: `python tools/packer/send.py --func reset --comport COM3`
+4. Ensure VMUPro firmware supports the serial commands
+5. Check if device is in bootloader mode (may need manual reset)
+
+**Problem:** File transfer fails, corrupts, or shows "FILE_ERR".
+
+**Solution:**
+1. Check available space on VMUPro SD card
+2. Verify the target directory exists (create `apps/` folder if needed)
+3. Try a smaller test file first to verify connection
+4. Check for proper `.vmupack` file format (ensure packaging completed successfully)
+5. Verify file permissions on both local file and target directory
+6. Try using a different file name to avoid conflicts
 
 ### Getting Help
 
