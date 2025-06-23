@@ -29,10 +29,11 @@ extern "C"
  * has been successfully loaded into memory. All application initialization
  * and main logic should be implemented in this function.
  * 
- * @note This function must be implemented by the user application
+ * @note This function must be implemented by the user application as `app_main`
  * @note The function should not return as it represents the main application loop
+ * @note The entry point name is specified in metadata.json as "app_entry_point": "app_main"
  */
-void vmupro_main(void);
+void app_main(void);
 
 #ifdef __cplusplus
 }

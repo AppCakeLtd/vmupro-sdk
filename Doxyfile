@@ -138,11 +138,17 @@ FILE_PATTERNS          = *.c \
                          *.h++ \
                          *.md
 RECURSIVE              = YES
-EXCLUDE                = 
+EXCLUDE                = examples/minimal/vmupacker_venv
 EXCLUDE_SYMLINKS       = NO
 EXCLUDE_PATTERNS       = */build/* \
                          */managed_components/* \
-                         */vmupacker_*/*
+                         */vmupacker_*/* \
+                         */examples/*/vmupacker_venv/* \
+                         */examples/*/__pycache__/* \
+                         */examples/*/site-packages/* \
+                         */examples/*/python3.13/* \
+                         */examples/*/venv/* \
+                         */doxygen-awesome-css/*
 EXCLUDE_SYMBOLS        = 
 EXAMPLE_PATH           = examples
 EXAMPLE_PATTERNS       = *

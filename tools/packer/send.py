@@ -1,4 +1,29 @@
-# 8BM Copyright/License notice
+#!/usr/bin/env python3
+"""
+@file send.py
+@brief VMUPro Serial Communication Tool
+
+This script provides functionality to upload .vmupack files to VMUPro devices
+over serial connection and provides a 2-way serial monitor for debugging.
+
+Features:
+- File upload with chunked transfer
+- Device reset capability  
+- Auto-execution of uploaded applications
+- Interactive 2-way serial monitor
+- Progress tracking and error handling
+
+Usage:
+    Upload file: python send.py --func send --localfile app.vmupack --remotefile apps/app.vmupack --comport COM3 --exec true
+    Reset device: python send.py --func reset --comport COM3
+
+@author 8BitMods
+@version 1.0.0
+@date 2025-06-23
+@copyright Copyright (c) 2025 8BitMods. All rights reserved.
+"""
+
+# 8BM Copyright/License notice  
 # For use with ESP IDF Python 3.10.x
 
 import sys
@@ -341,9 +366,9 @@ def SendFile():
     try:
 
         # Start the listen thread...
-        threadArgs = tuple()
-        t = threading.Thread(target=ListenerThread, args=threadArgs, daemon=True)
-        t.start()
+        # threadArgs = tuple()
+        # t = threading.Thread(target=ListenerThread, args=threadArgs, daemon=True)
+        # t.start()
 
         # Init the serial connection
         uart = serial.Serial(
