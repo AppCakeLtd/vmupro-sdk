@@ -351,7 +351,7 @@ def SendFile():
     parser.add_argument("--comport", required=True,
                         help="e.g. COM18, /dev/ttyxxx")
 
-    parser.add_argument("--exec", required=False,
+    parser.add_argument("--exec", action='store_true', required=False,
                         help="Execute afterwards")
 
     parser.add_argument("--debug", required=False, default=False,
