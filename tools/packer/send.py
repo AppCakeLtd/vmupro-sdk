@@ -308,12 +308,12 @@ def ResetVMUPro():
     parser.add_argument("--func", required=True,
                         help="e.g. reset")
 
-    parser.add_argument("--comport", required=True,
+    parser.add_argument("--comport", required=False,
                         help="e.g. COM18, /dev/ttyxxx")
 
     args = parser.parse_args()
 
-    comPort = args.comport
+    comPort = CheckComPort(args)
 
     try:
         uart = serial.Serial(
