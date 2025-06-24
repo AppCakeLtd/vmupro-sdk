@@ -48,24 +48,24 @@ extern "C"
    * @brief Predefined color values for VMUPro display
    *
    * This enumeration provides commonly used color values in RGB565 format
-   * for the VMUPro display system.
+   * for the VMUPro display system. Values are in big endian format.
    */
   typedef enum
   {
-    VMUPRO_COLOR_RED = 0xf800,         /**< Red color (RGB565: 0xF800) */
-    VMUPRO_COLOR_ORANGE = 0xfba0,      /**< Orange color (RGB565: 0xFBA0) */
-    VMUPRO_COLOR_YELLOW = 0xff80,      /**< Yellow color (RGB565: 0xFF80) */
-    VMUPRO_COLOR_YELLOWGREEN = 0x7f80, /**< Yellow-green color (RGB565: 0x7F80) */
-    VMUPRO_COLOR_GREEN = 0x0500,       /**< Green color (RGB565: 0x0500) */
-    VMUPRO_COLOR_BLUE = 0x045f,        /**< Blue color (RGB565: 0x045F) */
-    VMUPRO_COLOR_NAVY = 0x000c,        /**< Navy blue color (RGB565: 0x000C) */
-    VMUPRO_COLOR_VIOLET = 0x781f,      /**< Violet color (RGB565: 0x781F) */
-    VMUPRO_COLOR_MAGENTA = 0x780d,     /**< Magenta color (RGB565: 0x780D) */
-    VMUPRO_COLOR_GREY = 0xb5b6,        /**< Grey color (RGB565: 0xB5B6) */
-    VMUPRO_COLOR_BLACK = 0x0000,       /**< Black color (RGB565: 0x0000) */
-    VMUPRO_COLOR_WHITE = 0xffff,       /**< White color (RGB565: 0xFFFF) */
-    VMUPRO_COLOR_VMUGREEN = 0x6cd2,    /**< VMU signature green color (RGB565: 0x6CD2) */
-    VMUPRO_COLOR_VMUINK = 0x288a,      /**< VMU signature ink color (RGB565: 0x288A) */
+    VMUPRO_COLOR_RED = 0x00f8,         /**< Red color (RGB565 big endian: 0x00F8) */
+    VMUPRO_COLOR_ORANGE = 0xa0fb,      /**< Orange color (RGB565 big endian: 0xA0FB) */
+    VMUPRO_COLOR_YELLOW = 0x80ff,      /**< Yellow color (RGB565 big endian: 0x80FF) */
+    VMUPRO_COLOR_YELLOWGREEN = 0x807f, /**< Yellow-green color (RGB565 big endian: 0x807F) */
+    VMUPRO_COLOR_GREEN = 0x0005,       /**< Green color (RGB565 big endian: 0x0005) */
+    VMUPRO_COLOR_BLUE = 0x5f04,        /**< Blue color (RGB565 big endian: 0x5F04) */
+    VMUPRO_COLOR_NAVY = 0x0c00,        /**< Navy blue color (RGB565 big endian: 0x0C00) */
+    VMUPRO_COLOR_VIOLET = 0x1f78,      /**< Violet color (RGB565 big endian: 0x1F78) */
+    VMUPRO_COLOR_MAGENTA = 0x0d78,     /**< Magenta color (RGB565 big endian: 0x0D78) */
+    VMUPRO_COLOR_GREY = 0xb6b5,        /**< Grey color (RGB565 big endian: 0xB6B5) */
+    VMUPRO_COLOR_BLACK = 0x0000,       /**< Black color (RGB565 big endian: 0x0000) */
+    VMUPRO_COLOR_WHITE = 0xffff,       /**< White color (RGB565 big endian: 0xFFFF) */
+    VMUPRO_COLOR_VMUGREEN = 0xd26c,    /**< VMU signature green color (RGB565 big endian: 0xD26C) */
+    VMUPRO_COLOR_VMUINK = 0x8a28,      /**< VMU signature ink color (RGB565 big endian: 0x8A28) */
   } vmupro_color_t;
 
   /**
