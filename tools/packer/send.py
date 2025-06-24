@@ -112,11 +112,16 @@ def Monitor2Way():
         # print(f"Sent: {key!r}")
 
 
-def LoopMonitorMode():
+def LoopMonitorMode(acceptInput):
 
-    print("PC: Entering 2-way monitor mode")
-    print("PC: You may send keystrokes to the app")
-    print("PC: Ctrl+C / ESC to exit")
+    if acceptInput:
+        print("PC: Entering 2-way monitor mode")
+        print("PC: You may send keystrokes to the app")
+        print("PC: Ctrl+C / ESC to exit")
+    else:
+        print("PC: No --monitor flag provided")
+        print("PC: The console will not send keystrokes to the VMUPro")
+        print("PC Ctrl+C / ESC to exit")
 
     while True:
         Monitor2Way()
@@ -356,19 +361,23 @@ def SendFile():
 
     parser.add_argument("--debug", required=False, default=False,
                         help="Extra debug spam")
+    
+    parser.add_argument("--monitor", action='store_true', required=False, default=False, help="Open a 2-way console to the VMU pro")
 
     args = parser.parse_args()
     localFile = args.localfile
     remoteFile = args.remotefile
     comPort = args.comport
     debugMode = args.debug
+    acceptInput = args.monitor
 
     try:
 
         # Start the listen thread...
-        # threadArgs = tuple()
-        # t = threading.Thread(target=ListenerThread, args=threadArgs, daemon=True)
-        # t.start()
+        if acceptInput:
+            threadArgs = tuple()
+            t = threading.Thread(target=ListenerThread, args=threadArgs, daemon=True)
+            t.start()
 
         # Init the serial connection
         uart = serial.Serial(
@@ -442,7 +451,7 @@ def SendFile():
             # We're done
             # Open a 2-way serial
 
-            LoopMonitorMode()
+            LoopMonitorMode(acceptInput)
 
         uart.close()
 
