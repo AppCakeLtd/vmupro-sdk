@@ -2,13 +2,35 @@
  * @file vmupro_display.h
  * @brief VMUPro Display and Graphics API
  *
- * This header provides the display and graphics API for the VMUPro SDK.
- * It includes functions for display management, color definitions,
- * framebuffer operations, and basic drawing primitives.
+ * This header provides the comprehensive display and graphics API for the VMUPro SDK.
+ * It includes a complete suite of graphics functions for professional game development,
+ * matching the capabilities of retro console systems.
+ *
+ * ## Core Features
+ * - **Display Management**: Double buffering, framebuffer access, and refresh control
+ * - **Basic Drawing**: Rectangles, lines, circles, ellipses, polygons, and pixel operations
+ * - **Advanced Blitting**: Transparency, scaling, rotation, flipping, and palette support
+ * - **Background Systems**: Scrolling, parallax effects, and infinite tiling
+ * - **Visual Effects**: Mosaic, shadow/highlight, color filters, and blending modes
+ * - **Collision Detection**: Rectangle and pixel-perfect collision testing
+ * - **Sprite Management**: Batch rendering with priority ordering and effects
+ * - **Layer System**: Multi-layer compositing with individual scroll, alpha, and priority
+ * - **Palette Operations**: Color swapping, animation, and interpolation
+ * - **Windowing/Masking**: Advanced clipping and masking operations
+ *
+ * ## Color Format
+ * All graphics operations use RGB565 format (16-bit color) for optimal performance
+ * and memory efficiency on the VMUPro hardware.
+ *
+ * ## Performance Notes
+ * - Functions with "precise" in the name use floating-point math and are slower
+ * - 90-degree rotation functions are optimized for pixel-perfect, fast operation
+ * - Layer and sprite batch operations are optimized for rendering multiple objects
+ * - Double buffering eliminates screen tearing for smooth animation
  *
  * @author 8BitMods
  * @version 1.0.0
- * @date 2025-06-17
+ * @date 2025-06-24
  * @copyright Copyright (c) 2025 APPCAKE Limited. Distributed under the MIT License.
  */
 
