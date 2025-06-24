@@ -23,7 +23,7 @@ Usage:
 @copyright Copyright (c) 2025 8BitMods. All rights reserved.
 """
 
-# 8BM Copyright/License notice  
+# 8BM Copyright/License notice
 # For use with ESP IDF Python 3.10.x
 
 import sys
@@ -54,6 +54,8 @@ debugMode = False
 CHUNK_SIZE = 2048 * 8
 
 # https://pynput.readthedocs.io/en/latest/keyboard.html
+
+
 def OnKeyPress(key):
     """key press event for listener thread"""
 
@@ -112,11 +114,16 @@ def Monitor2Way():
         # print(f"Sent: {key!r}")
 
 
-def LoopMonitorMode():
+def LoopMonitorMode(acceptInput):
 
-    print("PC: Entering 2-way monitor mode")
-    print("PC: You may send keystrokes to the app")
-    print("PC: Ctrl+C / ESC to exit")
+    if acceptInput:
+        print("PC: Entering 2-way monitor mode")
+        print("PC: You may send keystrokes to the app")
+        print("PC: Ctrl+C / ESC to exit")
+    else:
+        print("PC: No --monitor flag provided")
+        print("PC: The console will not send keystrokes to the VMUPro")
+        print("PC Ctrl+C / ESC to exit")
 
     while True:
         Monitor2Way()
@@ -301,12 +308,12 @@ def ResetVMUPro():
     parser.add_argument("--func", required=True,
                         help="e.g. reset")
 
-    parser.add_argument("--comport", required=True,
+    parser.add_argument("--comport", required=False,
                         help="e.g. COM18, /dev/ttyxxx")
 
     args = parser.parse_args()
 
-    comPort = args.comport
+    comPort = CheckComPort(args)
 
     try:
         uart = serial.Serial(
@@ -329,10 +336,70 @@ def ResetVMUPro():
             uart.close()
 
 
+def SaveComPort(comport):
+    # type: (str) -> None
+
+    print("Saving comport {} to comport.txt".format(comport))
+
+    try:
+        with open("comport.txt", "w") as f:
+            f.write(comport)
+    except Exception as e:
+        print("Unable to write to comport.txt: {}".format(
+            e))
+        print("Please ensure that the file is not currently open!")
+
+
+def LoadComPort():
+    # type: () -> str
+
+    print("Checking if comport param is saved in comport.txt...")
+
+    outVal = ""
+    try:
+        with open("comport.txt", "r") as f:
+            outVal = f.readline().strip()
+            print("Using --comport {} from comport.txt".format(outVal))
+            return outVal
+    except Exception as e:
+        print("Unable to read from comport.txt (it may not exist)")
+        return ""
+
+
+def CheckComPort(args):
+    # type: (ArgumentParser) -> str
+
+    # First, did the user provide a com port?
+
+    argVal = args.comport
+
+    if argVal:
+        SaveComPort(argVal)
+        return argVal
+
+    # Second, do we already have a saved value?
+
+    argVal = LoadComPort()
+    if argVal:
+        return argVal
+    
+    # Third, just ask the user
+
+    print("No --comport param provided, please type it in now")
+    print("On Windows it will be something like COM4, COM19, etc")
+    print("(found via devmgmt.msc)")
+    print("On unix-like systems it may be /dev/cu.usbmodem101 or /dev/ttyXXXX")
+
+    argVal = input(":")
+
+    SaveComPort(argVal)
+    return argVal
+
+
 def SendFile():
 
     global uart
-    
+
     """
     Send a file over serial with a PC-side (local) 
     and VMUPro-side (remote) file name.
@@ -348,27 +415,33 @@ def SendFile():
     parser.add_argument("--remotefile", required=True,
                         help="e.g. test.vmupack on the SD card")
 
-    parser.add_argument("--comport", required=True,
+    parser.add_argument("--comport", required=False,
                         help="e.g. COM18, /dev/ttyxxx")
 
-    parser.add_argument("--exec", required=False,
+    parser.add_argument("--exec", action='store_true', required=False,
                         help="Execute afterwards")
 
-    parser.add_argument("--debug", required=False, default=False,
+    parser.add_argument("--debug", action='store_true', required=False, default=False,
                         help="Extra debug spam")
+
+    parser.add_argument("--monitor", action='store_true', required=False,
+                        default=False, help="Open a 2-way console to the VMU pro")
 
     args = parser.parse_args()
     localFile = args.localfile
     remoteFile = args.remotefile
-    comPort = args.comport
+    comPort = CheckComPort(args)
     debugMode = args.debug
+    acceptInput = args.monitor
 
     try:
 
         # Start the listen thread...
-        # threadArgs = tuple()
-        # t = threading.Thread(target=ListenerThread, args=threadArgs, daemon=True)
-        # t.start()
+        if acceptInput:
+            threadArgs = tuple()
+            t = threading.Thread(target=ListenerThread,
+                                 args=threadArgs, daemon=True)
+            t.start()
 
         # Init the serial connection
         uart = serial.Serial(
@@ -442,7 +515,7 @@ def SendFile():
             # We're done
             # Open a 2-way serial
 
-            LoopMonitorMode()
+            LoopMonitorMode(acceptInput)
 
         uart.close()
 
