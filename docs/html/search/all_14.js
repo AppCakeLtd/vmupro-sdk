@@ -7,5 +7,6 @@ var searchData=
   ['the_20vmupro_20sdk_4',['3. Clone the VMUPro SDK',['../index.html#autotoc_md6',1,'']]],
   ['to_20example_20directory_5',['1. Navigate to Example Directory',['../index.html#autotoc_md12',1,'']]],
   ['transfer_6',['Chunked File Transfer',['../index.html#autotoc_md29',1,'']]],
-  ['troubleshooting_7',['Troubleshooting',['../index.html#autotoc_md37',1,'']]]
+  ['transparent_5fcolor_7',['transparent_color',['../structvmupro__sprite__t.html#a0eb28fa0e5eaae51351ce174b4f39053',1,'vmupro_sprite_t']]],
+  ['troubleshooting_8',['Troubleshooting',['../index.html#autotoc_md37',1,'']]]
 ];
