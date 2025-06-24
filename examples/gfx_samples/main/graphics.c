@@ -4,31 +4,42 @@ const char *TAG = "[GFX Samples]";
 
 void app_main(void)
 {
-  vmupro_log(VMUPRO_LOG_INFO, TAG, "GFX Samples");
-
-  // Clear the display
-  vmupro_display_clear(VMUPRO_COLOR_BLACK);
-
-  // Forces the display to refresh with everything that's in
-  // it's current framebuffer
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "GFX Samples 3");
+  
+  vmupro_display_clear(VMUPRO_COLOR_GREY);
   vmupro_display_refresh();
 
-  // Try and get the video buffer pointers, see if they match the sdk
-  // Make sure to start the double buffered rendering
-  // so the back buffer can be inintialised
   vmupro_start_double_buffer_renderer();
 
-  uint8_t *fb1Pointer = vmupro_get_front_fb();
-  uint8_t *fb2Pointer = vmupro_get_back_fb();
+  // Wait a bit to actually show the changes
+  bool flipflop = false;
+  while (true)
+  {
+
+    vmupro_color_t col = flipflop ? VMUPRO_COLOR_BLUE : VMUPRO_COLOR_RED;
+    vmupro_display_clear(col);
+    if ( flipflop ){
+      vmupro_log(VMUPRO_LOG_INFO, TAG, "Blue");
+    } else {
+      vmupro_log(VMUPRO_LOG_INFO, TAG, "Red");
+    }
+
+    vmupro_draw_rect(10,10,100,100, VMUPRO_COLOR_BLUE);
+    vmupro_push_double_buffer_frame();
+
+    // Nice long delay so we know what should be drawn at any given time
+    vmupro_sleep_ms(1000);
+    flipflop = !flipflop;
+
+    vmupro_btn_read();
+    if ( vmupro_btn_confirm_pressed() ){
+      break;
+    }
+
+  }
+
 
   // Terminate the renderer
   vmupro_stop_double_buffer_renderer();
 
-  // Wait a bit to actually show the changes
-  int counter = 10;
-  while (counter-- > 0)
-  {
-
-    vmupro_sleep_ms(1000);
-  }
 }
