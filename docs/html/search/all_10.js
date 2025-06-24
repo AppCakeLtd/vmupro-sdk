@@ -7,7 +7,8 @@ var searchData=
   ['prerequisites_4',['Prerequisites',['../index.html#autotoc_md2',1,'']]],
   ['prerequisites_20for_20deployment_5',['Prerequisites for Deployment',['../index.html#autotoc_md21',1,'']]],
   ['prerequisites_20for_20packaging_6',['Prerequisites for Packaging',['../index.html#autotoc_md17',1,'']]],
-  ['project_20structure_7',['Project Structure',['../index.html#autotoc_md8',1,'']]],
-  ['py_8',['Manual Deployment with send.py',['../index.html#autotoc_md23',1,'']]],
-  ['python_20virtual_20environment_20issues_9',['Python Virtual Environment Issues',['../index.html#autotoc_md40',1,'']]]
+  ['priority_7',['priority',['../structvmupro__sprite__t.html#a75b530c07b557432eca047d00207d941',1,'vmupro_sprite_t::priority'],['../structvmupro__layer__t.html#adf836544116a2a36a18446114026be1e',1,'vmupro_layer_t::priority']]],
+  ['project_20structure_8',['Project Structure',['../index.html#autotoc_md8',1,'']]],
+  ['py_9',['Manual Deployment with send.py',['../index.html#autotoc_md23',1,'']]],
+  ['python_20virtual_20environment_20issues_10',['Python Virtual Environment Issues',['../index.html#autotoc_md40',1,'']]]
 ];
