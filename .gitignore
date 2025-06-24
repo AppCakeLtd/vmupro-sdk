@@ -3,6 +3,7 @@ build
 *.vmupack
 comport.txt
 
+managed_components
 dependencies.lock
 sdkconfig
 sdkconfig.old
