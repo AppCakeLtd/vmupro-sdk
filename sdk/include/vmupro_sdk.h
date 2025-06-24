@@ -16,6 +16,7 @@
 #include "vmupro_log.h"
 #include "vmupro_display.h"
 #include "vmupro_utils.h"
+#include "vmupro_buttons.h"
 
 #ifdef __cplusplus
 extern "C"
