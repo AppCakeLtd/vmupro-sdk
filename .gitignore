@@ -3,3 +3,8 @@ build
 *.vmupack
 comport.txt
 
+dependencies.lock
+sdkconfig
+sdkconfig.old
+vmupacker_venv/
+vmupacker_debug/
