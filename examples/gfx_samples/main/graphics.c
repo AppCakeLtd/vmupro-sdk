@@ -33,6 +33,13 @@ void app_main(void)
 
     // Nice long delay so we know what should be drawn at any given time
     vmupro_sleep_ms(1000);
+
+    vmupro_display_clear(col);
+    vmupro_draw_circle(90, 90, 30, rectCol);
+    vmupro_push_double_buffer_frame();
+
+    vmupro_sleep_ms(1000);
+
     flipflop = !flipflop;
 
     vmupro_btn_read();
