@@ -181,6 +181,7 @@ void DrawBackground()
 
   // method 3:
   // let the sdk handle it, with vmupro_blit_infinite_scrolling_background()
+  // note: still broken
   if (method == 3)
   {
     Img *img = &img_sdk_tile_bg_brown_raw;
