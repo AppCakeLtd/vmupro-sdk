@@ -154,7 +154,7 @@ void InitBackground()
 
 void DrawBackground()
 {
-  int method = 1;
+  int method = 2;
 
   // method 1:
   // draw an extra tile, and scroll them slightly off screen with modulo
@@ -203,6 +203,7 @@ void DrawTestFunction(int testNum)
   if (testNum == 0)
   {
     Img *img = &img_vmu_circle_raw;
+    uint8_t * data = img_vmu_circle_raw.data;    
     vmupro_blit_buffer_at(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height);
     vmupro_blit_buffer_at(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height);
   }
@@ -235,12 +236,16 @@ void DrawTestFunction(int testNum)
     Img *img = &img_vmu_circle_raw;
     uint16_t rgb565 = VMUPRO_COLOR_GREEN;
     // optional
-    rgb565 = (rgb565 << 8) | (rgb565 >> 8);    
-    vmupro_blit_buffer_color_add(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, rgb565);
+    rgb565 = (rgb565 << 8) | (rgb565 >> 8);
+    //vmupro_blit_buffer_color_add(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, rgb565);
   }
 
-  
-
+  if (testNum == 4)
+  {
+    Img *img = &img_vmu_circle_raw;
+    vmupro_blit_buffer_at(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height);
+    vmupro_blit_buffer_at(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height);
+  }
 }
 
 void app_main(void)
