@@ -9,10 +9,7 @@
 const char *TAG = "[GFX Samples]";
 
 // foreground: camera/player/test objs
-bool scroll_dir_x = true;
-int scroll_pos_x = 10;
-bool scroll_dir_y = true;
-int scroll_pos_y = 24;
+// TODO
 
 // ground
 #define GROUND_WIDTH_TILES_X 16
@@ -27,6 +24,64 @@ int bgScrollY = 0;
 const int BG_TILE_SIZE = 65;
 const int SCREEN_WIDTH = 240;
 const int SCREEN_HEIGHT = 240;
+
+// test function
+int testNum = 0;
+
+// Little dvd bouncer that bounces off the edge of the screen
+// used for various tests
+typedef struct
+{
+  bool reverse; // positive
+  int xPos;
+  int yPos;
+  int max;
+} DVDBounce;
+
+// 2 sets of xy positions
+DVDBounce bounce1 = {false, 10, 24, SCREEN_WIDTH};
+DVDBounce bounce2 = {false, 80, 86, SCREEN_WIDTH};
+// For params like rotation, alpha
+DVDBounce bounce3 = {false, 0, 0, 255};
+DVDBounce bounce4 = {false, 128, 128, 255};
+
+void UpdateDVDBounce(DVDBounce *bounce)
+{
+
+  if (!bounce->reverse)
+  {
+    bounce->xPos++;
+    if (bounce->xPos >= bounce->max - 1)
+    {
+      bounce->reverse = true;
+    }
+  }
+  else
+  {
+    bounce->xPos--;
+    if (bounce->xPos < 0)
+    {
+      bounce->reverse = false;
+    }
+  }
+
+  if (!bounce->reverse)
+  {
+    bounce->yPos++;
+    if (bounce->yPos >= bounce->max - 1)
+    {
+      bounce->reverse = true;
+    }
+  }
+  else
+  {
+    bounce->yPos--;
+    if (bounce->yPos < 0)
+    {
+      bounce->reverse = false;
+    }
+  }
+}
 
 void InitForeground()
 {
@@ -99,7 +154,7 @@ void InitBackground()
 
 void DrawBackground()
 {
-  int method = 3;
+  int method = 1;
 
   // method 1:
   // draw an extra tile, and scroll them slightly off screen with modulo
@@ -135,6 +190,59 @@ void DrawBackground()
   }
 }
 
+void DrawTestFunction(int testNum)
+{
+
+  UpdateDVDBounce(&bounce1);
+  UpdateDVDBounce(&bounce2);
+  UpdateDVDBounce(&bounce3);
+  UpdateDVDBounce(&bounce4);
+
+  // simple image
+  // issue for claude: flickering + detached columns with image size 55x55
+  if (testNum == 0)
+  {
+    Img *img = &img_vmu_circle_raw;
+    vmupro_blit_buffer_at(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height);
+    vmupro_blit_buffer_at(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height);
+  }
+
+  // rotated image
+  // issue for claude: flickering + detatched columns, same as method #1
+  if (testNum == 1)
+  {
+    Img *img = &img_vmu_circle_raw;
+    vmupro_blit_buffer_rotated_90(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, (bounce3.xPos / 16) % 4);
+    vmupro_blit_buffer_rotated_90(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height, (bounce3.yPos / 16) % 4);
+  }
+
+  // alpha blended image
+  // issue for claude:
+  //                  - SIMD part displays utter garbage
+  //                  - Scalar part works but the byte order appears wrong
+  if (testNum == 2)
+  {
+    Img *img = &img_vmu_circle_raw;
+    int alpha = bounce3.xPos;
+    vmupro_blit_buffer_blended(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, alpha);
+    vmupro_blit_buffer_blended(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height, 20);
+  }
+
+  // colour addition
+  // issue flor claude: - immediately crashes the device
+  if (testNum == 3)
+  {
+    Img *img = &img_vmu_circle_raw;
+    uint16_t rgb565 = VMUPRO_COLOR_GREEN;
+    // optional
+    rgb565 = (rgb565 << 8) | (rgb565 >> 8);    
+    vmupro_blit_buffer_color_add(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, rgb565);
+  }
+
+  
+
+}
+
 void app_main(void)
 {
   vmupro_log(VMUPRO_LOG_INFO, TAG, "GFX Samples 3");
@@ -159,47 +267,27 @@ void app_main(void)
     DrawBackground();
     DrawGround();
     DrawForeground();
+    DrawTestFunction(testNum);
 
     vmupro_push_double_buffer_frame();
 
-    if (scroll_dir_x)
-    {
-      scroll_pos_x++;
-      // let it go out of bounds so we see what happens)
-      if (scroll_pos_x >= 240 - 1)
-      {
-        scroll_dir_x = false;
-      }
-    }
-    else
-    {
-      scroll_pos_x--;
-      if (scroll_pos_x < 0)
-      {
-        scroll_dir_x = true;
-      }
-    }
-
-    if (scroll_dir_y)
-    {
-      scroll_pos_y++;
-      // let it go out of bounds so we see what happens)
-      if (scroll_pos_y >= 240 - 1)
-      {
-        scroll_dir_y = false;
-      }
-    }
-    else
-    {
-      scroll_pos_y--;
-      if (scroll_pos_y < 0)
-      {
-        scroll_dir_y = true;
-      }
-    }
-
     // Nice long delay so we know what should be drawn at any given time
     vmupro_sleep_ms(32);
+
+    if (vmupro_btn_pressed(DPad_Up) || vmupro_btn_pressed(DPad_Right))
+    {
+      testNum++;
+      vmupro_log(VMUPRO_LOG_INFO, TAG, "Switched to test %d", testNum);
+    }
+    if (vmupro_btn_pressed(DPad_Down) || vmupro_btn_pressed(DPad_Down))
+    {
+      testNum--;
+      if (testNum < 0)
+      {
+        testNum = 0;
+      }
+      vmupro_log(VMUPRO_LOG_INFO, TAG, "Switched to test %d", testNum);
+    }
 
     vmupro_btn_read();
     if (vmupro_btn_confirm_pressed())
