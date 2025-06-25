@@ -99,7 +99,7 @@ void InitBackground()
 
 void DrawBackground()
 {
-  int method = 2;
+  int method = 3;
 
   // method 1:
   // draw an extra tile, and scroll them slightly off screen with modulo
@@ -122,6 +122,16 @@ void DrawBackground()
     bgScrollX += 1;
     bgScrollY += 1;
     vmupro_blit_scrolling_background(img->data, img->width, img->height, bgScrollX, bgScrollY, SCREEN_WIDTH, SCREEN_HEIGHT);
+  }
+
+  // method 3:
+  // let the sdk handle it, with vmupro_blit_infinite_scrolling_background()
+  if (method == 3)
+  {
+    Img *img = &img_sdk_tile_bg_brown_raw;
+    bgScrollX += 1;
+    bgScrollY += 1;
+    vmupro_blit_infinite_scrolling_background(img->data, img->width, img->height, bgScrollX, bgScrollY, SCREEN_WIDTH, SCREEN_HEIGHT);
   }
 }
 
