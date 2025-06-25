@@ -181,17 +181,45 @@ void DrawBackground()
 
   // method 3:
   // let the sdk handle it, with vmupro_blit_infinite_scrolling_background()
-  // note: still broken
+  // issue for claude: still hangs the device
   if (method == 3)
   {
     Img *img = &img_sdk_tile_bg_brown_raw;
     bgScrollX += 1;
     bgScrollY += 1;
-    vmupro_blit_infinite_scrolling_background(img->data, img->width, img->height, bgScrollX, bgScrollY, SCREEN_WIDTH, SCREEN_HEIGHT);
+    vmupro_blit_infinite_scrolling_background(img->data, img->width, img->height, bgScrollX, bgScrollY, SCREEN_WIDTH, SCREEN_HEIGHT);    
   }
 }
 
-void DrawTestFunction(int testNum)
+uint8_t mask_55x55_a[55 * 55];
+uint8_t mask_55x55_b[55 * 55];
+
+void InitTestFunctions()
+{
+
+  for (int i = 0; i < 55 * 55; i++)
+  {
+    if (i % 4 > 1)
+    {
+      mask_55x55_a[i] = 0;
+    }
+    else
+    {
+      mask_55x55_a[i] = 1;
+    }
+
+    if (i % 9 > 4)
+    {
+      mask_55x55_b[i] = 0;
+    }
+    else
+    {
+      mask_55x55_b[i] = 1;
+    }
+  }
+}
+
+void DrawTestFunctions(int testNum)
 {
 
   UpdateDVDBounce(&bounce1);
@@ -200,17 +228,16 @@ void DrawTestFunction(int testNum)
   UpdateDVDBounce(&bounce4);
 
   // simple image
-  // issue for claude: flickering + detached columns with image size 55x55
+
   if (testNum == 0)
   {
     Img *img = &img_vmu_circle_raw;
-    uint8_t * data = img_vmu_circle_raw.data;    
+    uint8_t *data = img_vmu_circle_raw.data;
     vmupro_blit_buffer_at(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height);
     vmupro_blit_buffer_at(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height);
   }
 
   // rotated image
-  // issue for claude: flickering + detatched columns, same as method #1
   if (testNum == 1)
   {
     Img *img = &img_vmu_circle_raw;
@@ -231,22 +258,76 @@ void DrawTestFunction(int testNum)
   }
 
   // colour addition
-  // issue flor claude: - immediately crashes the device
+  // issue for claude: immediately crashes the device
   if (testNum == 3)
   {
     Img *img = &img_vmu_circle_raw;
     uint16_t rgb565 = VMUPRO_COLOR_GREEN;
     // optional
     rgb565 = (rgb565 << 8) | (rgb565 >> 8);
-    //vmupro_blit_buffer_color_add(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, rgb565);
+    // vmupro_blit_buffer_color_add(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, rgb565);
+    static bool showedSkipMessage3 = false;
+    if (!showedSkipMessage3)
+    {
+      showedSkipMessage3 = true;
+      vmupro_log(VMUPRO_LOG_INFO, TAG, "Function %d skipped due to crashing", testNum);
+    }
   }
 
+  // colour multiply
+  // issue for claude: only displays part of the first row, eventually crashes
   if (testNum == 4)
   {
+
     Img *img = &img_vmu_circle_raw;
-    vmupro_blit_buffer_at(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height);
-    vmupro_blit_buffer_at(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height);
+    uint16_t rgb565 = VMUPRO_COLOR_GREEN;
+    // optional
+    rgb565 = (rgb565 << 8) | (rgb565 >> 8);
+    vmupro_blit_buffer_color_multiply(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, rgb565);
+    static bool showedSkipMessage4 = false;
+    if (!showedSkipMessage4)
+    {
+      showedSkipMessage4 = true;
+      vmupro_log(VMUPRO_LOG_INFO, TAG, "Function %d will eventually crash", testNum);
+    }
   }
+
+  // Flipped x & y coords
+  // issue for claude: crashes and reboots the device (caught on vid)
+  if (testNum == 5)
+  {
+    Img *img = &img_vmu_circle_raw;
+    // vmupro_blit_buffer_flip_h(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height);
+    // vmupro_blit_buffer_flip_v(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height);
+    static bool showedSkipMessage5 = false;
+    if (!showedSkipMessage5)
+    {
+      showedSkipMessage5 = true;
+      vmupro_log(VMUPRO_LOG_INFO, TAG, "Function %d skipped due to crashing", testNum);
+    }
+  }
+
+  // Fixed alpha
+  // issue for claude: displays garbage data like colour multiply
+  //                   - the edges are vaguely correct looking, maybe slightly miscoloured
+  if (testNum == 6)
+  {
+    Img *img = &img_vmu_circle_raw;
+    vmupro_blit_buffer_fixed_alpha(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, 0);
+    vmupro_blit_buffer_fixed_alpha(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height, 1);
+    vmupro_blit_buffer_fixed_alpha(img->data, bounce3.xPos, bounce3.yPos, img->width, img->height, 2);
+  }
+
+  // Masked image  
+  if (testNum == 7)
+  {
+    Img *img = &img_vmu_circle_raw;
+    vmupro_blit_buffer_masked(img->data, mask_55x55_a, bounce1.xPos, bounce1.yPos, img->width, img->height);
+    vmupro_blit_buffer_masked(img->data, mask_55x55_b, bounce2.xPos, bounce2.yPos, img->width, img->height);
+  }
+
+  
+
 }
 
 void app_main(void)
@@ -261,6 +342,7 @@ void app_main(void)
   InitForeground();
   InitGround();
   InitBackground();
+  InitTestFunctions();
 
   // Wait a bit to actually show the changes
 
@@ -273,7 +355,7 @@ void app_main(void)
     DrawBackground();
     DrawGround();
     DrawForeground();
-    DrawTestFunction(testNum);
+    DrawTestFunctions(testNum);
 
     vmupro_push_double_buffer_frame();
 
