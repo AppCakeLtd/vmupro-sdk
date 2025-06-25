@@ -17,7 +17,7 @@ int scroll_pos_y = 24;
 // ground
 #define GROUND_WIDTH_TILES_X 16
 #define GROUND_WIDTH_TILES_Y 16
-#define NUM_GROUND_TILES GROUND_WIDTH_TILES_X * GROUND_WIDTH_TILES_Y
+#define NUM_GROUND_TILES GROUND_WIDTH_TILES_X *GROUND_WIDTH_TILES_Y
 // arrange it y/x for better memory cache access
 Img *tileList[GROUND_WIDTH_TILES_Y][GROUND_WIDTH_TILES_X];
 
@@ -103,7 +103,8 @@ void DrawBackground()
 
   // method 1:
   // draw an extra tile, and scroll them slightly off screen with modulo
-  if ( method == 1 ){
+  if (method == 1)
+  {
     // Start by making the user feel kinda sick
     bgScrollX += 1;
     bgScrollX = bgScrollX % BG_TILE_SIZE;
@@ -114,14 +115,14 @@ void DrawBackground()
   }
 
   // method 2:
-  // let the sdk handle it, with blit_scrolling_background
-  if ( method == 2 ){
-    Img * img = &img_sdk_tile_bg_brown_raw;
+  // let the sdk handle it, with blit_scrolling_background()
+  if (method == 2)
+  {
+    Img *img = &img_sdk_tile_bg_brown_raw;
     bgScrollX += 1;
-    bgScrollY += 1;    
-    vmupro_blit_scrolling_background(img->data, img->width, img->height, bgScrollX, bgScrollY, SCREEN_WIDTH-1, SCREEN_HEIGHT-1 );
+    bgScrollY += 1;
+    vmupro_blit_scrolling_background(img->data, img->width, img->height, bgScrollX, bgScrollY, SCREEN_WIDTH, SCREEN_HEIGHT);
   }
-
 }
 
 void app_main(void)
