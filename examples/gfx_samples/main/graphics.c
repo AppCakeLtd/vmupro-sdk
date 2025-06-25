@@ -40,6 +40,15 @@ void DrawGround(){
   tileList[7][13] = &img_ground_grass_bm_raw;
   tileList[8][13] = &img_ground_grass_br_raw;
 
+  // the big middle block
+  tileList[8][9] = &img_ground_grass_tl_raw;
+  tileList[9][9] = &img_ground_grass_tm_raw;
+  tileList[10][9] = &img_ground_grass_tm_raw;
+  tileList[11][9] = &img_ground_grass_tm_raw;
+  tileList[12][9] = &img_ground_grass_tr_raw;
+
+
+
 
   for( int y = 0; y < 16; y++ ){
     for( int x = 0; x < 16; x++ ){
