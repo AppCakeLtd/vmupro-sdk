@@ -1,5 +1,7 @@
 #include "vmupro_sdk.h"
 #include "placeholder.h"
+#include "sdk_tile_bg_brown.h"
+#include "sdk_tile_bg_brown.h"
 
 const char *TAG = "[GFX Samples]";
 
@@ -23,12 +25,16 @@ void app_main(void)
   while (true)
   {
 
-    vmupro_color_t col = flipflop ? VMUPRO_COLOR_BLUE : VMUPRO_COLOR_RED;
+    // vmupro_color_t col = flipflop ? VMUPRO_COLOR_BLUE : VMUPRO_COLOR_RED;
     // vmupro_color_t shapeCol = flipflop ? VMUPRO_COLOR_RED : VMUPRO_COLOR_BLUE;
+
+    vmupro_color_t col = VMUPRO_COLOR_BLUE;
     vmupro_display_clear(col);
 
-    vmupro_blit_buffer_at((uint8_t *)&placeholder, scroll_pos_x, scroll_pos_y, 76, 76);
-    vmupro_push_double_buffer_frame();
+    // vmupro_blit_buffer_at((uint8_t *)&placeholder, scroll_pos_x, scroll_pos_y, 76, 76);
+    // vmupro_push_double_buffer_frame();
+
+    vmupro_blit_tile_pattern( (uint8_t*)&sdk_tile_bg_brown_data[0], 64, 64, 0, 0, 64, 64);
 
     if (scroll_dir_x)
     {
