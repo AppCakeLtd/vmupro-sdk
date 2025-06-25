@@ -43,8 +43,8 @@ typedef struct
 DVDBounce bounce1 = {false, 10, 24, -10, SCREEN_WIDTH + 10};
 DVDBounce bounce2 = {false, 80, 86, -10, SCREEN_WIDTH + 10};
 // For params like rotation, alpha
-DVDBounce bounce3 = {false, 0, 0, 255, -10, SCREEN_WIDTH + 10};
-DVDBounce bounce4 = {false, 128, 128, 255, -10, SCREEN_WIDTH + 10};
+DVDBounce bounce3 = {false, 0, 0, 0, SCREEN_WIDTH};
+DVDBounce bounce4 = {false, 128, 128, 255};
 
 void UpdateDVDBounce(DVDBounce *bounce)
 {
@@ -230,6 +230,7 @@ void DrawTestFunctions(int testNum)
 
   // simple image
 
+  // # 0, vmupro_blit_buffer_at(), normal buffer blit
   if (testNum == 0)
   {
     Img *img = &img_vmu_circle_raw;
@@ -244,7 +245,7 @@ void DrawTestFunctions(int testNum)
     }
   }
 
-  // rotated image
+  // #1, vmupro_blit_buffer_rotated_90(), normal blit with rotation
   if (testNum == 1)
   {
     Img *img = &img_vmu_circle_raw;
@@ -258,10 +259,11 @@ void DrawTestFunctions(int testNum)
     }
   }
 
-  // alpha blended image
-  // issue for claude:
-  //                  - SIMD part displays utter garbage
-  //                  - Scalar part works but the byte order appears wrong
+  // #2, vmupro_blit_buffer_blended(), blit with alpha blending
+  // issues for claude:
+  //  - SIMD part displays utter garbage
+  //  - Scalar part works but the byte order appears wrong
+  //  - wraps when x or y are below 0
   if (testNum == 2)
   {
     Img *img = &img_vmu_circle_raw;
@@ -276,8 +278,9 @@ void DrawTestFunctions(int testNum)
     }
   }
 
-  // colour addition
-  // issue for claude: immediately crashes the device
+  // #3, vmupro_blit_buffer_color_add(), blit w/ constant colour
+  // issues for claude:
+  //  - immediately crashes the device
   if (testNum == 3)
   {
     Img *img = &img_vmu_circle_raw;
@@ -294,8 +297,10 @@ void DrawTestFunctions(int testNum)
     }
   }
 
-  // colour multiply
-  // issue for claude: only displays part of the first row, eventually crashes
+  // #4, vmupro_blit_buffer_color_multiply(), blit w/ colour multiply
+  // issues for claude:
+  //  - only displays a few flickering pixels from a single row
+  //  - eventually crashes
   if (testNum == 4)
   {
 
@@ -313,8 +318,9 @@ void DrawTestFunctions(int testNum)
     }
   }
 
-  // Flipped x & y coords
-  // issue for claude: crashes and reboots the device (caught on vid)
+  // #5, vmupro_blit_buffer_flip_h() & vmupro_blit_buffer_flip_v(), blit flipped
+  // issues for claude:
+  //  - crashes and reboots the device (caught on vid)
   if (testNum == 5)
   {
     Img *img = &img_vmu_circle_raw;
@@ -329,16 +335,18 @@ void DrawTestFunctions(int testNum)
     }
   }
 
-  // Fixed alpha
-  // issue for claude: - displays garbage data like colour multiply
-  //                   - the edges are vaguely correct looking, maybe slightly miscoloured
-  //                   - wraps around the screen edges, unlike other funcions
+  // #6, vmupro_blit_buffer_fixed_alpha(), blit with fixed alpha value
+  // issues for claude:
+  //  - displays garbage data like colour multiply
+  //  - the edges are vaguely correct looking, maybe slightly miscoloured
+  //  - wraps around the screen edges, unlike other funcions
   if (testNum == 6)
   {
     Img *img = &img_vmu_circle_raw;
     vmupro_blit_buffer_fixed_alpha(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, 0);
     vmupro_blit_buffer_fixed_alpha(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height, 1);
     vmupro_blit_buffer_fixed_alpha(img->data, bounce3.xPos, bounce3.yPos, img->width, img->height, 2);
+
     static bool shownMsg6 = false;
     if (!shownMsg6)
     {
@@ -347,7 +355,7 @@ void DrawTestFunctions(int testNum)
     }
   }
 
-  // Masked image
+  // #7, vmupro_blit_buffer_masked(), blit with a mask buffer
   if (testNum == 7)
   {
     Img *img = &img_vmu_circle_raw;
@@ -361,6 +369,9 @@ void DrawTestFunctions(int testNum)
     }
   }
 
+  // # 8, vmupro_blit_buffer_mosaic(), pixellate stuff
+  // issues for claude:
+  //  - mosaic values of 0 render nothing
   if (testNum == 8)
   {
 
@@ -368,6 +379,7 @@ void DrawTestFunctions(int testNum)
     vmupro_blit_buffer_mosaic(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, 1);
     vmupro_blit_buffer_mosaic(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height, 2);
     vmupro_blit_buffer_mosaic(img->data, bounce3.xPos, bounce3.yPos, img->width, img->height, 3);
+
     static bool shownMsg8 = false;
     if (!shownMsg8)
     {
