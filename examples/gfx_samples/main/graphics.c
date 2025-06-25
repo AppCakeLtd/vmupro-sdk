@@ -1,9 +1,58 @@
 #include "vmupro_sdk.h"
 #include "placeholder.h"
+#include "images/icons.h"
 #include "sdk_tile_bg_brown.h"
-#include "sdk_tile_bg_brown.h"
+#include "sdk_tile_bg_blue.h"
 
 const char *TAG = "[GFX Samples]";
+
+
+// Temporary solution
+void DrawGround(){
+
+  // should be static, but just for demo
+  Img * tileList [16][16] = {};
+
+
+  // these would be encoded somewhere instead of in-line like this
+  // usually by something like asperite or a custom tool
+  // little block at the bottom left
+  tileList[1][12] = &img_ground_grass_tl_raw;
+  tileList[2][12] = &img_ground_grass_tm_raw;
+  tileList[3][12] = &img_ground_grass_tm_raw;
+  tileList[4][12] = &img_ground_grass_tr_raw;
+  tileList[1][13] = &img_ground_grass_bl_raw;
+  tileList[2][13] = &img_ground_grass_bm_raw;
+  tileList[3][13] = &img_ground_grass_bm_raw;
+  tileList[4][13] = &img_ground_grass_br_raw;
+
+  // next block
+  tileList[5][11] = &img_ground_grass_tl_raw;
+  tileList[6][11] = &img_ground_grass_tm_raw;
+  tileList[7][11] = &img_ground_grass_tm_raw;
+  tileList[8][11] = &img_ground_grass_tr_raw;
+  tileList[5][12] = &img_ground_grass_ml_raw;
+  tileList[6][12] = &img_ground_grass_mm_raw;
+  tileList[7][12] = &img_ground_grass_mm_raw;
+  tileList[8][12] = &img_ground_grass_mr_raw;
+  tileList[5][13] = &img_ground_grass_bl_raw;
+  tileList[6][13] = &img_ground_grass_bm_raw;
+  tileList[7][13] = &img_ground_grass_bm_raw;
+  tileList[8][13] = &img_ground_grass_br_raw;
+
+
+  for( int y = 0; y < 16; y++ ){
+    for( int x = 0; x < 16; x++ ){
+      Img * src = tileList[x][y];
+      if ( src == NULL ) continue;
+
+      int drawX = x * 16;
+      int drawY = y * 16;
+      vmupro_blit_buffer_at( src->data, drawX, drawY, src->width, src->height);
+    }
+  }
+
+}
 
 void app_main(void)
 {
@@ -22,6 +71,12 @@ void app_main(void)
   bool scroll_dir_y = true;
   int scroll_pos_y = 24;
 
+  int bgScrollX = 0;
+  int bgScrollY = 0;
+  const int BG_TILE_SIZE = 65;
+  const int SCREEN_WIDTH = 240;
+  const int SCREEN_HEIGHT = 240;
+
   while (true)
   {
 
@@ -31,10 +86,20 @@ void app_main(void)
     vmupro_color_t col = VMUPRO_COLOR_BLUE;
     vmupro_display_clear(col);
 
-    // vmupro_blit_buffer_at((uint8_t *)&placeholder, scroll_pos_x, scroll_pos_y, 76, 76);
-    // vmupro_push_double_buffer_frame();
+    
 
-    vmupro_blit_tile_pattern( (uint8_t*)&sdk_tile_bg_brown_data[0], 64, 64, 0, 0, 64, 64);
+    // Start by making the user feel kinda sick
+    bgScrollX += 1;
+    bgScrollX = bgScrollX % BG_TILE_SIZE;
+    bgScrollY += 1;
+    bgScrollY = bgScrollY % BG_TILE_SIZE;
+    Img * img = &img_sdk_tile_bg_brown_raw;
+    vmupro_blit_tile_pattern( img->data, img->width, img->height, 0 - BG_TILE_SIZE + bgScrollX, 0 - BG_TILE_SIZE + bgScrollY, SCREEN_WIDTH + BG_TILE_SIZE, SCREEN_HEIGHT + BG_TILE_SIZE);
+
+    // vmupro_blit_buffer_at((uint8_t *)&placeholder, scroll_pos_x, scroll_pos_y, 76, 76);
+    DrawGround();
+
+    vmupro_push_double_buffer_frame();
 
     if (scroll_dir_x)
     {
