@@ -35,15 +35,16 @@ typedef struct
   bool reverse; // positive
   int xPos;
   int yPos;
-  int max;
+  int min; // to test going off screen
+  int max; // also to test going off screen
 } DVDBounce;
 
 // 2 sets of xy positions
-DVDBounce bounce1 = {false, 10, 24, SCREEN_WIDTH};
-DVDBounce bounce2 = {false, 80, 86, SCREEN_WIDTH};
+DVDBounce bounce1 = {false, 10, 24, -10, SCREEN_WIDTH + 10};
+DVDBounce bounce2 = {false, 80, 86, -10, SCREEN_WIDTH + 10};
 // For params like rotation, alpha
-DVDBounce bounce3 = {false, 0, 0, 255};
-DVDBounce bounce4 = {false, 128, 128, 255};
+DVDBounce bounce3 = {false, 0, 0, 255, -10, SCREEN_WIDTH + 10};
+DVDBounce bounce4 = {false, 128, 128, 255, -10, SCREEN_WIDTH + 10};
 
 void UpdateDVDBounce(DVDBounce *bounce)
 {
@@ -59,7 +60,7 @@ void UpdateDVDBounce(DVDBounce *bounce)
   else
   {
     bounce->xPos--;
-    if (bounce->xPos < 0)
+    if (bounce->xPos < bounce->min)
     {
       bounce->reverse = false;
     }
@@ -76,7 +77,7 @@ void UpdateDVDBounce(DVDBounce *bounce)
   else
   {
     bounce->yPos--;
-    if (bounce->yPos < 0)
+    if (bounce->yPos < bounce->min)
     {
       bounce->reverse = false;
     }
@@ -187,7 +188,7 @@ void DrawBackground()
     Img *img = &img_sdk_tile_bg_brown_raw;
     bgScrollX += 1;
     bgScrollY += 1;
-    vmupro_blit_infinite_scrolling_background(img->data, img->width, img->height, bgScrollX, bgScrollY, SCREEN_WIDTH, SCREEN_HEIGHT);    
+    vmupro_blit_infinite_scrolling_background(img->data, img->width, img->height, bgScrollX, bgScrollY, SCREEN_WIDTH, SCREEN_HEIGHT);
   }
 }
 
@@ -235,6 +236,12 @@ void DrawTestFunctions(int testNum)
     uint8_t *data = img_vmu_circle_raw.data;
     vmupro_blit_buffer_at(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height);
     vmupro_blit_buffer_at(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height);
+    static bool shownMsg0 = false;
+    if (!shownMsg0)
+    {
+      shownMsg0 = true;
+      vmupro_log(VMUPRO_LOG_INFO, TAG, "Function %d - vmupro_blit_buffer_at", testNum);
+    }
   }
 
   // rotated image
@@ -243,6 +250,12 @@ void DrawTestFunctions(int testNum)
     Img *img = &img_vmu_circle_raw;
     vmupro_blit_buffer_rotated_90(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, (bounce3.xPos / 16) % 4);
     vmupro_blit_buffer_rotated_90(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height, (bounce3.yPos / 16) % 4);
+    static bool shownMsg1 = false;
+    if (!shownMsg1)
+    {
+      shownMsg1 = true;
+      vmupro_log(VMUPRO_LOG_INFO, TAG, "Function %d - vmupro_blit_buffer_rotated_90", testNum);
+    }
   }
 
   // alpha blended image
@@ -255,6 +268,12 @@ void DrawTestFunctions(int testNum)
     int alpha = bounce3.xPos;
     vmupro_blit_buffer_blended(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, alpha);
     vmupro_blit_buffer_blended(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height, 20);
+    static bool shownMsg2 = false;
+    if (!shownMsg2)
+    {
+      shownMsg2 = true;
+      vmupro_log(VMUPRO_LOG_INFO, TAG, "Function %d - vmupro_blit_buffer_blended", testNum);
+    }
   }
 
   // colour addition
@@ -266,11 +285,12 @@ void DrawTestFunctions(int testNum)
     // optional
     rgb565 = (rgb565 << 8) | (rgb565 >> 8);
     // vmupro_blit_buffer_color_add(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, rgb565);
-    static bool showedSkipMessage3 = false;
-    if (!showedSkipMessage3)
+    static bool shownMsg3 = false;
+    if (!shownMsg3)
     {
-      showedSkipMessage3 = true;
-      vmupro_log(VMUPRO_LOG_INFO, TAG, "Function %d skipped due to crashing", testNum);
+      shownMsg3 = true;
+      vmupro_log(VMUPRO_LOG_INFO, TAG, "Function %d - vmupro_blit_buffer_color_add", testNum);
+      vmupro_log(VMUPRO_LOG_INFO, TAG, "SKIPPED DUE TO CRASHING");
     }
   }
 
@@ -284,11 +304,12 @@ void DrawTestFunctions(int testNum)
     // optional
     rgb565 = (rgb565 << 8) | (rgb565 >> 8);
     vmupro_blit_buffer_color_multiply(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, rgb565);
-    static bool showedSkipMessage4 = false;
-    if (!showedSkipMessage4)
+    static bool shownMsg4 = false;
+    if (!shownMsg4)
     {
-      showedSkipMessage4 = true;
-      vmupro_log(VMUPRO_LOG_INFO, TAG, "Function %d will eventually crash", testNum);
+      shownMsg4 = true;
+      vmupro_log(VMUPRO_LOG_INFO, TAG, "Function %d - vmupro_blit_buffer_color_multiply", testNum);
+      vmupro_log(VMUPRO_LOG_INFO, TAG, "EVENTUALLY CRASHES");
     }
   }
 
@@ -299,35 +320,61 @@ void DrawTestFunctions(int testNum)
     Img *img = &img_vmu_circle_raw;
     // vmupro_blit_buffer_flip_h(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height);
     // vmupro_blit_buffer_flip_v(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height);
-    static bool showedSkipMessage5 = false;
-    if (!showedSkipMessage5)
+    static bool shownMsg5 = false;
+    if (!shownMsg5)
     {
-      showedSkipMessage5 = true;
-      vmupro_log(VMUPRO_LOG_INFO, TAG, "Function %d skipped due to crashing", testNum);
+      shownMsg5 = true;
+      vmupro_log(VMUPRO_LOG_INFO, TAG, "Function %d - vmupro_blit_buffer_flip_h & h", testNum);
+      vmupro_log(VMUPRO_LOG_INFO, TAG, "SKIPPED DUE TO CRASHING");
     }
   }
 
   // Fixed alpha
-  // issue for claude: displays garbage data like colour multiply
+  // issue for claude: - displays garbage data like colour multiply
   //                   - the edges are vaguely correct looking, maybe slightly miscoloured
+  //                   - wraps around the screen edges, unlike other funcions
   if (testNum == 6)
   {
     Img *img = &img_vmu_circle_raw;
     vmupro_blit_buffer_fixed_alpha(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, 0);
     vmupro_blit_buffer_fixed_alpha(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height, 1);
     vmupro_blit_buffer_fixed_alpha(img->data, bounce3.xPos, bounce3.yPos, img->width, img->height, 2);
+    static bool shownMsg6 = false;
+    if (!shownMsg6)
+    {
+      shownMsg6 = true;
+      vmupro_log(VMUPRO_LOG_INFO, TAG, "Function %d - vmupro_blit_buffer_fixed_alpha", testNum);
+    }
   }
 
-  // Masked image  
+  // Masked image
   if (testNum == 7)
   {
     Img *img = &img_vmu_circle_raw;
     vmupro_blit_buffer_masked(img->data, mask_55x55_a, bounce1.xPos, bounce1.yPos, img->width, img->height);
     vmupro_blit_buffer_masked(img->data, mask_55x55_b, bounce2.xPos, bounce2.yPos, img->width, img->height);
+    static bool shownMsg7 = false;
+    if (!shownMsg7)
+    {
+      shownMsg7 = true;
+      vmupro_log(VMUPRO_LOG_INFO, TAG, "Function %d - vmupro_blit_buffer_masked", testNum);
+    }
   }
 
-  
+  if (testNum == 8)
+  {
 
+    Img *img = &img_vmu_circle_raw;
+    vmupro_blit_buffer_mosaic(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, 1);
+    vmupro_blit_buffer_mosaic(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height, 2);
+    vmupro_blit_buffer_mosaic(img->data, bounce3.xPos, bounce3.yPos, img->width, img->height, 3);
+    static bool shownMsg8 = false;
+    if (!shownMsg8)
+    {
+      shownMsg8 = true;
+      vmupro_log(VMUPRO_LOG_INFO, TAG, "Function %d - vmupro_blit_buffer_mosaic", testNum);
+    }
+  }
 }
 
 void app_main(void)
