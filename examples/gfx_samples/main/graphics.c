@@ -413,7 +413,7 @@ void DrawTestFunctions(int testNum)
   // #11, vmupro_blit_buffer_scaled(), scaled from a source point
   // - when drawing a 1:1 image, the SIMD/vectorised part draws at the wrong x pos (the scalar part draws correctly)
   // - when drawing a 1:1 image, the SIMD/vectorised part shakes rapidaly on the x axis (leaving a varying column between the SIMD and scalar part)
-  if (testNum == 0)
+  if (testNum == 11)
   {
 
     Img *img = &img_vmu_circle_raw;
