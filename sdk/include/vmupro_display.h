@@ -610,6 +610,24 @@ extern "C"
   void vmupro_blit_buffer_mosaic(uint8_t *buffer, int x, int y, int width, int height, int mosaic_size);
 
   /**
+   * @brief Apply blur effect to buffer
+   *
+   * Applies a Gaussian blur effect to the specified region of a buffer.
+   * Creates smooth, softened edges and depth-of-field effects.
+   *
+   * @param buffer Pointer to the source pixel buffer
+   * @param x X coordinate of the region
+   * @param y Y coordinate of the region
+   * @param width Width of the region
+   * @param height Height of the region
+   * @param blur_radius Blur intensity (higher = more blurred, 0 = no blur)
+   * 
+   * @note Performance intensive operation, especially with large blur radius
+   * @note Blur radius of 1-3 provides subtle effects, 4-8 for dramatic blur
+   */
+  void vmupro_blit_buffer_blurred(uint8_t *buffer, int x, int y, int width, int height, int blur_radius);
+
+  /**
    * @brief Apply mosaic effect directly to screen
    *
    * Applies mosaic effect to a region of the current framebuffer.

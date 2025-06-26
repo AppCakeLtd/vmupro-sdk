@@ -309,7 +309,6 @@ void DrawTestFunctions(int testNum)
     {
       shownMsg4 = true;
       vmupro_log(VMUPRO_LOG_INFO, TAG, "Function %d - vmupro_blit_buffer_color_multiply", testNum);
-      vmupro_log(VMUPRO_LOG_INFO, TAG, "EVENTUALLY CRASHES");
     }
   }
 
@@ -326,7 +325,6 @@ void DrawTestFunctions(int testNum)
     {
       shownMsg5 = true;
       vmupro_log(VMUPRO_LOG_INFO, TAG, "Function %d - vmupro_blit_buffer_flip_h & h", testNum);
-      vmupro_log(VMUPRO_LOG_INFO, TAG, "SKIPPED DUE TO CRASHING");
     }
   }
 
