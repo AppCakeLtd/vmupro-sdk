@@ -331,10 +331,6 @@ void DrawTestFunctions(int testNum)
   }
 
   // #6, vmupro_blit_buffer_fixed_alpha(), blit with fixed alpha value
-  // issues for claude:
-  //  - displays garbage data like colour multiply
-  //  - the edges are vaguely correct looking, maybe slightly miscoloured
-  //  - wraps around the screen edges, unlike other funcions
   if (testNum == 6)
   {
     Img *img = &img_vmu_circle_raw;
@@ -365,8 +361,6 @@ void DrawTestFunctions(int testNum)
   }
 
   // #8, vmupro_blit_buffer_mosaic(), pixellate stuff
-  // issues for claude:
-  //  - mosaic values of 0 render nothing
   if (testNum == 8)
   {
 
