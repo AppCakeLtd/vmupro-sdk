@@ -379,9 +379,9 @@ void DrawTestFunctions(int testNum)
     }
   }
 
-  // #9, vmupro_blit_buffer_blurred, normal blit, blurred
   if (testNum == 9)
   {
+
     Img *img = &img_vmu_circle_raw;
     // vmupro_blit_buffer_blurred(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, 0);
     // vmupro_blit_buffer_blurred(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height, 1);

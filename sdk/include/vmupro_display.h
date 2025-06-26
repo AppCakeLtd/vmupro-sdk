@@ -664,7 +664,9 @@ extern "C"
    * @param y Y coordinate of the region
    * @param width Width of the region
    * @param height Height of the region
-   * @param color_filter Color multiplier (RGB565 format)
+   * @param color_filter Color multiplier (RGB565 big endian format)
+   * 
+   * @note Color values should be in big endian format (e.g., use VMUPRO_COLOR_* constants)
    */
   void vmupro_blit_buffer_color_multiply(uint8_t *buffer, int x, int y, int width, int height, vmupro_color_t color_filter);
 
@@ -678,7 +680,9 @@ extern "C"
    * @param y Y coordinate of the region
    * @param width Width of the region
    * @param height Height of the region
-   * @param color_offset Color offset to add (RGB565 format)
+   * @param color_offset Color offset to add (RGB565 big endian format)
+   * 
+   * @note Color values should be in big endian format (e.g., use VMUPRO_COLOR_* constants)
    */
   void vmupro_blit_buffer_color_add(uint8_t *buffer, int x, int y, int width, int height, vmupro_color_t color_offset);
 
