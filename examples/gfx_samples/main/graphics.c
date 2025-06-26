@@ -260,10 +260,6 @@ void DrawTestFunctions(int testNum)
   }
 
   // #2, vmupro_blit_buffer_blended(), blit with alpha blending
-  // issues for claude:
-  //  - SIMD part displays utter garbage
-  //  - Scalar part works but the byte order appears wrong
-  //  - wraps when x or y are below 0
   if (testNum == 2)
   {
     Img *img = &img_vmu_circle_raw;
@@ -279,13 +275,18 @@ void DrawTestFunctions(int testNum)
   }
 
   // #3, vmupro_blit_buffer_color_add(), blit w/ constant colour
-  // issues for claude:
-  //  - immediately crashes the device
   if (testNum == 3)
   {
     Img *img = &img_vmu_circle_raw;
-    uint16_t rgb565 = VMUPRO_COLOR_BLUE;
-    vmupro_blit_buffer_color_add(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, rgb565);
+    
+    vmupro_blit_buffer_color_add(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, 0x0000);
+    uint16_t shift1 = (5<<11) | (5<6) | (5); // add 5 to each
+    shift1 = (shift1 <<8) | (shift1 >>8);
+    vmupro_blit_buffer_color_add(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height, shift1);
+    uint16_t shift2 = (10<<11) | (10<6) | (10); // add 10 to each
+    shift2 = (shift2 <<8) | (shift2 >>8);
+    vmupro_blit_buffer_color_add(img->data, bounce3.xPos, bounce3.yPos, img->width, img->height, shift2);
+
     static bool shownMsg3 = false;
     if (!shownMsg3)
     {
@@ -295,15 +296,18 @@ void DrawTestFunctions(int testNum)
   }
 
   // #4, vmupro_blit_buffer_color_multiply(), blit w/ colour multiply
-  // issues for claude:
-  //  - only displays a few flickering pixels from a single row
-  //  - eventually crashes
+  // issues for claude:  
+  //  - vertical columns with dark spots
   if (testNum == 4)
   {
 
     Img *img = &img_vmu_circle_raw;
-    uint16_t rgb565 = VMUPRO_COLOR_GREEN;
-    vmupro_blit_buffer_color_multiply(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, rgb565);
+    
+    uint16_t shift1 = (2<<11) | (2<6) | (2); // add 2 to each
+    uint16_t shift2 = (shift1 <<8) | (shift1 >>8);
+    vmupro_blit_buffer_color_multiply(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, shift1);
+    vmupro_blit_buffer_color_multiply(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height, shift2);
+    //vmupro_blit_buffer_color_multiply(img->data, bounce3.xPos, bounce3.yPos, img->width, img->height, VMUPRO_COLOR_BLUE);
     static bool shownMsg4 = false;
     if (!shownMsg4)
     {
@@ -313,8 +317,6 @@ void DrawTestFunctions(int testNum)
   }
 
   // #5, vmupro_blit_buffer_flip_h() & vmupro_blit_buffer_flip_v(), blit flipped
-  // issues for claude:
-  //  - crashes and reboots the device (caught on vid)
   if (testNum == 5)
   {
     Img *img = &img_vmu_circle_raw;
@@ -329,10 +331,6 @@ void DrawTestFunctions(int testNum)
   }
 
   // #6, vmupro_blit_buffer_fixed_alpha(), blit with fixed alpha value
-  // issues for claude:
-  //  - displays garbage data like colour multiply
-  //  - the edges are vaguely correct looking, maybe slightly miscoloured
-  //  - wraps around the screen edges, unlike other funcions
   if (testNum == 6)
   {
     Img *img = &img_vmu_circle_raw;
@@ -362,9 +360,7 @@ void DrawTestFunctions(int testNum)
     }
   }
 
-  // # 8, vmupro_blit_buffer_mosaic(), pixellate stuff
-  // issues for claude:
-  //  - mosaic values of 0 render nothing
+  // #8, vmupro_blit_buffer_mosaic(), pixellate stuff
   if (testNum == 8)
   {
 
