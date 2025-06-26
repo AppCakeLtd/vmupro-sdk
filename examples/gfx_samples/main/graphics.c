@@ -260,10 +260,6 @@ void DrawTestFunctions(int testNum)
   }
 
   // #2, vmupro_blit_buffer_blended(), blit with alpha blending
-  // issues for claude:
-  //  - SIMD part displays utter garbage
-  //  - Scalar part works but the byte order appears wrong
-  //  - wraps when x or y are below 0
   if (testNum == 2)
   {
     Img *img = &img_vmu_circle_raw;
@@ -279,8 +275,6 @@ void DrawTestFunctions(int testNum)
   }
 
   // #3, vmupro_blit_buffer_color_add(), blit w/ constant colour
-  // issues for claude:
-  //  - requires byte-swapped colour params
   if (testNum == 3)
   {
     Img *img = &img_vmu_circle_raw;
@@ -303,7 +297,7 @@ void DrawTestFunctions(int testNum)
 
   // #4, vmupro_blit_buffer_color_multiply(), blit w/ colour multiply
   // issues for claude:  
-  //  - vertical columns
+  //  - vertical columns with dark spots
   if (testNum == 4)
   {
 
@@ -323,8 +317,6 @@ void DrawTestFunctions(int testNum)
   }
 
   // #5, vmupro_blit_buffer_flip_h() & vmupro_blit_buffer_flip_v(), blit flipped
-  // issues for claude:
-  //  - crashes and reboots the device (caught on vid)
   if (testNum == 5)
   {
     Img *img = &img_vmu_circle_raw;
