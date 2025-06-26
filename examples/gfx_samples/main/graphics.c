@@ -280,12 +280,19 @@ void DrawTestFunctions(int testNum)
 
   // #3, vmupro_blit_buffer_color_add(), blit w/ constant colour
   // issues for claude:
-  //  - immediately crashes the device
+  //  - requires byte-swapped colour params
   if (testNum == 3)
   {
     Img *img = &img_vmu_circle_raw;
-    uint16_t rgb565 = VMUPRO_COLOR_BLUE;
-    vmupro_blit_buffer_color_add(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, rgb565);
+    
+    vmupro_blit_buffer_color_add(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, 0x0000);
+    uint16_t shift1 = (5<<11) | (5<6) | (5); // add 5 to each
+    shift1 = (shift1 <<8) | (shift1 >>8);
+    vmupro_blit_buffer_color_add(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height, shift1);
+    uint16_t shift2 = (10<<11) | (10<6) | (10); // add 10 to each
+    shift2 = (shift2 <<8) | (shift2 >>8);
+    vmupro_blit_buffer_color_add(img->data, bounce3.xPos, bounce3.yPos, img->width, img->height, shift2);
+
     static bool shownMsg3 = false;
     if (!shownMsg3)
     {
@@ -295,15 +302,18 @@ void DrawTestFunctions(int testNum)
   }
 
   // #4, vmupro_blit_buffer_color_multiply(), blit w/ colour multiply
-  // issues for claude:
-  //  - only displays a few flickering pixels from a single row
-  //  - eventually crashes
+  // issues for claude:  
+  //  - vertical columns
   if (testNum == 4)
   {
 
     Img *img = &img_vmu_circle_raw;
-    uint16_t rgb565 = VMUPRO_COLOR_GREEN;
-    vmupro_blit_buffer_color_multiply(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, rgb565);
+    
+    uint16_t shift1 = (2<<11) | (2<6) | (2); // add 2 to each
+    uint16_t shift2 = (shift1 <<8) | (shift1 >>8);
+    vmupro_blit_buffer_color_multiply(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, shift1);
+    vmupro_blit_buffer_color_multiply(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height, shift2);
+    //vmupro_blit_buffer_color_multiply(img->data, bounce3.xPos, bounce3.yPos, img->width, img->height, VMUPRO_COLOR_BLUE);
     static bool shownMsg4 = false;
     if (!shownMsg4)
     {
@@ -362,7 +372,7 @@ void DrawTestFunctions(int testNum)
     }
   }
 
-  // # 8, vmupro_blit_buffer_mosaic(), pixellate stuff
+  // #8, vmupro_blit_buffer_mosaic(), pixellate stuff
   // issues for claude:
   //  - mosaic values of 0 render nothing
   if (testNum == 8)
@@ -378,6 +388,21 @@ void DrawTestFunctions(int testNum)
     {
       shownMsg8 = true;
       vmupro_log(VMUPRO_LOG_INFO, TAG, "Function %d - vmupro_blit_buffer_mosaic", testNum);
+    }
+  }
+
+  // #9,
+  if (testNum == 9)
+  {
+    Img *img = &img_vmu_circle_raw;
+    vmupro_blit_buffer_blurred(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, 0);
+    vmupro_blit_buffer_blurred(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height, 1);
+    vmupro_blit_buffer_blurred(img->data, bounce3.xPos, bounce3.yPos, img->width, img->height, 2);
+    static bool shownMsg9 = false;
+    if (!shownMsg9)
+    {
+      shownMsg9 = true;
+      vmupro_log(VMUPRO_LOG_INFO, TAG, "Function %d - vmupro_blit_buffer_blurred", testNum);
     }
   }
 }
