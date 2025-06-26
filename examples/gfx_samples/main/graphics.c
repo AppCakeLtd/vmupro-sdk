@@ -284,16 +284,13 @@ void DrawTestFunctions(int testNum)
   if (testNum == 3)
   {
     Img *img = &img_vmu_circle_raw;
-    uint16_t rgb565 = VMUPRO_COLOR_GREEN;
-    // optional
-    rgb565 = (rgb565 << 8) | (rgb565 >> 8);
-    // vmupro_blit_buffer_color_add(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, rgb565);
+    uint16_t rgb565 = VMUPRO_COLOR_BLUE;
+    vmupro_blit_buffer_color_add(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, rgb565);
     static bool shownMsg3 = false;
     if (!shownMsg3)
     {
       shownMsg3 = true;
       vmupro_log(VMUPRO_LOG_INFO, TAG, "Function %d - vmupro_blit_buffer_color_add", testNum);
-      vmupro_log(VMUPRO_LOG_INFO, TAG, "SKIPPED DUE TO CRASHING");
     }
   }
 
@@ -306,8 +303,6 @@ void DrawTestFunctions(int testNum)
 
     Img *img = &img_vmu_circle_raw;
     uint16_t rgb565 = VMUPRO_COLOR_GREEN;
-    // optional
-    rgb565 = (rgb565 << 8) | (rgb565 >> 8);
     vmupro_blit_buffer_color_multiply(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, rgb565);
     static bool shownMsg4 = false;
     if (!shownMsg4)
@@ -324,8 +319,8 @@ void DrawTestFunctions(int testNum)
   if (testNum == 5)
   {
     Img *img = &img_vmu_circle_raw;
-    // vmupro_blit_buffer_flip_h(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height);
-    // vmupro_blit_buffer_flip_v(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height);
+    vmupro_blit_buffer_flip_h(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height);
+    vmupro_blit_buffer_flip_v(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height);
     static bool shownMsg5 = false;
     if (!shownMsg5)
     {
