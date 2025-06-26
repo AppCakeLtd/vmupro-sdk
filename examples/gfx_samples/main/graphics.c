@@ -26,7 +26,7 @@ const int SCREEN_WIDTH = 240;
 const int SCREEN_HEIGHT = 240;
 
 // test function
-int testNum = 11;
+int testNum = 0;
 
 // Little dvd bouncer that bounces off the edge of the screen
 // used for various tests
