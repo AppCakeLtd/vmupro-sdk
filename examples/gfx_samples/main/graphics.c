@@ -380,6 +380,22 @@ void DrawTestFunctions(int testNum)
       vmupro_log(VMUPRO_LOG_INFO, TAG, "Function %d - vmupro_blit_buffer_mosaic", testNum);
     }
   }
+
+  if (testNum == 9)
+  {
+
+    Img *img = &img_vmu_circle_raw;
+    vmupro_blit_buffer_blurred(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, 2);
+    vmupro_blit_buffer_blurred(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height, 4);
+    vmupro_blit_buffer_blurred(img->data, bounce3.xPos, bounce3.yPos, img->width, img->height, 6);
+
+    static bool shownMsg9 = false;
+    if (!shownMsg9)
+    {
+      shownMsg9 = true;
+      vmupro_log(VMUPRO_LOG_INFO, TAG, "Function %d - vmupro_blit_buffer_blurred", testNum);
+    }
+  }
 }
 
 void app_main(void)
