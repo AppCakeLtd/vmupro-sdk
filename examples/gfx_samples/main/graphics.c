@@ -26,7 +26,7 @@ const int SCREEN_WIDTH = 240;
 const int SCREEN_HEIGHT = 240;
 
 // test function
-int testNum = 0;
+int testNum = 11;
 
 // Little dvd bouncer that bounces off the edge of the screen
 // used for various tests
@@ -44,7 +44,8 @@ DVDBounce bounce1 = {false, 10, 24, -10, SCREEN_WIDTH + 10};
 DVDBounce bounce2 = {false, 80, 86, -10, SCREEN_WIDTH + 10};
 // For params like rotation, alpha
 DVDBounce bounce3 = {false, 0, 0, 0, SCREEN_WIDTH};
-DVDBounce bounce4 = {false, 128, 128, 255};
+DVDBounce bounce255 = {false, 128, 0, 255};
+DVDBounce bounce360 = {false, 0, 0, 360};
 
 void UpdateDVDBounce(DVDBounce *bounce)
 {
@@ -226,7 +227,8 @@ void DrawTestFunctions(int testNum)
   UpdateDVDBounce(&bounce1);
   UpdateDVDBounce(&bounce2);
   UpdateDVDBounce(&bounce3);
-  UpdateDVDBounce(&bounce4);
+  UpdateDVDBounce(&bounce255);
+  UpdateDVDBounce(&bounce360);
 
   // simple image
 
@@ -278,13 +280,13 @@ void DrawTestFunctions(int testNum)
   if (testNum == 3)
   {
     Img *img = &img_vmu_circle_raw;
-    
+
     vmupro_blit_buffer_color_add(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, 0x0000);
-    uint16_t shift1 = (5<<11) | (5<6) | (5); // add 5 to each
-    shift1 = (shift1 <<8) | (shift1 >>8);
+    uint16_t shift1 = (5 << 11) | (5 < 6) | (5); // add 5 to each
+    shift1 = (shift1 << 8) | (shift1 >> 8);
     vmupro_blit_buffer_color_add(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height, shift1);
-    uint16_t shift2 = (10<<11) | (10<6) | (10); // add 10 to each
-    shift2 = (shift2 <<8) | (shift2 >>8);
+    uint16_t shift2 = (10 << 11) | (10 < 6) | (10); // add 10 to each
+    shift2 = (shift2 << 8) | (shift2 >> 8);
     vmupro_blit_buffer_color_add(img->data, bounce3.xPos, bounce3.yPos, img->width, img->height, shift2);
 
     static bool shownMsg3 = false;
@@ -296,18 +298,18 @@ void DrawTestFunctions(int testNum)
   }
 
   // #4, vmupro_blit_buffer_color_multiply(), blit w/ colour multiply
-  // issues for claude:  
+  // issues for claude:
   //  - vertical columns with dark spots
   if (testNum == 4)
   {
 
     Img *img = &img_vmu_circle_raw;
-    
-    uint16_t shift1 = (2<<11) | (2<6) | (2); // add 2 to each
-    uint16_t shift2 = (shift1 <<8) | (shift1 >>8);
+
+    uint16_t shift1 = (2 << 11) | (2 < 6) | (2); // add 2 to each
+    uint16_t shift2 = (shift1 << 8) | (shift1 >> 8);
     vmupro_blit_buffer_color_multiply(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, shift1);
     vmupro_blit_buffer_color_multiply(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height, shift2);
-    //vmupro_blit_buffer_color_multiply(img->data, bounce3.xPos, bounce3.yPos, img->width, img->height, VMUPRO_COLOR_BLUE);
+    // vmupro_blit_buffer_color_multiply(img->data, bounce3.xPos, bounce3.yPos, img->width, img->height, VMUPRO_COLOR_BLUE);
     static bool shownMsg4 = false;
     if (!shownMsg4)
     {
@@ -381,14 +383,66 @@ void DrawTestFunctions(int testNum)
   if (testNum == 9)
   {
     Img *img = &img_vmu_circle_raw;
-    vmupro_blit_buffer_blurred(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, 0);
-    vmupro_blit_buffer_blurred(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height, 1);
-    vmupro_blit_buffer_blurred(img->data, bounce3.xPos, bounce3.yPos, img->width, img->height, 2);
+    // vmupro_blit_buffer_blurred(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, 0);
+    // vmupro_blit_buffer_blurred(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height, 1);
+    // vmupro_blit_buffer_blurred(img->data, bounce3.xPos, bounce3.yPos, img->width, img->height, 2);
     static bool shownMsg9 = false;
     if (!shownMsg9)
     {
       shownMsg9 = true;
       vmupro_log(VMUPRO_LOG_INFO, TAG, "Function %d - vmupro_blit_buffer_blurred", testNum);
+      vmupro_log(VMUPRO_LOG_INFO, TAG, "SKIPPED DUE TO CRASHING");
+    }
+  }
+
+  // #10, vmupro_blit_buffer_rotated_precise(), fine rotation control
+  if (testNum == 10)
+  {
+    Img *img = &img_vmu_circle_raw;
+    vmupro_blit_buffer_rotated_precise(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, 0);
+    vmupro_blit_buffer_rotated_precise(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height, bounce360.xPos);
+    vmupro_blit_buffer_rotated_precise(img->data, bounce3.xPos, bounce3.yPos, img->width, img->height, -10);
+    static bool shownMsg10 = false;
+    if (!shownMsg10)
+    {
+      shownMsg10 = true;
+      vmupro_log(VMUPRO_LOG_INFO, TAG, "Function %d - vmupro_blit_buffer_rotated_precise", testNum);
+    }
+  }
+
+  // #11, vmupro_blit_buffer_scaled(), scaled from a source point
+  // - when drawing a 1:1 image, the SIMD/vectorised part draws at the wrong x pos (the scalar part draws correctly)
+  // - when drawing a 1:1 image, the SIMD/vectorised part shakes rapidaly on the x axis (leaving a varying column between the SIMD and scalar part)
+  if (testNum == 0)
+  {
+
+    Img *img = &img_vmu_circle_raw;
+
+    // normal version of the image for comparison @ 5x5
+    int drawX = 5;
+    int drawY = 5;
+    vmupro_blit_buffer_at(img->data, drawX, drawY, img->width, img->height);
+
+    // 1:1 scale right next to it
+    drawX = 5 + img->width + 5;
+    drawY = 5;
+    vmupro_blit_buffer_scaled(img->data, img->width, 0, 0, img->width, img->height, drawX, 5, img->width, img->height);
+
+    // scaling the whole image (top left)
+    drawX = 5;
+    drawY = 65;
+    vmupro_blit_buffer_scaled(img->data, img->width, 0, 0, img->width, img->height, drawX, drawY, 40, 40);
+    vmupro_blit_buffer_scaled(img->data, img->width, 0, 0, img->width / 2, img->height / 2, drawX, drawY, 40, 40);
+
+    // scaling the whole image (sourcing partially out of bounds)
+    // vmupro_blit_buffer_scaled(img->data, img->width, 25, 25, img->width, img->height, 20, 80, 40, 40);
+    // vmupro_blit_buffer_scaled(img->data, img->width, 25, 25, img->width / 2, img->height /2, 60, 80, 40, 40);
+
+    static bool shownMsg10 = false;
+    if (!shownMsg10)
+    {
+      shownMsg10 = true;
+      vmupro_log(VMUPRO_LOG_INFO, TAG, "Function %d - vmupro_blit_buffer_rotated_precise", testNum);
     }
   }
 }
