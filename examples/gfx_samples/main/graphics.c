@@ -306,10 +306,9 @@ void DrawTestFunctions(int testNum)
     Img *img = &img_vmu_circle_raw;
 
     uint16_t shift1 = (2 << 11) | (2 < 6) | (2); // add 2 to each
-    uint16_t shift2 = (shift1 << 8) | (shift1 >> 8);
+    uint16_t shift2 = (3 << 11) | (3 < 6) | (3);
     vmupro_blit_buffer_color_multiply(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, shift1);
-    vmupro_blit_buffer_color_multiply(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height, shift2);
-    // vmupro_blit_buffer_color_multiply(img->data, bounce3.xPos, bounce3.yPos, img->width, img->height, VMUPRO_COLOR_BLUE);
+    vmupro_blit_buffer_color_multiply(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height, shift2);    
     static bool shownMsg4 = false;
     if (!shownMsg4)
     {
