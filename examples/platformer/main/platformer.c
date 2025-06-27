@@ -366,15 +366,31 @@ void DrawPlayer()
 
   // we moved left/right?
   Vec2 * lastPlayerAbsPos = &player.spr.lastAbsPos;
-  bool movedRight = absFeetPos->x > lastPlayerAbsPos->x;
-  bool movedLeft = absFeetPos->x < lastPlayerAbsPos->x;
+  int xDelta = absFeetPos->x - lastPlayerAbsPos->x;
+  int yDelta = absFeetPos->y - lastPlayerAbsPos->y;
 
-  if ( player.facingRight && movedLeft ){
+  if ( player.facingRight && xDelta < 0 ){
+    // moved left
     player.facingRight = false;
   }
-  if ( !player.facingRight && movedRight ){
+  if ( !player.facingRight && xDelta > 0 ){
+    // moved right
     player.facingRight = true;
   }
+
+  bool goingUp = yDelta < 0;
+
+  // __TEST__ temporary thing
+  if (goingUp){
+    player.spr.img = &img_player_fall_raw;
+    OnSpriteUpdated(&player.spr, true);
+  } else {
+    player.spr.img = &img_player_idle_raw;
+    OnSpriteUpdated(&player.spr, true);
+  }
+
+  // update the img pointer
+  img = player.spr.img;
 
   if ( player.facingRight ){
     vmupro_blit_buffer_at(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height);
