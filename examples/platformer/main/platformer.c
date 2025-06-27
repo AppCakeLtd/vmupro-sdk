@@ -6,6 +6,19 @@
 
 const char *TAG = "[Platformer]";
 
+#define SCREEN_WIDTH 240
+#define SCREEN_HEIGHT 240
+#define TILEMAP_WIDTH_TILES 8
+#define TILEMAP_HEIGHT_TILES 22
+#define TILE_SIZE_PX 16
+#define TILEMAP_WIDTH_PIXELS (TILEMAP_WIDTH_TILES * TILE_SIZE_PX)
+#define TILEMAP_HEIGHT_PIXELS (TILEMAP_HEIGHT_TILES * TILE_SIZE_PX)
+
+int playerX = 80;
+int playerY = 0;
+int camX = 0;
+int camY = 0;
+
 typedef struct
 {
   uint32_t widthInTiles;
@@ -24,11 +37,28 @@ void LoadLevel(int levelNum)
   currentLevel = (LevelData *)level_1_layer_0_data;
 }
 
+#define BLOCK_NULL 0xFFFFFFFF
+
+// returns atlas block 0-max
+// note: the .map file uses 0x00 for blank spots
+// so we'll always sub 1 to get a 0-indexed
+// value into our spritesheet/atlas
 uint32_t GetBlockIDAtPos(int x, int y)
 {
 
   if (currentLevel == NULL)
-    return 0;
+    return BLOCK_NULL;
+
+  // bounds check the input values
+  if (x < 0 || y < 0)
+  {
+    return BLOCK_NULL;
+  }
+
+  if (x >= currentLevel->widthInTiles || y > currentLevel->heightInTiles)
+  {
+    return BLOCK_NULL;
+  }
 
   uint32_t offset = (y * currentLevel->widthInTiles) + x;
 
@@ -44,22 +74,42 @@ void DrawLevelBlock(int x, int y)
 
   uint32_t blockId = GetBlockIDAtPos(x, y);
 
-  if (blockId == 0xFFFFFFFF)
+  if (blockId == BLOCK_NULL)
   {
     return;
   }
 
-  const uint32_t TILEMAP_WIDTH_TILES = 8;
-  const uint32_t TILE_SIZE = 16;
+  uint32_t pixSrcX = (blockId % TILEMAP_WIDTH_TILES) * TILE_SIZE_PX;
+  uint32_t pixSrcY = (blockId / TILEMAP_WIDTH_TILES) * TILE_SIZE_PX;
 
-  uint32_t pixSrcX = (blockId % TILEMAP_WIDTH_TILES) * TILE_SIZE;
-  uint32_t pixSrcY = (blockId / TILEMAP_WIDTH_TILES) * TILE_SIZE;
-
-  uint32_t pixTargX = x * TILE_SIZE;
-  uint32_t pixTargY = y * TILE_SIZE;
+  uint32_t pixTargX = x * TILE_SIZE_PX;
+  uint32_t pixTargY = y * TILE_SIZE_PX;
 
   const Img *sheet = &img_tilemap_raw;
-  vmupro_blit_tile(sheet->data, pixTargX + scrollx, pixTargY, pixSrcX, pixSrcY, TILE_SIZE, TILE_SIZE, sheet->width);
+  vmupro_blit_tile(sheet->data, pixTargX - camX, pixTargY - camY, pixSrcX, pixSrcY, TILE_SIZE_PX, TILE_SIZE_PX, sheet->width);
+}
+
+
+
+// center the camera on the player
+void SolveCamera()
+{
+
+  // check if cam's going off left
+  int camLeft = playerX - (SCREEN_WIDTH/2);
+  if ( camLeft < 0 ) camLeft = 0;
+  
+  // check if cam's going off right
+  int camRight = camLeft + SCREEN_WIDTH;
+  if (camRight >= TILEMAP_WIDTH_PIXELS ){
+    int delta = camRight - TILEMAP_WIDTH_PIXELS;
+    //camLeft -= delta;
+  }
+
+  camX = camLeft;
+  camY = 0;
+
+
 }
 
 void app_main(void)
@@ -92,32 +142,48 @@ void app_main(void)
 
     // uint32_t *layer0 = (uint32_t *)level_1_layer_0_data;
 
-    int extraTiles = 4;
+    SolveCamera();
+
+    // work out the x/y range based on camera pos
+    // the screen (240px) can hadle 15 and a bit 16px tiles
+    // so we'll always draw 17 to allow clean scrolling
+    // this is a good point for optimisation
+    int startTileY = 0;
+    int leftTileIndex = camX / TILE_SIZE_PX;
+    // wrapping, draw an extra tile
+    leftTileIndex -=1;
+
+
+    
+    int extraTiles = 8;
 
     for (int y = 0; y < 16; y++)
     {
-      for (int x = 0; x < 16 + extraTiles; x++)
+      for (int x = 0; x < 17; x++)
       {
-        DrawLevelBlock(x, y);
+        int realXTile = x + leftTileIndex;
+        DrawLevelBlock(realXTile, y);
       }
     }
+    
 
-    if (!scrollReverse)
-    {
-      scrollx++;
-      if (scrollx == extraTiles * 16)
-      {
-        scrollReverse = true;
-      }
-    }
-    else
-    {
-      scrollx--;
-      if (scrollx == 0)
-      {
-        scrollReverse = false;
-      }
-    }
+    // if (!scrollReverse)
+    // {
+    //   scrollx++;
+    //   if (scrollx == extraTiles * 16)
+    //   {
+    //     scrollReverse = true;
+    //   }
+    // }
+    // else
+    // {
+    //   scrollx--;
+    //   if (scrollx == 0)
+    //   {
+    //     scrollReverse = false;
+    //   }
+    // }
+    
 
     vmupro_push_double_buffer_frame();
 
@@ -128,6 +194,14 @@ void app_main(void)
     {
       break;
     }
+
+    if ( vmupro_btn_held(DPad_Right) ){
+      playerX+=3;
+    }
+    if ( vmupro_btn_held(DPad_Left)){
+      playerX-=3;
+    }
+
   }
 
   // Terminate the renderer
