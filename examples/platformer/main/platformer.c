@@ -8,11 +8,19 @@ const char *TAG = "[Platformer]";
 
 #define SCREEN_WIDTH 240
 #define SCREEN_HEIGHT 240
+#define TILE_SIZE_PX 16
+
+// the spritesheet/atlas
 #define TILEMAP_WIDTH_TILES 8
 #define TILEMAP_HEIGHT_TILES 22
-#define TILE_SIZE_PX 16
 #define TILEMAP_WIDTH_PIXELS (TILEMAP_WIDTH_TILES * TILE_SIZE_PX)
 #define TILEMAP_HEIGHT_PIXELS (TILEMAP_HEIGHT_TILES * TILE_SIZE_PX)
+
+// the actual map
+#define MAP_WIDTH_TILES 128
+#define MAP_HEIGHT_TILES 32
+#define MAP_WIDTH_PIXELS (MAP_WIDTH_TILES * TILE_SIZE_PX)
+#define MAP_HEIGHT_PIXELS (MAP_HEIGHT_PIXELS * TILE_SIZE_PX)
 
 int playerX = 80;
 int playerY = 0;
@@ -89,27 +97,25 @@ void DrawLevelBlock(int x, int y)
   vmupro_blit_tile(sheet->data, pixTargX - camX, pixTargY - camY, pixSrcX, pixSrcY, TILE_SIZE_PX, TILE_SIZE_PX, sheet->width);
 }
 
-
-
 // center the camera on the player
 void SolveCamera()
 {
 
   // check if cam's going off left
-  int camLeft = playerX - (SCREEN_WIDTH/2);
-  if ( camLeft < 0 ) camLeft = 0;
-  
+  int camLeft = playerX - (SCREEN_WIDTH / 2);
+  if (camLeft < 0)
+    camLeft = 0;
+
   // check if cam's going off right
   int camRight = camLeft + SCREEN_WIDTH;
-  if (camRight >= TILEMAP_WIDTH_PIXELS ){
-    int delta = camRight - TILEMAP_WIDTH_PIXELS;
-    //camLeft -= delta;
+  if (camRight >= MAP_WIDTH_PIXELS)
+  {
+    int delta = camRight - MAP_WIDTH_PIXELS;
+    camLeft -= delta;
   }
 
   camX = camLeft;
   camY = 0;
-
-
 }
 
 void app_main(void)
@@ -151,10 +157,8 @@ void app_main(void)
     int startTileY = 0;
     int leftTileIndex = camX / TILE_SIZE_PX;
     // wrapping, draw an extra tile
-    leftTileIndex -=1;
+    leftTileIndex -= 1;
 
-
-    
     int extraTiles = 8;
 
     for (int y = 0; y < 16; y++)
@@ -165,7 +169,6 @@ void app_main(void)
         DrawLevelBlock(realXTile, y);
       }
     }
-    
 
     // if (!scrollReverse)
     // {
@@ -183,7 +186,6 @@ void app_main(void)
     //     scrollReverse = false;
     //   }
     // }
-    
 
     vmupro_push_double_buffer_frame();
 
@@ -195,13 +197,14 @@ void app_main(void)
       break;
     }
 
-    if ( vmupro_btn_held(DPad_Right) ){
-      playerX+=3;
+    if (vmupro_btn_held(DPad_Right))
+    {
+      playerX += 3;
     }
-    if ( vmupro_btn_held(DPad_Left)){
-      playerX-=3;
+    if (vmupro_btn_held(DPad_Left))
+    {
+      playerX -= 3;
     }
-
   }
 
   // Terminate the renderer
