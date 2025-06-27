@@ -115,7 +115,7 @@ void SolveCamera()
   }
 
   camX = camLeft;
-  camY = 0;
+  camY = playerY;
 }
 
 void app_main(void)
@@ -154,19 +154,22 @@ void app_main(void)
     // the screen (240px) can hadle 15 and a bit 16px tiles
     // so we'll always draw 17 to allow clean scrolling
     // this is a good point for optimisation
-    int startTileY = 0;
+
     int leftTileIndex = camX / TILE_SIZE_PX;
     // wrapping, draw an extra tile
     leftTileIndex -= 1;
 
-    int extraTiles = 8;
+    int topTileIndex = camY / TILE_SIZE_PX;
+    // wrapping, draw an extra tile
+    topTileIndex -= 1;
 
-    for (int y = 0; y < 16; y++)
+    for (int y = 0; y < 17; y++)
     {
+      int realYTile = y + topTileIndex;
       for (int x = 0; x < 17; x++)
       {
         int realXTile = x + leftTileIndex;
-        DrawLevelBlock(realXTile, y);
+        DrawLevelBlock(realXTile, realYTile);
       }
     }
 
@@ -204,6 +207,15 @@ void app_main(void)
     if (vmupro_btn_held(DPad_Left))
     {
       playerX -= 3;
+    }
+
+    if (vmupro_btn_held(DPad_Up))
+    {
+      playerY -= 3;
+    }
+    if (vmupro_btn_held(DPad_Down))
+    {
+      playerY += 3;
     }
   }
 
