@@ -1,0 +1,11 @@
+
+{
+    "metadata_version" : 1,
+    "app_name":"8BM Platformer Example",
+    "app_author":"8BitMods",
+    "app_version": "1.0.0",
+    "app_mode": 2,
+    "icon_transparency": true,    
+    "app_entry_point":"app_main",    
+    "resources": []
+}

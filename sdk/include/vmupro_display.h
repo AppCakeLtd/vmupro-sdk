@@ -963,6 +963,12 @@ extern "C"
    */
   void vmupro_render_all_layers(void);
 
+  // todo: add a note on alignment
+  // todo: add a note mentioning how it can't read past the edge of an image
+  // todo: suggest powers of 2
+  // todo: note that tilemap width is in pixels
+  void vmupro_blit_tile(uint8_t *buffer, int x, int y, int src_x, int src_y, int width, int height, int tilemap_width);
+
 #ifdef __cplusplus
 }
 #endif
