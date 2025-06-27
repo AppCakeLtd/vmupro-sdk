@@ -8,7 +8,7 @@
 
 const char *TAG = "[Platformer]";
 
-const bool DEBUG_BBOX = true;
+const bool DEBUG_BBOX = false;
 
 #define SCREEN_WIDTH 240
 #define SCREEN_HEIGHT 240
@@ -76,11 +76,13 @@ typedef struct
   // since the player's pos might be
   // the feet pos for example
   Vec2 pos;
+  Vec2 lastAbsPos;
 } Sprite;
 
 typedef struct
 {
   Sprite spr;
+  bool facingRight;
 } Player;
 
 typedef struct
@@ -94,7 +96,7 @@ Mob testMob;
 // in: absolute position in level
 // out: position on screen
 // (obvs might be off screen, check that elsewhere)
-Vec2 GetScreenPos(Vec2 *srcPos)
+Vec2 GetScreenPlayerPos(Vec2 *srcPos)
 {
 
   Vec2 returnVal;
@@ -109,7 +111,7 @@ void DrawSpriteBoundingBox(Sprite *inSprite, uint16_t inCol)
 
   BBox *box = &inSprite->bbox;
   Vec2 absPos = inSprite->bbox.vecs.pos;
-  Vec2 screenPos = GetScreenPos(&absPos);
+  Vec2 screenPos = GetScreenPlayerPos(&absPos);
   int x2 = screenPos.x + box->width;
   int y2 = screenPos.y + box->height;
   vmupro_draw_rect(screenPos.x, screenPos.y, x2, y2, inCol);
@@ -152,7 +154,7 @@ void OnSpriteUpdated(Sprite *spr, bool forPlayer)
   }
 }
 
-Vec2 *GetPlayerPos()
+Vec2 *GetAbsPlayerPos()
 {
 
   return &player.spr.pos;
@@ -169,7 +171,7 @@ void SetPlayerPos(int inX, int inY)
 void MovePlayer(int inX, int inY)
 {
 
-  Vec2 tPos = *GetPlayerPos();
+  Vec2 tPos = *GetAbsPlayerPos();
   tPos.x += inX;
   tPos.y += inY;
   SetPlayerPos(tPos.x, tPos.y);
@@ -178,9 +180,14 @@ void MovePlayer(int inX, int inY)
 void ResetPlayer(Player *ply)
 {
 
-  ply->spr.img = &img_vmu_circle_raw;
+  ply->spr.img = &img_vmu_circle_raw;  
   Vec2 startPos = {80, MAP_HEIGHT_PIXELS - (TILE_SIZE_PX * 4)};
   SetPlayerPos(startPos.x, startPos.y);
+
+  // update other struct vals
+  ply->facingRight = true;
+  ply->spr.lastAbsPos = ply->spr.pos;
+
 }
 
 void LoadLevel(int levelNum)
@@ -222,7 +229,7 @@ void UpdateInputs()
 
   vmupro_btn_read();
 
-  Vec2 *pPos = GetPlayerPos();
+  Vec2 *pPos = GetAbsPlayerPos();
   if (vmupro_btn_held(DPad_Right))
   {
 
@@ -270,7 +277,7 @@ void DrawLevelBlock(int x, int y)
 void SolveCamera()
 {
 
-  Vec2 *pPos = GetPlayerPos();
+  Vec2 *pPos = GetAbsPlayerPos();
 
   // check if cam's going off left of the level
   int camLeft = pPos->x - (SCREEN_WIDTH / 2);
@@ -333,22 +340,50 @@ void DrawBackgroundTiles()
   }
 }
 
+// store the last abs pos vs current
+// do it at the end of the frame in case
+// the pos is updated multiple times in a frame
+// (collision, etc)
+void SetLastAbsPos(Sprite * inSpr){
+  inSpr->lastAbsPos = inSpr->pos;
+}
+
+void EndOfFrame(){
+  SetLastAbsPos(&player.spr);
+}
+ 
 void DrawPlayer()
 {
 
-  Vec2 *absFeetPos = GetPlayerPos();
-  Vec2 screenFeetPos = GetScreenPos(absFeetPos);
+  Vec2 *absFeetPos = GetAbsPlayerPos();
+  Vec2 screenFeetPos = GetScreenPlayerPos(absFeetPos);
 
   // draw based on the actual bounding box
   Vec2 absBoxPos = player.spr.bbox.vecs.pos;
-  Vec2 screenBoxPos = GetScreenPos(&absBoxPos);
+  Vec2 screenBoxPos = GetScreenPlayerPos(&absBoxPos);
 
   const Img *img = player.spr.img;
 
-  vmupro_blit_buffer_at(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height);
+  // we moved left/right?
+  Vec2 * lastPlayerAbsPos = &player.spr.lastAbsPos;
+  bool movedRight = absFeetPos->x > lastPlayerAbsPos->x;
+  bool movedLeft = absFeetPos->x < lastPlayerAbsPos->x;
+
+  if ( player.facingRight && movedLeft ){
+    player.facingRight = false;
+  }
+  if ( !player.facingRight && movedRight ){
+    player.facingRight = true;
+  }
+
+  if ( player.facingRight ){
+    vmupro_blit_buffer_at(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height);
+  }else {
+    vmupro_blit_buffer_flip_h(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height);    
+  }
 
   // draw something at the player's feet pos for debugging
-  vmupro_blit_buffer_at(img->data, screenFeetPos.x, screenFeetPos.y, img->width, img->height);
+  //vmupro_blit_buffer_at(img->data, screenFeetPos.x, screenFeetPos.y, img->width, img->height);
 }
 
 void app_main(void)
@@ -381,6 +416,7 @@ void app_main(void)
 
     vmupro_push_double_buffer_frame();
 
+    EndOfFrame();
 
     vmupro_sleep_ms(32);
 
