@@ -180,7 +180,7 @@ void MovePlayer(int inX, int inY)
 void ResetPlayer(Player *ply)
 {
 
-  ply->spr.img = &img_vmu_circle_raw;  
+  ply->spr.img = &img_player_idle_raw;  
   Vec2 startPos = {80, MAP_HEIGHT_PIXELS - (TILE_SIZE_PX * 4)};
   SetPlayerPos(startPos.x, startPos.y);
 
