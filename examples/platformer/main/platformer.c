@@ -24,9 +24,6 @@ const char *TAG = "[Platformer]";
 
 #define BLOCK_NULL 0xFFFFFFFF
 
-// __TEST__
-// int playerX = 80;
-// int playerY = MAP_HEIGHT_PIXELS - (TILE_SIZE_PX * 4);
 int camX = 0;
 int camY = 0;
 
@@ -67,8 +64,13 @@ typedef struct
 
 typedef struct
 {
+  // typically the image's bbox
   BBox bbox;
+  // the actual image data
   const Img *img;
+  // since the player's pos might be
+  // the feet pos for example
+  Vec2 pos;
 } Sprite;
 
 typedef struct
@@ -84,28 +86,66 @@ typedef struct
 Player player;
 Mob testMob;
 
-// int scrollx = 0;
-// int scrollReverse = false;
-
-void InitSprite(Sprite *spr, Img *srcImage)
+// Updates the bounding box when the pos or img changes
+void OnSpriteUpdated(Sprite *spr, bool forPlayer)
 {
 
-  // bounding box
-  spr->bbox.x = 0;
-  spr->bbox.y = 0;
-  spr->bbox.width = srcImage->width;
-  spr->bbox.height = srcImage->height;
+  if (spr == NULL)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "OnSpriteUpdated() - null sprite");
+    return;
+  }
 
-  // img
-  spr->img = srcImage;
+  const Img *img = spr->img;
+
+  if (spr->img == NULL)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Set the sprite img before attempting to update the bboxs");
+    return;
+  }
+
+  if (forPlayer)
+  {
+    // if it's the player, we'll centre around the feet
+    spr->bbox.x = spr->pos.x - (img->width / 2);
+    spr->bbox.y = spr->pos.y - (img->height);
+    spr->bbox.width = img->width;
+    spr->bbox.height = img->height;
+  }
+  else
+  {
+    // else we'll centre around the centre.
+    spr->bbox.x = spr->pos.x - (img->width / 2);
+    spr->bbox.y = spr->pos.y - (img->height / 2);
+    spr->bbox.width = img->width;
+    spr->bbox.height = img->height;
+  }
+
+}
+
+Vec2 GetPlayerPos()
+{
+
+  return player.spr.pos;
+}
+
+void SetPlayerPos(int inX, int inY)
+{
+
+  player.spr.pos.x = inX;
+  player.spr.pos.y = inY;
+  OnSpriteUpdated(&player.spr, true);
 }
 
 void ResetPlayer(Player *ply)
 {
-  InitSprite(&ply->spr, &img_vmu_circle_raw);
-  ply->spr.bbox.x = 80;
-  ply->spr.bbox.y = MAP_HEIGHT_PIXELS - (TILE_SIZE_PX * 4);
+
+  ply->spr.img = &img_vmu_circle_raw;
+  Vec2 startPos = {80, MAP_HEIGHT_PIXELS - (TILE_SIZE_PX * 4)};
+  SetPlayerPos(startPos.x, startPos.y);
 }
+
+
 
 void LoadLevel(int levelNum)
 {
@@ -267,7 +307,6 @@ void app_main(void)
     DrawBackgroundTiles();
 
     DrawPlayer();
-
 
     vmupro_push_double_buffer_frame();
 
