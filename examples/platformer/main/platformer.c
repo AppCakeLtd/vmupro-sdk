@@ -22,8 +22,11 @@ const char *TAG = "[Platformer]";
 #define MAP_WIDTH_PIXELS (MAP_WIDTH_TILES * TILE_SIZE_PX)
 #define MAP_HEIGHT_PIXELS (MAP_HEIGHT_TILES * TILE_SIZE_PX)
 
-int playerX = 80;
-int playerY = MAP_HEIGHT_PIXELS - (TILE_SIZE_PX * 4);
+#define BLOCK_NULL 0xFFFFFFFF
+
+// __TEST__
+// int playerX = 80;
+// int playerY = MAP_HEIGHT_PIXELS - (TILE_SIZE_PX * 4);
 int camX = 0;
 int camY = 0;
 
@@ -36,16 +39,80 @@ typedef struct
 
 LevelData *currentLevel = NULL;
 
-int scrollx = 0;
-int scrollReverse = false;
+typedef struct
+{
+  int x;
+  int y;
+} Vec2;
+
+typedef struct
+{
+  union
+  {
+    struct
+    {
+      int x;
+      int y;
+      int width;
+      int height;
+    };
+
+    struct
+    {
+      Vec2 pos;
+      Vec2 size;
+    } vecs;
+  };
+} BBox;
+
+typedef struct
+{
+  BBox bbox;
+  const Img *img;
+} Sprite;
+
+typedef struct
+{
+  Sprite spr;
+} Player;
+
+typedef struct
+{
+  Sprite pr;
+} Mob;
+
+Player player;
+Mob testMob;
+
+// int scrollx = 0;
+// int scrollReverse = false;
+
+void InitSprite(Sprite *spr, Img *srcImage)
+{
+
+  // bounding box
+  spr->bbox.x = 0;
+  spr->bbox.y = 0;
+  spr->bbox.width = srcImage->width;
+  spr->bbox.height = srcImage->height;
+
+  // img
+  spr->img = srcImage;
+}
+
+void ResetPlayer(Player *ply)
+{
+  InitSprite(&ply->spr, &img_vmu_circle_raw);
+  ply->spr.bbox.x = 80;
+  ply->spr.bbox.y = MAP_HEIGHT_PIXELS - (TILE_SIZE_PX * 4);
+}
 
 void LoadLevel(int levelNum)
 {
 
   currentLevel = (LevelData *)level_1_layer_0_data;
+  ResetPlayer(&player);
 }
-
-#define BLOCK_NULL 0xFFFFFFFF
 
 // returns atlas block 0-max
 // note: the .map file uses 0x00 for blank spots
@@ -101,6 +168,9 @@ void DrawLevelBlock(int x, int y)
 void SolveCamera()
 {
 
+  int playerX = player.spr.bbox.x;
+  int playerY = player.spr.bbox.y;
+
   // check if cam's going off left of the level
   int camLeft = playerX - (SCREEN_WIDTH / 2);
   if (camLeft < 0)
@@ -135,11 +205,40 @@ void SolveCamera()
   camY = camTop;
 }
 
+void DrawBackgroundTiles()
+{
+
+  // work out the x/y range based on camera pos
+  // the screen (240px) can hadle 15 and a bit 16px tiles
+  // so we'll always draw 17 to allow clean scrolling
+  // this is a good point for optimisation
+
+  int leftTileIndex = camX / TILE_SIZE_PX;
+  // wrapping, draw an extra tile
+  leftTileIndex -= 1;
+
+  int topTileIndex = camY / TILE_SIZE_PX;
+  // wrapping, draw an extra tile
+  topTileIndex -= 1;
+
+  for (int y = 0; y < 17; y++)
+  {
+    int realYTile = y + topTileIndex;
+    for (int x = 0; x < 17; x++)
+    {
+      int realXTile = x + leftTileIndex;
+      DrawLevelBlock(realXTile, realYTile);
+    }
+  }
+}
+
 void DrawPlayer()
 {
 
-  int playerDrawPosX = playerX - camX;
-  int playerDrawPosY = playerY - camY;
+  Vec2 *pPos = &player.spr.bbox.vecs.pos;
+
+  int playerDrawPosX = pPos->x - camX;
+  int playerDrawPosY = pPos->y - camY;
 
   // draw the 'player'
   const Img *img = &img_vmu_circle_raw;
@@ -163,59 +262,12 @@ void app_main(void)
     vmupro_color_t col = VMUPRO_COLOR_BLUE;
     vmupro_display_clear(col);
 
-    // srcx, srcy, tilemapwidth
-    // blit from the 2nd tile in the spritesheet
-    // const Img *sheet = &img_tilemap_raw;
-    // const int TILESIZE = 16 * 3;
-    // vmupro_blit_tile(sheet->data, 20, 20, 16, 0, TILESIZE, TILESIZE, sheet->width);
-
-    // vmupro_blit_tile(sheet->data, 20, 70, 16, 16, TILESIZE, TILESIZE, sheet->width);
-
-    // uint32_t *layer0 = (uint32_t *)level_1_layer_0_data;
-
     SolveCamera();
 
-    // work out the x/y range based on camera pos
-    // the screen (240px) can hadle 15 and a bit 16px tiles
-    // so we'll always draw 17 to allow clean scrolling
-    // this is a good point for optimisation
-
-    int leftTileIndex = camX / TILE_SIZE_PX;
-    // wrapping, draw an extra tile
-    leftTileIndex -= 1;
-
-    int topTileIndex = camY / TILE_SIZE_PX;
-    // wrapping, draw an extra tile
-    topTileIndex -= 1;
-
-    for (int y = 0; y < 17; y++)
-    {
-      int realYTile = y + topTileIndex;
-      for (int x = 0; x < 17; x++)
-      {
-        int realXTile = x + leftTileIndex;
-        DrawLevelBlock(realXTile, realYTile);
-      }
-    }
+    DrawBackgroundTiles();
 
     DrawPlayer();
 
-    // if (!scrollReverse)
-    // {
-    //   scrollx++;
-    //   if (scrollx == extraTiles * 16)
-    //   {
-    //     scrollReverse = true;
-    //   }
-    // }
-    // else
-    // {
-    //   scrollx--;
-    //   if (scrollx == 0)
-    //   {
-    //     scrollReverse = false;
-    //   }
-    // }
 
     vmupro_push_double_buffer_frame();
 
@@ -227,22 +279,23 @@ void app_main(void)
       break;
     }
 
+    Vec2 *pPos = &player.spr.bbox.vecs.pos;
     if (vmupro_btn_held(DPad_Right))
     {
-      playerX += 3;
+      pPos->x += 3;
     }
     if (vmupro_btn_held(DPad_Left))
     {
-      playerX -= 3;
+      pPos->x -= 3;
     }
 
     if (vmupro_btn_held(DPad_Up))
     {
-      playerY -= 3;
+      pPos->y -= 3;
     }
     if (vmupro_btn_held(DPad_Down))
     {
-      playerY += 3;
+      pPos->y += 3;
     }
   }
 
