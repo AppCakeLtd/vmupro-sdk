@@ -20,10 +20,10 @@ const char *TAG = "[Platformer]";
 #define MAP_WIDTH_TILES 128
 #define MAP_HEIGHT_TILES 32
 #define MAP_WIDTH_PIXELS (MAP_WIDTH_TILES * TILE_SIZE_PX)
-#define MAP_HEIGHT_PIXELS (MAP_HEIGHT_PIXELS * TILE_SIZE_PX)
+#define MAP_HEIGHT_PIXELS (MAP_HEIGHT_TILES * TILE_SIZE_PX)
 
 int playerX = 80;
-int playerY = 0;
+int playerY = MAP_HEIGHT_PIXELS - (TILE_SIZE_PX * 4);
 int camX = 0;
 int camY = 0;
 
@@ -63,7 +63,7 @@ uint32_t GetBlockIDAtPos(int x, int y)
     return BLOCK_NULL;
   }
 
-  if (x >= currentLevel->widthInTiles || y > currentLevel->heightInTiles)
+  if (x >= currentLevel->widthInTiles || y >= currentLevel->heightInTiles)
   {
     return BLOCK_NULL;
   }
@@ -101,12 +101,12 @@ void DrawLevelBlock(int x, int y)
 void SolveCamera()
 {
 
-  // check if cam's going off left
+  // check if cam's going off left of the level
   int camLeft = playerX - (SCREEN_WIDTH / 2);
   if (camLeft < 0)
     camLeft = 0;
 
-  // check if cam's going off right
+  // check if cam's going off right of the level
   int camRight = camLeft + SCREEN_WIDTH;
   if (camRight >= MAP_WIDTH_PIXELS)
   {
@@ -114,8 +114,36 @@ void SolveCamera()
     camLeft -= delta;
   }
 
+  // check if cam's going off the top of the level
+  // player's about 3/4 of the way down the screen
+  int playerYOffset = (SCREEN_WIDTH * 4) / 3;
+  int camTop = playerY - (SCREEN_WIDTH / 2);
+  if (camTop < 0)
+  {
+    camTop = 0;
+  }
+
+  // check if cam's going off the bottom of the level
+  int camBottom = camTop + SCREEN_HEIGHT;
+  if (camBottom >= MAP_HEIGHT_PIXELS)
+  {
+    int delta = camBottom - MAP_HEIGHT_PIXELS;
+    camTop -= delta;
+  }
+
   camX = camLeft;
-  camY = playerY;
+  camY = camTop;
+}
+
+void DrawPlayer()
+{
+
+  int playerDrawPosX = playerX - camX;
+  int playerDrawPosY = playerY - camY;
+
+  // draw the 'player'
+  const Img *img = &img_vmu_circle_raw;
+  vmupro_blit_buffer_at(img->data, playerDrawPosX - 22, playerDrawPosY - 22, img->width, img->height);
 }
 
 void app_main(void)
@@ -134,9 +162,6 @@ void app_main(void)
 
     vmupro_color_t col = VMUPRO_COLOR_BLUE;
     vmupro_display_clear(col);
-
-    const Img *img = &img_vmu_circle_raw;
-    // vmupro_blit_buffer_at(img->data, 120, 20, img->width, img->height);
 
     // srcx, srcy, tilemapwidth
     // blit from the 2nd tile in the spritesheet
@@ -172,6 +197,8 @@ void app_main(void)
         DrawLevelBlock(realXTile, realYTile);
       }
     }
+
+    DrawPlayer();
 
     // if (!scrollReverse)
     // {
