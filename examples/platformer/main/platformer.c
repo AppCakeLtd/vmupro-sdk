@@ -1,10 +1,14 @@
 
+#include <stdint.h>
+#include <stdbool.h>
 #include <string.h>
 #include "vmupro_sdk.h"
 #include "images/images.h"
 #include "images/level_1_layer_0.h"
 
 const char *TAG = "[Platformer]";
+
+const bool DEBUG_BBOX = true;
 
 #define SCREEN_WIDTH 240
 #define SCREEN_HEIGHT 240
@@ -26,6 +30,7 @@ const char *TAG = "[Platformer]";
 
 int camX = 0;
 int camY = 0;
+int frameCounter = 0;
 
 typedef struct
 {
@@ -86,6 +91,31 @@ typedef struct
 Player player;
 Mob testMob;
 
+// in: absolute position in level
+// out: position on screen
+// (obvs might be off screen, check that elsewhere)
+Vec2 GetScreenPos(Vec2 *srcPos)
+{
+
+  Vec2 returnVal;
+  returnVal.x = srcPos->x - camX;
+  returnVal.y = srcPos->y - camY;
+  return returnVal;
+}
+
+// in screen spsace
+void DrawSpriteBoundingBox(Sprite *inSprite, uint16_t inCol)
+{
+
+  BBox *box = &inSprite->bbox;
+  Vec2 absPos = inSprite->bbox.vecs.pos;
+  Vec2 screenPos = GetScreenPos(&absPos);
+  int x2 = screenPos.x + box->width;
+  int y2 = screenPos.y + box->height;
+  vmupro_draw_rect(screenPos.x, screenPos.y, x2, y2, inCol);
+  
+}
+
 // Updates the bounding box when the pos or img changes
 void OnSpriteUpdated(Sprite *spr, bool forPlayer)
 {
@@ -120,13 +150,12 @@ void OnSpriteUpdated(Sprite *spr, bool forPlayer)
     spr->bbox.width = img->width;
     spr->bbox.height = img->height;
   }
-
 }
 
-Vec2 GetPlayerPos()
+Vec2 *GetPlayerPos()
 {
 
-  return player.spr.pos;
+  return &player.spr.pos;
 }
 
 void SetPlayerPos(int inX, int inY)
@@ -137,6 +166,15 @@ void SetPlayerPos(int inX, int inY)
   OnSpriteUpdated(&player.spr, true);
 }
 
+void MovePlayer(int inX, int inY)
+{
+
+  Vec2 tPos = *GetPlayerPos();
+  tPos.x += inX;
+  tPos.y += inY;
+  SetPlayerPos(tPos.x, tPos.y);
+}
+
 void ResetPlayer(Player *ply)
 {
 
@@ -144,8 +182,6 @@ void ResetPlayer(Player *ply)
   Vec2 startPos = {80, MAP_HEIGHT_PIXELS - (TILE_SIZE_PX * 4)};
   SetPlayerPos(startPos.x, startPos.y);
 }
-
-
 
 void LoadLevel(int levelNum)
 {
@@ -181,6 +217,32 @@ uint32_t GetBlockIDAtPos(int x, int y)
   return block - 1;
 }
 
+void UpdateInputs()
+{
+
+  vmupro_btn_read();
+
+  Vec2 *pPos = GetPlayerPos();
+  if (vmupro_btn_held(DPad_Right))
+  {
+
+    MovePlayer(3, 0);
+  }
+  if (vmupro_btn_held(DPad_Left))
+  {
+    MovePlayer(-3, 0);
+  }
+
+  if (vmupro_btn_held(DPad_Up))
+  {
+    MovePlayer(0, -3);
+  }
+  if (vmupro_btn_held(DPad_Down))
+  {
+    MovePlayer(0, 3);
+  }
+}
+
 void DrawLevelBlock(int x, int y)
 {
 
@@ -208,11 +270,10 @@ void DrawLevelBlock(int x, int y)
 void SolveCamera()
 {
 
-  int playerX = player.spr.bbox.x;
-  int playerY = player.spr.bbox.y;
+  Vec2 *pPos = GetPlayerPos();
 
   // check if cam's going off left of the level
-  int camLeft = playerX - (SCREEN_WIDTH / 2);
+  int camLeft = pPos->x - (SCREEN_WIDTH / 2);
   if (camLeft < 0)
     camLeft = 0;
 
@@ -227,7 +288,7 @@ void SolveCamera()
   // check if cam's going off the top of the level
   // player's about 3/4 of the way down the screen
   int playerYOffset = (SCREEN_WIDTH * 4) / 3;
-  int camTop = playerY - (SCREEN_WIDTH / 2);
+  int camTop = pPos->y - (SCREEN_WIDTH / 2);
   if (camTop < 0)
   {
     camTop = 0;
@@ -275,14 +336,19 @@ void DrawBackgroundTiles()
 void DrawPlayer()
 {
 
-  Vec2 *pPos = &player.spr.bbox.vecs.pos;
+  Vec2 *absFeetPos = GetPlayerPos();
+  Vec2 screenFeetPos = GetScreenPos(absFeetPos);
 
-  int playerDrawPosX = pPos->x - camX;
-  int playerDrawPosY = pPos->y - camY;
+  // draw based on the actual bounding box
+  Vec2 absBoxPos = player.spr.bbox.vecs.pos;
+  Vec2 screenBoxPos = GetScreenPos(&absBoxPos);
 
-  // draw the 'player'
-  const Img *img = &img_vmu_circle_raw;
-  vmupro_blit_buffer_at(img->data, playerDrawPosX - 22, playerDrawPosY - 22, img->width, img->height);
+  const Img *img = player.spr.img;
+
+  vmupro_blit_buffer_at(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height);
+
+  // draw something at the player's feet pos for debugging
+  vmupro_blit_buffer_at(img->data, screenFeetPos.x, screenFeetPos.y, img->width, img->height);
 }
 
 void app_main(void)
@@ -308,34 +374,24 @@ void app_main(void)
 
     DrawPlayer();
 
+    if (DEBUG_BBOX)
+    {
+      DrawSpriteBoundingBox(&player.spr, VMUPRO_COLOR_WHITE);
+    }
+
     vmupro_push_double_buffer_frame();
+
 
     vmupro_sleep_ms(32);
 
-    vmupro_btn_read();
+    UpdateInputs();
+
     if (vmupro_btn_confirm_pressed())
     {
       break;
     }
 
-    Vec2 *pPos = &player.spr.bbox.vecs.pos;
-    if (vmupro_btn_held(DPad_Right))
-    {
-      pPos->x += 3;
-    }
-    if (vmupro_btn_held(DPad_Left))
-    {
-      pPos->x -= 3;
-    }
-
-    if (vmupro_btn_held(DPad_Up))
-    {
-      pPos->y -= 3;
-    }
-    if (vmupro_btn_held(DPad_Down))
-    {
-      pPos->y += 3;
-    }
+    frameCounter++;
   }
 
   // Terminate the renderer
