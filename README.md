@@ -82,7 +82,9 @@ The SDK includes a minimal example to help you get started quickly.
 ```
 vmupro-sdk/
 ├── examples/           # Example applications
-│   └── minimal/       # Basic example application
+│   ├── minimal/       # Basic example application
+│   ├── gfx_samples/   # Graphics API demonstration
+│   └── platformer/    # Game development example
 ├── sdk/               # VMU Pro SDK headers and utilities
 └── tools/             # Build and packaging tools
     └── packer/        # VMU package creation tools
@@ -96,6 +98,23 @@ The `examples/minimal` directory contains a basic VMUPro application that demons
 - Basic application structure
 - Resource management (images and text assets)
 - Application metadata configuration
+
+### Graphics Samples Example
+
+The `examples/gfx_samples` directory showcases comprehensive graphics capabilities:
+- Various blitting operations (normal, transparent, blended, scaled, rotated)
+- Background scrolling and tiling techniques
+- Visual effects (mosaic, blur, color filters)
+- Tile-based rendering for game graphics
+- Double buffering for smooth animation
+
+### Platformer Example
+
+The `examples/platformer` directory demonstrates game development features:
+- Tile-based level rendering using the new `vmupro_blit_tile()` function
+- Multi-layer backgrounds with parallax scrolling
+- Sprite animation and movement
+- Game scene management
 
 ## Building Applications
 

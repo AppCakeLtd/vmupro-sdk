@@ -963,10 +963,26 @@ extern "C"
    */
   void vmupro_render_all_layers(void);
 
-  // todo: add a note on alignment
-  // todo: add a note mentioning how it can't read past the edge of an image
-  // todo: suggest powers of 2
-  // todo: note that tilemap width is in pixels
+  /**
+   * @brief Blit a single tile from a tilemap/tileset
+   *
+   * Copies a rectangular region from a source tilemap buffer to the display.
+   * Optimized for tile-based graphics rendering common in 2D games.
+   *
+   * @param buffer Pointer to the source tilemap buffer
+   * @param x Destination X coordinate on the display
+   * @param y Destination Y coordinate on the display
+   * @param src_x Source X coordinate within the tilemap (in pixels)
+   * @param src_y Source Y coordinate within the tilemap (in pixels)
+   * @param width Width of the tile in pixels
+   * @param height Height of the tile in pixels
+   * @param tilemap_width Width of the source tilemap in pixels (stride/pitch)
+   * 
+   * @note For optimal performance, use tile dimensions that are powers of 2 (8x8, 16x16, 32x32, etc.)
+   * @note The function cannot read past the edge of the source image - ensure src coordinates are valid
+   * @note tilemap_width parameter specifies the full width of the source tilemap in pixels, not tiles
+   * @note Ensure proper memory alignment for best performance
+   */
   void vmupro_blit_tile(uint8_t *buffer, int x, int y, int src_x, int src_y, int width, int height, int tilemap_width);
 
 #ifdef __cplusplus

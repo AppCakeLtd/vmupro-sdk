@@ -36,50 +36,52 @@ var NAVTREE =
       [ "Project Structure", "index.html#autotoc_md8", null ]
     ] ],
     [ "Examples", "index.html#autotoc_md9", [
-      [ "Minimal Example", "index.html#autotoc_md10", null ]
+      [ "Minimal Example", "index.html#autotoc_md10", null ],
+      [ "Graphics Samples Example", "index.html#autotoc_md11", null ],
+      [ "Platformer Example", "index.html#autotoc_md12", null ]
     ] ],
-    [ "Building Applications", "index.html#autotoc_md11", [
-      [ "1. Navigate to Example Directory", "index.html#autotoc_md12", null ],
-      [ "2. Set Up ESP-IDF Environment", "index.html#autotoc_md13", null ],
-      [ "3. Build the Application", "index.html#autotoc_md14", null ],
-      [ "4. Clean Build (if needed)", "index.html#autotoc_md15", null ]
+    [ "Building Applications", "index.html#autotoc_md13", [
+      [ "1. Navigate to Example Directory", "index.html#autotoc_md14", null ],
+      [ "2. Set Up ESP-IDF Environment", "index.html#autotoc_md15", null ],
+      [ "3. Build the Application", "index.html#autotoc_md16", null ],
+      [ "4. Clean Build (if needed)", "index.html#autotoc_md17", null ]
     ] ],
-    [ "Packaging Applications", "index.html#autotoc_md16", [
-      [ "Prerequisites for Packaging", "index.html#autotoc_md17", null ],
-      [ "Creating a .vmupack File", "index.html#autotoc_md18", null ],
-      [ "Metadata Configuration", "index.html#autotoc_md19", null ]
+    [ "Packaging Applications", "index.html#autotoc_md18", [
+      [ "Prerequisites for Packaging", "index.html#autotoc_md19", null ],
+      [ "Creating a .vmupack File", "index.html#autotoc_md20", null ],
+      [ "Metadata Configuration", "index.html#autotoc_md21", null ]
     ] ],
-    [ "Deploying Applications", "index.html#autotoc_md20", [
-      [ "Prerequisites for Deployment", "index.html#autotoc_md21", null ],
-      [ "Quick Deployment (Recommended)", "index.html#autotoc_md22", null ],
-      [ "Manual Deployment with send.py", "index.html#autotoc_md23", [
-        [ "Upload and Execute Application", "index.html#autotoc_md24", null ],
-        [ "Upload Without Executing", "index.html#autotoc_md25", null ],
-        [ "Reset VMUPro Device", "index.html#autotoc_md26", null ]
+    [ "Deploying Applications", "index.html#autotoc_md22", [
+      [ "Prerequisites for Deployment", "index.html#autotoc_md23", null ],
+      [ "Quick Deployment (Recommended)", "index.html#autotoc_md24", null ],
+      [ "Manual Deployment with send.py", "index.html#autotoc_md25", [
+        [ "Upload and Execute Application", "index.html#autotoc_md26", null ],
+        [ "Upload Without Executing", "index.html#autotoc_md27", null ],
+        [ "Reset VMUPro Device", "index.html#autotoc_md28", null ]
       ] ],
-      [ "Serial Communication Features", "index.html#autotoc_md27", [
-        [ "2-Way Serial Monitor", "index.html#autotoc_md28", null ],
-        [ "Chunked File Transfer", "index.html#autotoc_md29", null ],
-        [ "Error Handling", "index.html#autotoc_md30", null ]
+      [ "Serial Communication Features", "index.html#autotoc_md29", [
+        [ "2-Way Serial Monitor", "index.html#autotoc_md30", null ],
+        [ "Chunked File Transfer", "index.html#autotoc_md31", null ],
+        [ "Error Handling", "index.html#autotoc_md32", null ]
       ] ],
-      [ "Finding Your COM Port", "index.html#autotoc_md31", null ],
-      [ "Complete Development Workflow", "index.html#autotoc_md32", null ]
+      [ "Finding Your COM Port", "index.html#autotoc_md33", null ],
+      [ "Complete Development Workflow", "index.html#autotoc_md34", null ]
     ] ],
-    [ "IDE Integration", "index.html#autotoc_md33", [
-      [ "Visual Studio Code", "index.html#autotoc_md34", [
-        [ "Method 1: ESP-IDF Extension", "index.html#autotoc_md35", null ],
-        [ "Method 2: Custom Tasks", "index.html#autotoc_md36", null ]
+    [ "IDE Integration", "index.html#autotoc_md35", [
+      [ "Visual Studio Code", "index.html#autotoc_md36", [
+        [ "Method 1: ESP-IDF Extension", "index.html#autotoc_md37", null ],
+        [ "Method 2: Custom Tasks", "index.html#autotoc_md38", null ]
       ] ]
     ] ],
-    [ "Troubleshooting", "index.html#autotoc_md37", [
-      [ "Common Issues", "index.html#autotoc_md38", [
-        [ "ESP-IDF Environment Not Set", "index.html#autotoc_md39", null ],
-        [ "Python Virtual Environment Issues", "index.html#autotoc_md40", null ],
-        [ "Build Failures", "index.html#autotoc_md41", null ],
-        [ "Packaging Errors", "index.html#autotoc_md42", null ],
-        [ "Deployment Issues", "index.html#autotoc_md43", null ]
+    [ "Troubleshooting", "index.html#autotoc_md39", [
+      [ "Common Issues", "index.html#autotoc_md40", [
+        [ "ESP-IDF Environment Not Set", "index.html#autotoc_md41", null ],
+        [ "Python Virtual Environment Issues", "index.html#autotoc_md42", null ],
+        [ "Build Failures", "index.html#autotoc_md43", null ],
+        [ "Packaging Errors", "index.html#autotoc_md44", null ],
+        [ "Deployment Issues", "index.html#autotoc_md45", null ]
       ] ],
-      [ "Getting Help", "index.html#autotoc_md44", null ]
+      [ "Getting Help", "index.html#autotoc_md46", null ]
     ] ],
     [ "Data Structures", "annotated.html", [
       [ "Data Structures", "annotated.html", "annotated_dup" ],

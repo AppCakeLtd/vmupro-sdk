@@ -1,22 +1,8 @@
 var searchData=
 [
-  ['vmupro_5fcolor_5fblack_0',['VMUPRO_COLOR_BLACK',['../vmupro__display_8h.html#a55f3d86aa578bb3ce3e936b5f374fafeaec51d175bc0396228d5aef2aaaeb2445',1,'vmupro_display.h']]],
-  ['vmupro_5fcolor_5fblue_1',['VMUPRO_COLOR_BLUE',['../vmupro__display_8h.html#a55f3d86aa578bb3ce3e936b5f374fafea0234fb290379a1e5128a2130dbb8c6ef',1,'vmupro_display.h']]],
-  ['vmupro_5fcolor_5fgreen_2',['VMUPRO_COLOR_GREEN',['../vmupro__display_8h.html#a55f3d86aa578bb3ce3e936b5f374fafeacc429f647873e8482478d48d528cb750',1,'vmupro_display.h']]],
-  ['vmupro_5fcolor_5fgrey_3',['VMUPRO_COLOR_GREY',['../vmupro__display_8h.html#a55f3d86aa578bb3ce3e936b5f374fafea3fe4593c03f0e2905cc42734e8dd5c57',1,'vmupro_display.h']]],
-  ['vmupro_5fcolor_5fmagenta_4',['VMUPRO_COLOR_MAGENTA',['../vmupro__display_8h.html#a55f3d86aa578bb3ce3e936b5f374fafeae7639e2e748d46800b1b7633ee3104d4',1,'vmupro_display.h']]],
-  ['vmupro_5fcolor_5fnavy_5',['VMUPRO_COLOR_NAVY',['../vmupro__display_8h.html#a55f3d86aa578bb3ce3e936b5f374fafea286c73d8da9218f5e4048ca676524604',1,'vmupro_display.h']]],
-  ['vmupro_5fcolor_5forange_6',['VMUPRO_COLOR_ORANGE',['../vmupro__display_8h.html#a55f3d86aa578bb3ce3e936b5f374fafea3c8b9d843d195709ef642c7e56829ddd',1,'vmupro_display.h']]],
-  ['vmupro_5fcolor_5fred_7',['VMUPRO_COLOR_RED',['../vmupro__display_8h.html#a55f3d86aa578bb3ce3e936b5f374fafea2338ac5e6417df7c675dba924e47df89',1,'vmupro_display.h']]],
-  ['vmupro_5fcolor_5fviolet_8',['VMUPRO_COLOR_VIOLET',['../vmupro__display_8h.html#a55f3d86aa578bb3ce3e936b5f374fafea4bb8fdd146663ceec87c3dbf23f7a254',1,'vmupro_display.h']]],
-  ['vmupro_5fcolor_5fvmugreen_9',['VMUPRO_COLOR_VMUGREEN',['../vmupro__display_8h.html#a55f3d86aa578bb3ce3e936b5f374fafeafdf3470d97c1c123f26cfd0ed51814d9',1,'vmupro_display.h']]],
-  ['vmupro_5fcolor_5fvmuink_10',['VMUPRO_COLOR_VMUINK',['../vmupro__display_8h.html#a55f3d86aa578bb3ce3e936b5f374fafeab8ef8ae1410b7a53f8b4dee39713b257',1,'vmupro_display.h']]],
-  ['vmupro_5fcolor_5fwhite_11',['VMUPRO_COLOR_WHITE',['../vmupro__display_8h.html#a55f3d86aa578bb3ce3e936b5f374fafea8ef36bedc47634d8f3b6ab932506ea0c',1,'vmupro_display.h']]],
-  ['vmupro_5fcolor_5fyellow_12',['VMUPRO_COLOR_YELLOW',['../vmupro__display_8h.html#a55f3d86aa578bb3ce3e936b5f374fafea86a6d391ef9b440b3c925f058c17c29c',1,'vmupro_display.h']]],
-  ['vmupro_5fcolor_5fyellowgreen_13',['VMUPRO_COLOR_YELLOWGREEN',['../vmupro__display_8h.html#a55f3d86aa578bb3ce3e936b5f374fafeab48b6e6cf68c9421c35ec2582f6ae9be',1,'vmupro_display.h']]],
-  ['vmupro_5flog_5fdebug_14',['VMUPRO_LOG_DEBUG',['../vmupro__log_8h.html#a9712706598d53a2e669535d1f220a4a2a5586afe69f1c22ed8fe80686131adcf3',1,'vmupro_log.h']]],
-  ['vmupro_5flog_5ferror_15',['VMUPRO_LOG_ERROR',['../vmupro__log_8h.html#a9712706598d53a2e669535d1f220a4a2a0f967fb85bf5226790a06242fd6553fd',1,'vmupro_log.h']]],
-  ['vmupro_5flog_5finfo_16',['VMUPRO_LOG_INFO',['../vmupro__log_8h.html#a9712706598d53a2e669535d1f220a4a2af985b0a6e80e3ca9deb4ef818d852bd8',1,'vmupro_log.h']]],
-  ['vmupro_5flog_5fnone_17',['VMUPRO_LOG_NONE',['../vmupro__log_8h.html#a9712706598d53a2e669535d1f220a4a2a0f9fec94908d4da1b16bcc594c152fe1',1,'vmupro_log.h']]],
-  ['vmupro_5flog_5fwarn_18',['VMUPRO_LOG_WARN',['../vmupro__log_8h.html#a9712706598d53a2e669535d1f220a4a2ac0c37af3ff8f5a6752decb47aa839632',1,'vmupro_log.h']]]
+  ['btn_5fa_0',['Btn_A',['../vmupro__buttons_8h.html#afba050524e7c273c9fd0b04b386f9613af17daa2162a7397da9c4de409f59ab46',1,'vmupro_buttons.h']]],
+  ['btn_5fb_1',['Btn_B',['../vmupro__buttons_8h.html#afba050524e7c273c9fd0b04b386f9613af22d90bb41289f459ca08583e780a94b',1,'vmupro_buttons.h']]],
+  ['btn_5fbottom_2',['Btn_Bottom',['../vmupro__buttons_8h.html#afba050524e7c273c9fd0b04b386f9613ae62759afe517e450192db8ef17317f98',1,'vmupro_buttons.h']]],
+  ['btn_5fmode_3',['Btn_Mode',['../vmupro__buttons_8h.html#afba050524e7c273c9fd0b04b386f9613a36a510535d5275e1657092503903c10f',1,'vmupro_buttons.h']]],
+  ['btn_5fpower_4',['Btn_Power',['../vmupro__buttons_8h.html#afba050524e7c273c9fd0b04b386f9613a478a701d8a04cd5d09a44f28b508d967',1,'vmupro_buttons.h']]]
 ];

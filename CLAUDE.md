@@ -6,11 +6,20 @@ This is the VMUPro SDK - a development toolkit for creating applications and gam
 ## Project Structure
 - `sdk/` - Core SDK files and headers
 - `examples/minimal/` - Minimal example application
+- `examples/gfx_samples/` - Graphics API demonstration with various blitting tests
+- `examples/platformer/` - Platform game example using tile-based rendering
 - `tools/packer/` - Build and packaging utilities
 - `docs/` - Doxygen documentation
 
 ## Current SDK APIs
-- **Display** (`vmupro_display.h`) - Graphics, framebuffer, double buffering, basic drawing
+- **Display** (`vmupro_display.h`) - Comprehensive graphics API including:
+  - Basic drawing: rectangles, lines, circles, ellipses, polygons
+  - Advanced blitting: transparency, scaling, rotation, flipping, palette support
+  - Background systems: scrolling, parallax, per-line/column scrolling
+  - Visual effects: mosaic, blur, shadow/highlight, color filters, blending modes
+  - Collision detection: rectangle and pixel-perfect collision testing
+  - Sprite batching and multi-layer rendering system
+  - Tile-based rendering with `vmupro_blit_tile()` function
 - **Logging** (`vmupro_log.h`) - Multi-level logging system  
 - **Utils** (`vmupro_utils.h`) - Sleep/timing functions
 - **Main** (`vmupro_sdk.h`) - Core entry point and main header
@@ -52,6 +61,7 @@ Required for every application:
     "app_author": "Author Name", 
     "app_version": "1.0.0",
     "app_mode": 2,
+    "app_exclusive": true,
     "icon_transparency": true,
     "app_entry_point": "app_main",
     "resources": ["assets/file1.png", "assets/file2.txt"]
