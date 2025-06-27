@@ -115,7 +115,6 @@ void DrawSpriteBoundingBox(Sprite *inSprite, uint16_t inCol)
   int x2 = screenPos.x + box->width;
   int y2 = screenPos.y + box->height;
   vmupro_draw_rect(screenPos.x, screenPos.y, x2, y2, inCol);
-  
 }
 
 // Updates the bounding box when the pos or img changes
@@ -180,14 +179,13 @@ void MovePlayer(int inX, int inY)
 void ResetPlayer(Player *ply)
 {
 
-  ply->spr.img = &img_player_idle_raw;  
+  ply->spr.img = &img_player_idle_raw;
   Vec2 startPos = {80, MAP_HEIGHT_PIXELS - (TILE_SIZE_PX * 4)};
   SetPlayerPos(startPos.x, startPos.y);
 
   // update other struct vals
   ply->facingRight = true;
   ply->spr.lastAbsPos = ply->spr.pos;
-
 }
 
 void LoadLevel(int levelNum)
@@ -313,7 +311,18 @@ void SolveCamera()
   camY = camTop;
 }
 
-void DrawBackgroundTiles()
+void DrawBackground()
+{
+
+  Img *img = &img_bg_1_raw;
+
+  int bgScrollX = (camX * 5) / 4;
+  int bgScrollY = (camY * 5) / 4;
+
+  vmupro_blit_scrolling_background(img->data, img->width, img->height, bgScrollX, bgScrollY, SCREEN_WIDTH, SCREEN_HEIGHT);
+}
+
+void DrawGroundtiles()
 {
 
   // work out the x/y range based on camera pos
@@ -344,14 +353,16 @@ void DrawBackgroundTiles()
 // do it at the end of the frame in case
 // the pos is updated multiple times in a frame
 // (collision, etc)
-void SetLastAbsPos(Sprite * inSpr){
+void SetLastAbsPos(Sprite *inSpr)
+{
   inSpr->lastAbsPos = inSpr->pos;
 }
 
-void EndOfFrame(){
+void EndOfFrame()
+{
   SetLastAbsPos(&player.spr);
 }
- 
+
 void DrawPlayer()
 {
 
@@ -365,15 +376,17 @@ void DrawPlayer()
   const Img *img = player.spr.img;
 
   // we moved left/right?
-  Vec2 * lastPlayerAbsPos = &player.spr.lastAbsPos;
+  Vec2 *lastPlayerAbsPos = &player.spr.lastAbsPos;
   int xDelta = absFeetPos->x - lastPlayerAbsPos->x;
   int yDelta = absFeetPos->y - lastPlayerAbsPos->y;
 
-  if ( player.facingRight && xDelta < 0 ){
+  if (player.facingRight && xDelta < 0)
+  {
     // moved left
     player.facingRight = false;
   }
-  if ( !player.facingRight && xDelta > 0 ){
+  if (!player.facingRight && xDelta > 0)
+  {
     // moved right
     player.facingRight = true;
   }
@@ -381,10 +394,13 @@ void DrawPlayer()
   bool goingUp = yDelta < 0;
 
   // __TEST__ temporary thing
-  if (goingUp){
+  if (goingUp)
+  {
     player.spr.img = &img_player_fall_raw;
     OnSpriteUpdated(&player.spr, true);
-  } else {
+  }
+  else
+  {
     player.spr.img = &img_player_idle_raw;
     OnSpriteUpdated(&player.spr, true);
   }
@@ -392,14 +408,17 @@ void DrawPlayer()
   // update the img pointer
   img = player.spr.img;
 
-  if ( player.facingRight ){
+  if (player.facingRight)
+  {
     vmupro_blit_buffer_at(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height);
-  }else {
-    vmupro_blit_buffer_flip_h(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height);    
+  }
+  else
+  {
+    vmupro_blit_buffer_flip_h(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height);
   }
 
   // draw something at the player's feet pos for debugging
-  //vmupro_blit_buffer_at(img->data, screenFeetPos.x, screenFeetPos.y, img->width, img->height);
+  // vmupro_blit_buffer_at(img->data, screenFeetPos.x, screenFeetPos.y, img->width, img->height);
 }
 
 void app_main(void)
@@ -421,7 +440,8 @@ void app_main(void)
 
     SolveCamera();
 
-    DrawBackgroundTiles();
+    DrawBackground();
+    DrawGroundtiles();
 
     DrawPlayer();
 
