@@ -410,12 +410,23 @@ void DrawPlayer()
 
   if (player.facingRight)
   {
-    vmupro_blit_buffer_at(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height);
+    //vmupro_blit_buffer_at(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height);
   }
   else
   {
-    vmupro_blit_buffer_flip_h(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height);
+
+    //vmupro_blit_buffer_flip_h(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height);
+    
   }
+
+  vmupro_drawflags_t flags = (player.facingRight * VMUPRO_DRAWFLAGS_FLIP_H) | (goingUp * VMUPRO_DRAWFLAGS_FLIP_V);
+
+    uint8_t mask[img->width * img->height];
+    for( int i = 0; i < sizeof(mask); i++ ){
+      int x = (i / 8);
+      mask[i] = (x % 2 == 0 );
+    }
+  vmupro_blit_buffer_masked(img->data, mask, screenBoxPos.x, screenBoxPos.y, img->width, img->height, flags);
 
   // draw something at the player's feet pos for debugging
   // vmupro_blit_buffer_at(img->data, screenFeetPos.x, screenFeetPos.y, img->width, img->height);

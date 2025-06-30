@@ -68,6 +68,16 @@ extern "C"
     VMUPRO_COLOR_VMUINK = 0x8a28,      /**< VMU signature ink color (RGB565 big endian: 0x8A28) */
   } vmupro_color_t;
 
+    /**
+   * @brief Flip flags for various draw functions
+   * Combine as e.g. VMUPRO_DRAWFLAGS_FLIP_H | VMUPRO_DRAWFLAGS_FLIP_H   
+   */
+  typedef enum {
+    VMUPRO_DRAWFLAGS_NORMAL = 0x00,
+    VMUPRO_DRAWFLAGS_FLIP_H = 0x01,
+    VMUPRO_DRAWFLAGS_FLIP_V = 0x02
+  } vmupro_drawflags_t;
+
   /**
    * @brief Clear the display with a solid color
    *
@@ -813,7 +823,7 @@ extern "C"
    * @param width Width of the region
    * @param height Height of the region
    */
-  void vmupro_blit_buffer_masked(uint8_t *buffer, uint8_t *mask, int x, int y, int width, int height);
+  void vmupro_blit_buffer_masked(uint8_t *buffer, uint8_t *mask, int x, int y, int width, int height, vmupro_drawflags_t flags);
 
   /**
    * @brief Clear the color window
