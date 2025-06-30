@@ -419,6 +419,7 @@ void DrawPlayer()
     
   }
 
+  /* __TEST__ using masks
   vmupro_drawflags_t flags = (player.facingRight * VMUPRO_DRAWFLAGS_FLIP_H) | (goingUp * VMUPRO_DRAWFLAGS_FLIP_V);
 
     uint8_t mask[img->width * img->height];
@@ -427,6 +428,10 @@ void DrawPlayer()
       mask[i] = (x % 2 == 0 );
     }
   vmupro_blit_buffer_masked(img->data, mask, screenBoxPos.x, screenBoxPos.y, img->width, img->height, flags);
+  */
+
+  vmupro_drawflags_t flags = (player.facingRight * VMUPRO_DRAWFLAGS_FLIP_H) | (goingUp * VMUPRO_DRAWFLAGS_FLIP_V);
+  vmupro_blit_buffer_transparent(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height, VMUPRO_COLOR_BLACK, flags);
 
   // draw something at the player's feet pos for debugging
   // vmupro_blit_buffer_at(img->data, screenFeetPos.x, screenFeetPos.y, img->width, img->height);

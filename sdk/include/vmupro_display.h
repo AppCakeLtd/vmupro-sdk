@@ -228,11 +228,12 @@ extern "C"
    * @param width Width of the source buffer in pixels
    * @param height Height of the source buffer in pixels
    * @param transparent_color Color value to treat as transparent (will not be drawn)
+   * @param flags Horizontal/vertical flip flags
    * 
    * @note Essential for sprite rendering with transparent backgrounds
    * @note Transparent pixels preserve the existing framebuffer content
    */
-  void vmupro_blit_buffer_transparent(uint8_t *buffer, int x, int y, int width, int height, vmupro_color_t transparent_color);
+  void vmupro_blit_buffer_transparent(uint8_t *buffer, int x, int y, int width, int height, vmupro_color_t transparent_color, vmupro_drawflags_t flags);
 
   /**
    * @brief Blit a buffer with alpha blending
@@ -822,6 +823,7 @@ extern "C"
    * @param y Y coordinate of the region
    * @param width Width of the region
    * @param height Height of the region
+   * @param flags Horizontal/vertical draw flags
    */
   void vmupro_blit_buffer_masked(uint8_t *buffer, uint8_t *mask, int x, int y, int width, int height, vmupro_drawflags_t flags);
 
