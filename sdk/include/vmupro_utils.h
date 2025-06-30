@@ -39,6 +39,88 @@ extern "C"
 void vmupro_sleep_ms(uint32_t milliseconds);
 
 /**
+ * @brief Get current time in microseconds
+ * 
+ * Returns the current system time in microseconds since boot.
+ * This function provides high-resolution timing for precise measurements.
+ * 
+ * @return Current time in microseconds (64-bit unsigned integer)
+ * 
+ * @note Time starts from 0 at system boot
+ * @note Provides microsecond precision for accurate timing
+ * @note Useful for performance measurement and frame timing
+ * 
+ * @code
+ * // Measure execution time
+ * uint64_t start_time = vmupro_get_time_us();
+ * 
+ * // ... do some work ...
+ * 
+ * uint64_t end_time = vmupro_get_time_us();
+ * uint64_t elapsed = end_time - start_time;
+ * vmupro_log(VMUPRO_LOG_INFO, "TIMING", "Operation took %llu microseconds", elapsed);
+ * @endcode
+ */
+uint64_t vmupro_get_time_us(void);
+
+/**
+ * @brief Delay for a specified number of microseconds
+ * 
+ * Blocks execution for the specified duration in microseconds.
+ * This function provides precise timing control for frame rate limiting and delays.
+ * 
+ * @param delay_us Duration to delay in microseconds
+ * 
+ * @note More precise than vmupro_sleep_ms() for timing-critical applications
+ * @note If delay_us is 0, the function returns immediately
+ * @note Uses high-resolution timing for accurate delays
+ * 
+ * @code
+ * // Frame rate limiting to 60 FPS
+ * uint64_t frame_duration_us = 1000000 / 60; // 16666 microseconds per frame
+ * 
+ * while (game_running) {
+ *     uint64_t frame_start = vmupro_get_time_us();
+ *     
+ *     // Render frame
+ *     render_game_frame();
+ *     
+ *     // Calculate remaining time for this frame
+ *     uint64_t elapsed = vmupro_get_time_us() - frame_start;
+ *     if (elapsed < frame_duration_us) {
+ *         vmupro_delay_us(frame_duration_us - elapsed);
+ *     }
+ * }
+ * @endcode
+ */
+void vmupro_delay_us(uint64_t delay_us);
+
+/**
+ * @brief Delay for a specified number of milliseconds
+ * 
+ * Blocks execution for the specified duration in milliseconds.
+ * This function provides millisecond precision timing control.
+ * 
+ * @param delay_ms Duration to delay in milliseconds
+ * 
+ * @note Uses millisecond precision (less precise than vmupro_delay_us)
+ * @note If delay_ms is 0, the function returns immediately
+ * @note Useful for less timing-critical applications
+ * 
+ * @code
+ * // Simple periodic updates
+ * while (running) {
+ *     update_logic();
+ *     vmupro_delay_ms(100); // Wait 100ms between updates
+ * }
+ * 
+ * // Precise timing with microsecond conversion
+ * vmupro_delay_ms(50); // Wait 50 milliseconds
+ * @endcode
+ */
+void vmupro_delay_ms(uint64_t delay_ms);
+
+/**
  * @brief Safe string formatting function
  *
  * Formats and stores a string in a buffer with guaranteed null-termination.

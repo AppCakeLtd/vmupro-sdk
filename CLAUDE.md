@@ -22,7 +22,7 @@ This is the VMUPro SDK - a development toolkit for creating applications and gam
   - Tile-based rendering with `vmupro_blit_tile()` function
 - **Logging** (`vmupro_log.h`) - Multi-level logging system  
 - **Utils** (`vmupro_utils.h`) - Utility functions including:
-  - Sleep/timing functions (vmupro_sleep_ms)
+  - Sleep/timing functions (vmupro_sleep_ms, vmupro_get_time_us, vmupro_delay_us, vmupro_delay_ms)
   - Safe string formatting (vmupro_snprintf)
   - Emulator browser API for file selection (vmupro_emubrowser_init, vmupro_emubrowser_render_contents)
 - **File System** (`vmupro_file.h`) - File operations including:
