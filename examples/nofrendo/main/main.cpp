@@ -2,15 +2,6 @@
 #include <vmupro_sdk.h>
 #include <nofrendo.h>
 
-// #include "PowerManagement.h"
-// #include "EmuBrowser.h"
-// #include "SDFS.h"
-// #include "Audio.h"
-// #include "Buttons.h"
-// #include "st7789.h"
-// #include "DrawLib.h"
-// #include "config.h"
-
 static const char *kLogNESEmu       = "[VMU-PRO NES]";
 static bool emuRunning              = true;
 static bool appExitFlag             = false;
