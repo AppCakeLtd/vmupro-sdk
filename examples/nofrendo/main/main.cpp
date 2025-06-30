@@ -201,19 +201,16 @@ void Tick() {
     //       currentEmulatorState = EmulatorMenuState::EMULATOR_MENU;
     //     }
 
-    if (renderFrame) {
-      uint8_t *nes_framebuffer = nullptr;
-      while ((nes_framebuffer = vmupro_get_back_buffer()) == nes_back_buffer) {
-        __asm__ volatile("nop");
-      }
-      nes_setvidbuf(nes_framebuffer);
-      nes_emulate(true);
-      vmupro_push_double_buffer_frame();
-    }
-    else {
-      nes_emulate(false);
-      renderFrame = 1;
-    }
+    // if (renderFrame) {
+    nes_back_buffer = vmupro_get_back_buffer();
+    nes_setvidbuf(nes_back_buffer);
+    nes_emulate(true);
+    vmupro_push_double_buffer_frame();
+    // }
+    // else {
+    //   nes_emulate(false);
+    //   renderFrame = 1;
+    // }
 
     //     Audio::getInstance()->addStreamSamples((int16_t*)nes->apu->buffer, nes->apu->samples_per_frame, false);
 
