@@ -590,13 +590,13 @@ void ppu_renderline(uint8 *bmp, int scanline, bool draw_flag, uint16_t *palette)
     // We should have a line. Draw it to our output buffer
     uint32_t *screen32 = (uint32_t *)bmp;
     int width          = 240;
-    int xstart         = 0;
+    int xstart         = 8;
     for (int p = xstart; p <= width + xstart; p += 2) {
       uint16_t pixel1 = palette[vidbuf[p] % 192];
       uint16_t pixel2 = palette[vidbuf[p + 1] % 192];
 
-      uint32_t combinedPixels                          = (pixel2 << 16) | pixel1;
-      screen32[(((scanline + 0) * 240) + (p + 0)) / 2] = combinedPixels;
+      uint32_t combinedPixels                               = (pixel2 << 16) | pixel1;
+      screen32[(((scanline + 0) * 240) + (p - xstart)) / 2] = combinedPixels;
     }
   }
   // Vertical Blank

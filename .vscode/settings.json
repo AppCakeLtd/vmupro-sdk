@@ -6,5 +6,6 @@
     "string_view": "c",
     "unordered_map": "c",
     "vector": "c"
-  }
+  },
+  "idf.pythonInstallPath": "/opt/homebrew/opt/python@3.12/Frameworks/Python.framework/Versions/3.12/bin/python3"
 }
