@@ -207,6 +207,11 @@ void Tick() {
       nes_setvidbuf(nes_framebuffer);
       nes_emulate(true);
       vmupro_push_double_buffer_frame();
+
+      while(vmupro_get_last_blitted_fb_side() != bufferSide){
+        __asm__ volatile ("nop");
+      }
+
     }
     else {
       nes_emulate(false);

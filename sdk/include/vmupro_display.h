@@ -985,6 +985,11 @@ extern "C"
    */
   void vmupro_blit_tile(uint8_t *buffer, int x, int y, int src_x, int src_y, int width, int height, int tilemap_width);
 
+  // return whether the last buffer sent to the GPU was
+  // fb_side == 0, or fb_side == 1
+  // so we don't throw new frames at it before it finishes
+  uint8_t vmupro_get_last_blitted_fb_side();
+
 #ifdef __cplusplus
 }
 #endif
