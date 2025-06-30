@@ -63,32 +63,6 @@ void vmupro_sleep_ms(uint32_t milliseconds);
  */
 int vmupro_snprintf(char* buffer, size_t size, const char* format, ...);
 
-/**
- * @brief Duplicate a string
- *
- * Creates a duplicate of the source string by allocating memory and copying
- * the string contents. The returned pointer must be freed using free() when
- * no longer needed.
- *
- * @param source The null-terminated string to duplicate
- * @return Pointer to the duplicated string, or NULL on error or if source is NULL
- *
- * @note The caller is responsible for freeing the returned memory using free()
- * @note Returns NULL if source is NULL or if memory allocation fails
- * @note The returned string is guaranteed to be null-terminated
- *
- * @code
- * const char* original = "Hello, World!";
- * char* copy = vmupro_strdup(original);
- * if (copy) {
- *     // Use the copy
- *     vmupro_log(VMUPRO_LOG_INFO, "COPY", "%s", copy);
- *     // Remember to free when done
- *     free(copy);
- * }
- * @endcode
- */
-char* vmupro_strdup(const char* source);
 
 /**
  * @brief Settings structure for the emulator browser

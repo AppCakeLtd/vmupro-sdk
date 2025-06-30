@@ -221,7 +221,7 @@ nes_t *nes_init(nes_type_t system, int sample_rate, bool stereo, const char *fds
   if (NULL == nes.input) goto _fail;
 
   /* fds */
-  if (fds_bios) nes.fds_bios = vmupro_strdup(fds_bios);
+  if (fds_bios) nes.fds_bios = strdup(fds_bios);
 
   MESSAGE_INFO("NES: System initialized!\n");
   return &nes;

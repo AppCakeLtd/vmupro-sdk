@@ -167,7 +167,7 @@ extern "C"
    * // Write application data
    * uint8_t app_data[1024];
    * // ... fill app_data with application state ...
-   * 
+   *
    * if (vmupro_write_file_complete("/sdcard/data/settings.bin", app_data, sizeof(app_data))) {
    *     vmupro_log(VMUPRO_LOG_INFO, "APP", "Data saved successfully");
    * } else {
@@ -214,7 +214,7 @@ extern "C"
    * const char* log_entry = "Application started\n";
    * size_t current_size = vmupro_get_file_size("/sdcard/app.log");
    * if (current_size != (size_t)-1) {
-   *     vmupro_write_file_bytes("/sdcard/app.log", (uint8_t*)log_entry, 
+   *     vmupro_write_file_bytes("/sdcard/app.log", (uint8_t*)log_entry,
    *                           current_size, strlen(log_entry));
    * }
    * @endcode
@@ -244,12 +244,12 @@ extern "C"
    *     uint8_t buffer[1024];
    *     unsigned long file_crc = 0;
    *     size_t bytes_read;
-   *     
+   *
    *     while ((bytes_read = fread(buffer, 1, sizeof(buffer), file)) > 0) {
    *         file_crc = crc32(file_crc, buffer, bytes_read);
    *     }
    *     fclose(file);
-   *     
+   *
    *     vmupro_log(VMUPRO_LOG_INFO, "CRC", "File CRC32: 0x%08lX", file_crc);
    * }
    *
@@ -259,7 +259,7 @@ extern "C"
    * if (vmupro_read_file_complete("/sdcard/game.nes", rom_data, &rom_size)) {
    *     unsigned long calculated_crc = crc32(0, rom_data, rom_size);
    *     unsigned long expected_crc = 0x12345678; // Known good CRC
-   *     
+   *
    *     if (calculated_crc == expected_crc) {
    *         vmupro_log(VMUPRO_LOG_INFO, "ROM", "ROM integrity verified");
    *     } else {
@@ -273,7 +273,7 @@ extern "C"
    * vmupro_log(VMUPRO_LOG_INFO, "CRC", "Text CRC32: 0x%08lX", text_crc);
    * @endcode
    */
-  unsigned long crc32(int crc, uint8_t* buf, int len);
+  unsigned long crc32(int crc, uint8_t *buf, int len);
 
 #ifdef __cplusplus
 }

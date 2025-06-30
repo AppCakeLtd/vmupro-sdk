@@ -647,6 +647,37 @@
  */
 
 /**
+ * @fn char* strdup(const char* s)
+ * @brief Duplicate a string
+ *
+ * Creates a duplicate of the source string by allocating memory and copying
+ * the string contents. The returned pointer must be freed using free() when
+ * no longer needed.
+ * Include <string.h> to use this function.
+ *
+ * @param s The null-terminated string to duplicate
+ * @return Pointer to the duplicated string, or NULL on error or if s is NULL
+ *
+ * @note The caller is responsible for freeing the returned memory using free()
+ * @note Returns NULL if s is NULL or if memory allocation fails
+ * @note The returned string is guaranteed to be null-terminated
+ *
+ * @code
+ * #include <string.h>
+ * #include <stdlib.h>
+ * 
+ * const char* original = "Hello, World!";
+ * char* copy = strdup(original);
+ * if (copy) {
+ *     // Use the copy
+ *     vmupro_log(VMUPRO_LOG_INFO, "COPY", "%s", copy);
+ *     // Remember to free when done
+ *     free(copy);
+ * }
+ * @endcode
+ */
+
+/**
  * @fn char* strncat(char* dest, const char* src, size_t n)
  * @brief Concatenate strings with size limit
  *
@@ -1324,7 +1355,7 @@
  * 
  * To use these functions, include the appropriate standard C headers:
  * - `#include <stdio.h>` for file I/O and console output (fopen, fclose, fread, fwrite, fseek, ftell, fflush, printf, fprintf, puts, putchar, fputc, fputs, vfprintf)
- * - `#include <string.h>` for string and memory functions (strlen, strcmp, strchr, strrchr, strstr, strcspn, strncat, strerror, memcmp, memcpy, memset)
+ * - `#include <string.h>` for string and memory functions (strlen, strcmp, strchr, strrchr, strstr, strdup, strcspn, strncat, strerror, memcmp, memcpy, memset)
  * - `#include <stdlib.h>` for memory allocation and conversion (malloc, calloc, realloc, free, exit, strtol, strtod)
  * - `#include <unistd.h>` for POSIX functions (fsync, sleep, usleep, close)
  * - `#include <time.h>` for time functions (clock_gettime, strftime)
