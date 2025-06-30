@@ -109,6 +109,17 @@ extern "C"
   uint8_t *vmupro_get_back_fb();
 
   /**
+   * @brief Get pointer to the back buffer
+   *
+   * Returns a pointer to the back buffer used in double buffering.
+   * This is an alias or alternative function for accessing the back
+   * framebuffer, maintaining compatibility with different naming conventions.
+   *
+   * @return Pointer to the current back buffer data
+   */
+  uint8_t *vmupro_get_back_buffer();
+
+  /**
    * @brief Start the double buffer renderer
    *
    * Initializes and starts the double buffering system, allowing for
@@ -984,6 +995,11 @@ extern "C"
    * @note Ensure proper memory alignment for best performance
    */
   void vmupro_blit_tile(uint8_t *buffer, int x, int y, int src_x, int src_y, int width, int height, int tilemap_width);
+
+  // return whether the last buffer sent to the GPU was
+  // fb_side == 0, or fb_side == 1
+  // so we don't throw new frames at it before it finishes
+  uint8_t vmupro_get_last_blitted_fb_side();
 
 #ifdef __cplusplus
 }

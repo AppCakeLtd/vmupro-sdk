@@ -101,18 +101,44 @@ $(function(){initNavTree('vmupro__utils_8h_source.html','',''); });
 <div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><span class="preprocessor">#pragma once</span></div>
 <div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span> </div>
 <div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span><span class="preprocessor">#include &quot;stdint.h&quot;</span></div>
-<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span> </div>
-<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="preprocessor">#ifdef __cplusplus</span></div>
-<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="keyword">extern</span> <span class="stringliteral">&quot;C&quot;</span></div>
-<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span>{</div>
-<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span></div>
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno"><a class="line" href="vmupro__utils_8h.html#a5da2aaaabf926fa9f1dbda161811ba29">   37</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="vmupro__utils_8h.html#a5da2aaaabf926fa9f1dbda161811ba29">vmupro_sleep_ms</a>(uint32_t milliseconds);</div>
-<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span> </div>
-<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span><span class="preprocessor">#ifdef __cplusplus</span></div>
-<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>}</div>
-<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span><span class="preprocessor">#include &quot;stdbool.h&quot;</span></div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="preprocessor">#include &lt;stddef.h&gt;</span></div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span> </div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span><span class="preprocessor">#ifdef __cplusplus</span></div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span><span class="keyword">extern</span> <span class="stringliteral">&quot;C&quot;</span></div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>{</div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span></div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno"><a class="line" href="vmupro__utils_8h.html#a5da2aaaabf926fa9f1dbda161811ba29">   39</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="vmupro__utils_8h.html#a5da2aaaabf926fa9f1dbda161811ba29">vmupro_sleep_ms</a>(uint32_t milliseconds);</div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span></div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno"><a class="line" href="vmupro__utils_8h.html#af969f2eeaf266ffc9d7e0f5f8397d63b">   64</a></span><span class="keywordtype">int</span> <a class="code hl_function" href="vmupro__utils_8h.html#af969f2eeaf266ffc9d7e0f5f8397d63b">vmupro_snprintf</a>(<span class="keywordtype">char</span>* buffer, <span class="keywordtype">size_t</span> size, <span class="keyword">const</span> <span class="keywordtype">char</span>* format, ...);</div>
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span></div>
+<div class="line"><a id="l00091" name="l00091"></a><span class="lineno"><a class="line" href="vmupro__utils_8h.html#acbc9f3f93d68db4ba89ed9da52158ee4">   91</a></span><span class="keywordtype">char</span>* <a class="code hl_function" href="vmupro__utils_8h.html#acbc9f3f93d68db4ba89ed9da52158ee4">vmupro_strdup</a>(<span class="keyword">const</span> <span class="keywordtype">char</span>* source);</div>
+<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span></div>
+<div class="foldopen" id="foldopen00100" data-start="{" data-end="};">
+<div class="line"><a id="l00100" name="l00100"></a><span class="lineno"><a class="line" href="structvmupro__emubrowser__settings__t.html">  100</a></span><span class="keyword">typedef</span> <span class="keyword">struct </span>{</div>
+<div class="line"><a id="l00101" name="l00101"></a><span class="lineno"><a class="line" href="structvmupro__emubrowser__settings__t.html#a2719cb8628f0727b6aeb6651178387d6">  101</a></span>  <span class="keyword">const</span> <span class="keywordtype">char</span>* <a class="code hl_variable" href="structvmupro__emubrowser__settings__t.html#a2719cb8628f0727b6aeb6651178387d6">title</a>;           </div>
+<div class="line"><a id="l00102" name="l00102"></a><span class="lineno"><a class="line" href="structvmupro__emubrowser__settings__t.html#abc6176723a8dd9d8803edd74cc8b81f7">  102</a></span>  <span class="keyword">const</span> <span class="keywordtype">char</span>* <a class="code hl_variable" href="structvmupro__emubrowser__settings__t.html#abc6176723a8dd9d8803edd74cc8b81f7">rootPath</a>;        </div>
+<div class="line"><a id="l00103" name="l00103"></a><span class="lineno"><a class="line" href="structvmupro__emubrowser__settings__t.html#a1c9898cdfc625c694bf275b57ee2b463">  103</a></span>  <span class="keyword">const</span> <span class="keywordtype">char</span>* <a class="code hl_variable" href="structvmupro__emubrowser__settings__t.html#a1c9898cdfc625c694bf275b57ee2b463">filterExtension</a>; </div>
+<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>} <a class="code hl_struct" href="structvmupro__emubrowser__settings__t.html">vmupro_emubrowser_settings_t</a>;</div>
+</div>
+<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span></div>
+<div class="line"><a id="l00129" name="l00129"></a><span class="lineno"><a class="line" href="vmupro__utils_8h.html#a6aa7291578b63fecc7c512bc9f60c08d">  129</a></span><span class="keywordtype">int</span> <a class="code hl_function" href="vmupro__utils_8h.html#a6aa7291578b63fecc7c512bc9f60c08d">vmupro_emubrowser_init</a>(<a class="code hl_struct" href="structvmupro__emubrowser__settings__t.html">vmupro_emubrowser_settings_t</a> settings);</div>
+<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span></div>
+<div class="line"><a id="l00156" name="l00156"></a><span class="lineno"><a class="line" href="vmupro__utils_8h.html#a9ffccf21751a39cf2891f06fa0e8cd44">  156</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="vmupro__utils_8h.html#a9ffccf21751a39cf2891f06fa0e8cd44">vmupro_emubrowser_render_contents</a>(<span class="keywordtype">char</span>* launchfile);</div>
+<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span> </div>
+<div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span><span class="preprocessor">#ifdef __cplusplus</span></div>
+<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>}</div>
+<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span><span class="preprocessor">#endif</span></div>
+<div class="ttc" id="astructvmupro__emubrowser__settings__t_html"><div class="ttname"><a href="structvmupro__emubrowser__settings__t.html">vmupro_emubrowser_settings_t</a></div><div class="ttdoc">Settings structure for the emulator browser.</div><div class="ttdef"><b>Definition</b> <a href="#l00100">vmupro_utils.h:100</a></div></div>
+<div class="ttc" id="astructvmupro__emubrowser__settings__t_html_a1c9898cdfc625c694bf275b57ee2b463"><div class="ttname"><a href="structvmupro__emubrowser__settings__t.html#a1c9898cdfc625c694bf275b57ee2b463">vmupro_emubrowser_settings_t::filterExtension</a></div><div class="ttdeci">const char * filterExtension</div><div class="ttdef"><b>Definition</b> <a href="#l00103">vmupro_utils.h:103</a></div></div>
+<div class="ttc" id="astructvmupro__emubrowser__settings__t_html_a2719cb8628f0727b6aeb6651178387d6"><div class="ttname"><a href="structvmupro__emubrowser__settings__t.html#a2719cb8628f0727b6aeb6651178387d6">vmupro_emubrowser_settings_t::title</a></div><div class="ttdeci">const char * title</div><div class="ttdef"><b>Definition</b> <a href="#l00101">vmupro_utils.h:101</a></div></div>
+<div class="ttc" id="astructvmupro__emubrowser__settings__t_html_abc6176723a8dd9d8803edd74cc8b81f7"><div class="ttname"><a href="structvmupro__emubrowser__settings__t.html#abc6176723a8dd9d8803edd74cc8b81f7">vmupro_emubrowser_settings_t::rootPath</a></div><div class="ttdeci">const char * rootPath</div><div class="ttdef"><b>Definition</b> <a href="#l00102">vmupro_utils.h:102</a></div></div>
 <div class="ttc" id="avmupro__utils_8h_html_a5da2aaaabf926fa9f1dbda161811ba29"><div class="ttname"><a href="vmupro__utils_8h.html#a5da2aaaabf926fa9f1dbda161811ba29">vmupro_sleep_ms</a></div><div class="ttdeci">void vmupro_sleep_ms(uint32_t milliseconds)</div><div class="ttdoc">Sleep for a specified number of milliseconds.</div></div>
+<div class="ttc" id="avmupro__utils_8h_html_a6aa7291578b63fecc7c512bc9f60c08d"><div class="ttname"><a href="vmupro__utils_8h.html#a6aa7291578b63fecc7c512bc9f60c08d">vmupro_emubrowser_init</a></div><div class="ttdeci">int vmupro_emubrowser_init(vmupro_emubrowser_settings_t settings)</div><div class="ttdoc">Initialize the emulator browser.</div></div>
+<div class="ttc" id="avmupro__utils_8h_html_a9ffccf21751a39cf2891f06fa0e8cd44"><div class="ttname"><a href="vmupro__utils_8h.html#a9ffccf21751a39cf2891f06fa0e8cd44">vmupro_emubrowser_render_contents</a></div><div class="ttdeci">void vmupro_emubrowser_render_contents(char *launchfile)</div><div class="ttdoc">Render the emulator browser and get selected file.</div></div>
+<div class="ttc" id="avmupro__utils_8h_html_acbc9f3f93d68db4ba89ed9da52158ee4"><div class="ttname"><a href="vmupro__utils_8h.html#acbc9f3f93d68db4ba89ed9da52158ee4">vmupro_strdup</a></div><div class="ttdeci">char * vmupro_strdup(const char *source)</div><div class="ttdoc">Duplicate a string.</div></div>
+<div class="ttc" id="avmupro__utils_8h_html_af969f2eeaf266ffc9d7e0f5f8397d63b"><div class="ttname"><a href="vmupro__utils_8h.html#af969f2eeaf266ffc9d7e0f5f8397d63b">vmupro_snprintf</a></div><div class="ttdeci">int vmupro_snprintf(char *buffer, size_t size, const char *format,...)</div><div class="ttdoc">Safe string formatting function.</div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 </div><!-- container -->
