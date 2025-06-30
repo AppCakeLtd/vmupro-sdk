@@ -411,12 +411,12 @@ void DrawPlayer()
 
   if (player.facingRight)
   {
-    vmupro_blit_buffer_flip_v(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height);
+    
   }
   else
   {
 
-    vmupro_blit_buffer_flip_h(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height);
+    //vmupro_blit_buffer_flip_h(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height);
     
   }
 
@@ -434,7 +434,8 @@ void DrawPlayer()
   //vmupro_drawflags_t flags = (player.facingRight * VMUPRO_DRAWFLAGS_FLIP_H) | (goingUp * VMUPRO_DRAWFLAGS_FLIP_V);
   //vmupro_blit_buffer_transparent(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height, VMUPRO_COLOR_BLACK, flags);
 
-
+  vmupro_drawflags_t flags = (player.facingRight * VMUPRO_DRAWFLAGS_FLIP_H) | (goingUp * VMUPRO_DRAWFLAGS_FLIP_V);
+  vmupro_blit_buffer_flipped(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height, flags);
 
   // draw something at the player's feet pos for debugging
   // vmupro_blit_buffer_at(img->data, screenFeetPos.x, screenFeetPos.y, img->width, img->height);

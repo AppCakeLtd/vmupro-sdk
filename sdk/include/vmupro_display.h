@@ -276,17 +276,18 @@ extern "C"
    * @brief Blit a buffer with vertical flipping
    * 
    * Copies pixel data from a source buffer to the display framebuffer,
-   * flipping the image vertically during the copy operation.
+   * optionally flipping the image horizontally and/or vertically during the copy operation.
    * 
    * @param buffer Pointer to the source pixel buffer
    * @param x X coordinate of the top-left corner where the buffer will be placed
    * @param y Y coordinate of the top-left corner where the buffer will be placed
    * @param width Width of the source buffer in pixels
    * @param height Height of the source buffer in pixels
+   * @param flags Horizontal/vertical draw flags
    * 
    * @note The bottom row of the source becomes the top row in the destination
    */
-  void vmupro_blit_buffer_flip_v(uint8_t *buffer, int x, int y, int width, int height);
+  void vmupro_blit_buffer_flipped(uint8_t *buffer, int x, int y, int width, int height, vmupro_drawflags_t flags);
 
   /**
    * @brief Blit a buffer with scaling support
