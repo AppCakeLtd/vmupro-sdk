@@ -21,7 +21,27 @@ This is the VMUPro SDK - a development toolkit for creating applications and gam
   - Sprite batching and multi-layer rendering system
   - Tile-based rendering with `vmupro_blit_tile()` function
 - **Logging** (`vmupro_log.h`) - Multi-level logging system  
-- **Utils** (`vmupro_utils.h`) - Sleep/timing functions
+- **Utils** (`vmupro_utils.h`) - Utility functions including:
+  - Sleep/timing functions (vmupro_sleep_ms)
+  - Safe string formatting (vmupro_snprintf)
+  - String duplication (vmupro_strdup)
+  - Emulator browser API for file selection (vmupro_emubrowser_init, vmupro_emubrowser_render_contents)
+- **File System** (`vmupro_file.h`) - File operations including:
+  - File/folder existence checking (vmupro_file_exists, vmupro_folder_exists)
+  - File size queries (vmupro_get_file_size)
+  - File reading (vmupro_read_file_complete, vmupro_read_file_bytes)
+  - File writing (vmupro_write_file_complete, vmupro_write_file_bytes)
+  - Standard C file I/O functions (fopen, fclose, fread, fwrite, fseek, ftell, fflush, fsync)
+  - String functions (strlen, strcmp, strchr, strrchr, strstr, strcspn, strncat, strerror, memcmp, memcpy, memset)
+  - Memory allocation (malloc, calloc, realloc, free)
+  - Console I/O (printf, fprintf, vfprintf, puts, putchar, fputc, fputs)
+  - String conversion (strtol, strtod)
+  - Time functions (sleep, usleep, clock_gettime, strftime)
+  - Process/file control (exit, close)
+  - Non-local jumps (setjmp, longjmp)
+  - POSIX threads (pthread_create, pthread_attr_init, pthread_attr_setstacksize, pthread_join, pthread_detach, pthread_exit)
+  - Data integrity functions (crc32)
+- **Buttons** (`vmupro_buttons.h`) - Input handling for D-pad and buttons
 - **Main** (`vmupro_sdk.h`) - Core entry point and main header
 
 ## Development Commands

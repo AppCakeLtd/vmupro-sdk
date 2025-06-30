@@ -454,7 +454,7 @@ void app_main(void)
 
     EndOfFrame();
 
-    vmupro_sleep_ms(32);
+    vmupro_sleep_ms(10);
 
     UpdateInputs();
 
