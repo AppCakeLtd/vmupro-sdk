@@ -145,6 +145,29 @@ void vmupro_delay_ms(uint64_t delay_ms);
  */
 int vmupro_snprintf(char* buffer, size_t size, const char* format, ...);
 
+/**
+ * @brief Memory allocation with SPIRAM preference
+ *
+ * Allocates memory with preference for SPIRAM (external RAM) when available.
+ * Falls back to internal RAM if SPIRAM allocation fails or is unavailable.
+ * This provides better memory utilization by using external RAM for large allocations.
+ *
+ * @param size Number of bytes to allocate
+ * @return Pointer to allocated memory on success, NULL on failure
+ *
+ * @note Memory allocated with this function should be freed with standard free()
+ * @note SPIRAM access is slower than internal RAM but provides more capacity
+ * @note Use this for large buffers, graphics data, or non-performance-critical allocations
+ *
+ * @code
+ * uint8_t* buffer = (uint8_t*)vmupro_malloc(1024);
+ * if (buffer) {
+ *     // Use buffer...
+ *     free(buffer);
+ * }
+ * @endcode
+ */
+void* vmupro_malloc(size_t size);
 
 /**
  * @brief Settings structure for the emulator browser

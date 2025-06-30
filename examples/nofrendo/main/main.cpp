@@ -26,10 +26,10 @@ static uint64_t frame_time_min   = 0.0f;
 static float frame_time_avg      = 0.0f;
 static char *launchfile          = nullptr;
 static nes_t *nes;
-static uint16_t *palette         = nullptr;
-static uint8_t *nes_front_buffer = nullptr;
-static uint8_t *nes_back_buffer  = nullptr;
-static uint8_t bufferSide        = 1;
+static uint16_t *palette        = nullptr;
+static uint8_t *nes_back_buffer = nullptr;
+
+// static uint8_t buffer_side       = 1;
 
 // static EmulatorMenuState currentEmulatorState = EmulatorMenuState::EMULATOR_RUNNING;
 
@@ -202,16 +202,13 @@ void Tick() {
     //     }
 
     if (renderFrame) {
-      bufferSide               = !bufferSide;
-      uint8_t *nes_framebuffer = bufferSide ? nes_back_buffer : nes_front_buffer;
+      uint8_t *nes_framebuffer = nullptr;
+      while ((nes_framebuffer = vmupro_get_back_buffer()) == nes_back_buffer) {
+        __asm__ volatile("nop");
+      }
       nes_setvidbuf(nes_framebuffer);
       nes_emulate(true);
       vmupro_push_double_buffer_frame();
-
-      while(vmupro_get_last_blitted_fb_side() != bufferSide){
-        __asm__ volatile ("nop");
-      }
-
     }
     else {
       nes_emulate(false);
@@ -228,12 +225,11 @@ void Tick() {
     vmupro_log(
         VMUPRO_LOG_INFO,
         kLogNESEmu,
-        "loop %i, fps: %.2f, elapsed: %lli, sleep: %lli, renderFrame: %i",
+        "loop %i, fps: %.2f, elapsed: %lli, sleep: %lli",
         frame_counter,
         fps_now,
         elapsed_us,
-        sleep_us,
-        renderFrame
+        sleep_us
     );
 
     if (sleep_us > 350) {
@@ -294,24 +290,30 @@ void app_main(void) {
   }
 
   // nes->refresh_rate gets us the refresh rate
+  vmupro_log(VMUPRO_LOG_INFO, kLogNESEmu, "Starting double buffer renderer");
   vmupro_start_double_buffer_renderer();
   // nes->blit_func  = blitScreen;
-  nes_front_buffer = vmupro_get_front_fb();
-  nes_back_buffer  = vmupro_get_back_fb();
-  nes_setvidbuf(nes_front_buffer);
+  vmupro_log(VMUPRO_LOG_INFO, kLogNESEmu, "Getting back buffer");
+  nes_back_buffer = vmupro_get_back_buffer();
+  nes_setvidbuf(nes_back_buffer);
+  vmupro_log(VMUPRO_LOG_INFO, kLogNESEmu, "back buffer set to emulator");
 
   // nsfPlayer whatever this is: nes->cart->type == ROM_TYPE_NSF;
 
   ppu_setopt(PPU_LIMIT_SPRITES, true);  // Make this configurable
+  vmupro_log(VMUPRO_LOG_INFO, kLogNESEmu, "setopt PPU");
   buildPalette();
+  vmupro_log(VMUPRO_LOG_INFO, kLogNESEmu, "build palette");
 
   nes->builtPalette = palette;
 
   // Audio::getInstance()->startListenMode(PlayMode::SAMPLES);
 
   // Apparently we need to emulate two frames in order to restore the state
+  vmupro_log(VMUPRO_LOG_INFO, kLogNESEmu, "two frames rendering");
   nes_emulate(false);
   nes_emulate(false);
+  vmupro_log(VMUPRO_LOG_INFO, kLogNESEmu, "two frames rendered");
 
   renderFrame = 1;
 

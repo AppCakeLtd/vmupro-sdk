@@ -3,6 +3,11 @@
 ## Project Overview
 This is the VMUPro SDK - a development toolkit for creating applications and games for the VMUPro device (Dreamcast VMU hardware). The SDK provides APIs for display, logging, utilities, and will be expanded with additional functionality for comprehensive game and application development.
 
+## Important Paths
+- **VMUPro SDK:** `/Users/thanos/Projects/8BitMods/vmupro-sdk` (this repository)
+- **VMU-PRO Firmware:** `/Users/thanos/Projects/8BitMods/vmu-pro` (firmware source)
+- **SDK Function Exports:** `/Users/thanos/Projects/8BitMods/vmu-pro/components/UserApps/sdk/vmupro_sdk.c` (all SDK function exports are defined here)
+
 ## Project Structure
 - `sdk/` - Core SDK files and headers
 - `examples/minimal/` - Minimal example application
