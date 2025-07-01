@@ -10,9 +10,14 @@ const char *TAG = "[Platformer]";
 
 const bool DEBUG_BBOX = false;
 
+// shift fixed point maths to/from world/subpixel coords
+#define SHIFT 4
+
 #define SCREEN_WIDTH 240
 #define SCREEN_HEIGHT 240
 #define TILE_SIZE_PX 16
+// e.g. 1 tile is 256 subpixel units
+#define TILE_SIZE_SUB (16 << SHIFT)
 
 // the spritesheet/atlas
 #define TILEMAP_WIDTH_TILES 8
@@ -29,8 +34,9 @@ const bool DEBUG_BBOX = false;
 #define BLOCK_NULL 0xFFFFFFFF
 
 // maximum speed (in subpixels) while walking or running
-const int MAX_SUBSPEED_WALK = 16;
-const int MAX_SUBSPEED_RUN = 16;
+// per frame.
+const int MAX_SUBSPEED_WALK = 100;
+const int MAX_SUBSPEED_RUN = 200;
 
 const int SUBACCEL_WALK = 12;
 const int SUBACCEL_RUN = 9;
@@ -91,8 +97,7 @@ typedef enum
   MM_FALL,
   MM_WALK,
   MM_RUN,
-  MM_JUMPFROMWALK,
-  MM_JUMPFROMRUN
+  MM_JUMP,
 
 } MoveMode;
 
@@ -110,16 +115,19 @@ typedef struct
   // since we may do multiple tweaks per frame
   Vec2 lastSubPos;
 
-  Vec2 subAccel;
-  Vec2 lastSubAccel;
+  Vec2 subVelo;
+  Vec2 lastSubVelo;
+
+  // Vec2 subAccel;
+  // Vec2 lastSubAccel;
 
   bool isPlayer;
   bool facingRight;
+  bool wasRunningLastTimeWasOnGround;
+
   Inputs input;
   MoveMode moveMode;
 } Sprite;
-
-#define SHIFT 4
 
 Vec2 Sub2World(Vec2 *inVec)
 {
@@ -281,15 +289,28 @@ void SetWorldPos(Sprite *spr, Vec2 *newPos)
   SetSubPos(spr, &world2Sub);
 }
 
+int Abs(int inVal)
+{
+  if (inVal < 0)
+    return -inVal;
+  return inVal;
+}
+
 bool SpriteInAir(Sprite *spr)
 {
 
   MoveMode mm = spr->moveMode;
-  if (mm == MM_FALL || mm == MM_JUMPFROMRUN || mm == MM_JUMPFROMWALK)
+  if (mm == MM_FALL || mm == MM_JUMP)
   {
     return true;
   }
   return false;
+}
+
+// we may extend this later for knockback, etc
+bool SpriteJumping(Sprite *spr)
+{
+  return spr->moveMode == MM_JUMP;
 }
 
 void SetMoveMode(Sprite *spr, MoveMode inMode)
@@ -307,13 +328,19 @@ void ResetSprite(Sprite *spr)
 
   // update other struct vals
   spr->facingRight = true;
+  spr->wasRunningLastTimeWasOnGround = false;
+
   spr->subPos = ZeroVec();
   spr->lastSubPos = ZeroVec();
-  spr->subAccel = ZeroVec();
-  spr->lastSubAccel = ZeroVec();
+
+  spr->subVelo = ZeroVec();
+  spr->lastSubVelo = ZeroVec();
+
+  // spr->subAccel = ZeroVec();
+  // spr->lastSubAccel = ZeroVec();
+
   SetMoveMode(spr, MM_FALL);
   memset(&spr->input, 0, sizeof(Inputs));
-
 
   // temp sensible start pos
   Vec2 worldStartPos = {80, MAP_HEIGHT_PIXELS - (TILE_SIZE_PX * 4)};
@@ -325,6 +352,8 @@ void LoadLevel(int levelNum)
 
   currentLevel = (LevelData *)level_1_layer_0_data;
   ResetSprite(&player.spr);
+  // filthy hack
+  player.spr.isPlayer = true;
 }
 
 // returns atlas block 0-max
@@ -476,9 +505,66 @@ void DrawGroundtiles()
 // (collision, etc)
 void EndOfFrame(Sprite *inSpr)
 {
-
   inSpr->lastSubPos = inSpr->subPos;
-  inSpr->lastSubAccel = inSpr->subAccel;
+  inSpr->lastSubVelo = inSpr->subVelo;
+  // inSpr->lastSubAccel = inSpr->subAccel;
+}
+
+int GetXSubAccelForMode(MoveMode inMode, bool wasRunningWhenLastGrounded)
+{
+
+  switch (inMode)
+  {
+  default:
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Unhandled movement mode: %d", (int)inMode);
+    return SUBACCEL_WALK;
+    break;
+
+  case MM_JUMP:
+  case MM_FALL:
+    return SUBACCEL_AIR;
+    break;
+
+  case MM_WALK:
+    return SUBACCEL_WALK;
+    break;
+  case MM_RUN:
+    return SUBACCEL_RUN;
+    break;
+  }
+}
+
+int GetMaxXSubSpeedForMode(MoveMode inMode, bool wasRunningWhenLastGrounded)
+{
+
+  switch (inMode)
+  {
+  default:
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Unhandled movement mode: %d", (int)inMode);
+    return MAX_SUBSPEED_WALK;
+    break;
+
+  case MM_JUMP:
+  case MM_FALL:
+    if (wasRunningWhenLastGrounded)
+    {
+      return MAX_SUBSPEED_RUN;
+    }
+    else
+    {
+      return MAX_SUBSPEED_WALK;
+    }
+
+    break;
+
+  case MM_WALK:
+    return MAX_SUBSPEED_WALK;
+    break;
+
+  case MM_RUN:
+    return MAX_SUBSPEED_RUN;
+    break;
+  }
 }
 
 void SolvePlayer()
@@ -489,7 +575,65 @@ void SolvePlayer()
 
   MoveMode mm = spr->moveMode;
   bool inAir = SpriteInAir(spr);
+  bool isJumping = SpriteJumping(spr);
 
+  int maxSubSpeedX = GetMaxXSubSpeedForMode(mm, spr->wasRunningLastTimeWasOnGround);
+  int subAccelX = GetXSubAccelForMode(mm, spr->wasRunningLastTimeWasOnGround);
+  int subAccelY = 0;
+
+  bool playerMoving = inp->right || inp->left;
+
+  if (!playerMoving)
+  {
+    subAccelX = 0;
+  }
+  else
+  {
+
+    if (inp->left)
+    {
+      subAccelX = subAccelX;
+    }
+    if (inp->right)
+    {
+      subAccelX = -subAccelX;
+    }
+  }
+
+  Vec2 subAccel = {subAccelX, 0};
+
+  // vmupro_log(VMUPRO_LOG_INFO, TAG, "__TEST__Subaccelx %d!", subAccelX);
+
+  // apply acceleration to the velo
+  AddVec(&spr->subVelo, &subAccel);
+
+  // apply velo to the
+
+  // TODO: dampen
+
+  if (spr->subVelo.x > maxSubSpeedX)
+  {
+    spr->subVelo.x = maxSubSpeedX;
+  }
+  else if (spr->subVelo.x < -maxSubSpeedX)
+  {
+    spr->subVelo.x = -maxSubSpeedX;
+  }
+
+  // some sanity checks?
+  if (Abs(spr->subVelo.x) > (TILE_SIZE_SUB))
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite's x velo exceeds a full tile size!");
+  }
+  if (Abs(spr->subVelo.y) > (TILE_SIZE_SUB))
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite's y velo exceeds a full tile size!");
+  }
+
+  // Add velo to pos
+  AddVec(&spr->subPos, &spr->subVelo);
+
+  /*
   if (inp->right)
   {
     AddSubPos2(spr, 3, 0);
@@ -507,6 +651,7 @@ void SolvePlayer()
   {
     AddSubPos2(spr, 0, 3);
   }
+  */
 }
 
 void DrawPlayer()
