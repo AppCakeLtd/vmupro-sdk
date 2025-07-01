@@ -46,6 +46,9 @@ const int SUBDAMPING_WALK = 8;
 const int SUBDAMPING_RUN = 6;
 const int SUBDAMPING_AIR = 4;
 
+const int SUB_GRAVITY = 2;
+const int MAX_SUBFALLSPEED = 40;
+
 int camX = 0;
 int camY = 0;
 int frameCounter = 0;
@@ -109,6 +112,9 @@ typedef struct
 {
   // typically the image's bbox
   BBox worldBBox;
+  // we're just using the sprite bbox for now
+  BBox worldHitBox;
+
   // the actual image data
   const Img *img;
   // Player's pos will be the feet pos for example
@@ -240,6 +246,8 @@ void OnSpriteUpdated(Sprite *spr)
     spr->worldBBox.width = img->width;
     spr->worldBBox.height = img->height;
   }
+
+  spr->worldHitBox = spr->worldBBox;
 }
 
 void AddVec(Vec2 *targ, Vec2 *delta)
@@ -364,24 +372,24 @@ void LoadLevel(int levelNum)
 // note: the .map file uses 0x00 for blank spots
 // so we'll always sub 1 to get a 0-indexed
 // value into our spritesheet/atlas
-uint32_t GetBlockIDAtPos(int x, int y)
+uint32_t GetBlockIDAtColRow(int blockCol, int blockRow)
 {
 
   if (currentLevel == NULL)
     return BLOCK_NULL;
 
   // bounds check the input values
-  if (x < 0 || y < 0)
+  if (blockCol < 0 || blockRow < 0)
   {
     return BLOCK_NULL;
   }
 
-  if (x >= currentLevel->widthInTiles || y >= currentLevel->heightInTiles)
+  if (blockCol >= currentLevel->widthInTiles || blockRow >= currentLevel->heightInTiles)
   {
     return BLOCK_NULL;
   }
 
-  uint32_t offset = (y * currentLevel->widthInTiles) + x;
+  uint32_t offset = (blockRow * currentLevel->widthInTiles) + blockCol;
 
   uint32_t block = currentLevel->blockData[offset];
   return block - 1;
@@ -407,7 +415,7 @@ void DrawLevelBlock(int x, int y)
   if (currentLevel == NULL)
     return;
 
-  uint32_t blockId = GetBlockIDAtPos(x, y);
+  uint32_t blockId = GetBlockIDAtColRow(x, y);
 
   if (blockId == BLOCK_NULL)
   {
@@ -604,6 +612,288 @@ int GetXDampingForMode(MoveMode inMode, bool wasRunningWhenLastGrounded)
   }
 }
 
+typedef enum
+{
+  PIV_LEFT_TOP,
+  PIV_MIDDLE_TOP,
+  PIV_RIGHT_TOP,
+  PIV_LEFT_MIDDLE,
+  PIV_MIDDLE_MIDDLE,
+  PIV_RIGHT_MIDDLE,
+  PIV_LEFT_BOTTOM,
+  PIV_MIDDLE_BOTTOM,
+  PIV_RIGHT_BOTTOM,
+  PIV_NONE_NONE
+} Pivot;
+
+Vec2 GetWorldPointOnSprite(Sprite *spr, Pivot piv)
+{
+
+  // TODO: switch to an actual hitbox
+
+  int returnX = 0;
+  int returnY = 0;
+
+  BBox *aabb = &spr->worldHitBox;
+
+  switch (piv)
+  {
+
+  // top row
+  case PIV_LEFT_TOP:
+    returnX = aabb->x;
+    returnY = aabb->y;
+    break;
+
+  case PIV_MIDDLE_TOP:
+    returnX = aabb->x + (aabb->width / 2);
+    returnY = aabb->y;
+    break;
+
+  case PIV_RIGHT_TOP:
+    returnX = aabb->x + aabb->width;
+    returnY = aabb->y;
+    break;
+
+  // middle row
+  case PIV_LEFT_MIDDLE:
+    returnX = aabb->x;
+    returnY = aabb->y + (aabb->height / 2);
+    break;
+
+  case PIV_MIDDLE_MIDDLE:
+    returnX = aabb->x + (aabb->width / 2);
+    returnY = aabb->y + (aabb->height / 2);
+    break;
+
+  case PIV_RIGHT_MIDDLE:
+    returnX = aabb->x + aabb->width;
+    returnY = aabb->y + (aabb->height / 2);
+    break;
+
+  // bottom row
+  case PIV_LEFT_BOTTOM:
+    returnX = aabb->x;
+    returnY = aabb->y + aabb->height;
+    break;
+
+  case PIV_MIDDLE_BOTTOM:
+    returnX = aabb->x + (aabb->width / 2);
+    returnY = aabb->y + aabb->height;
+    break;
+
+  case PIV_RIGHT_BOTTOM:
+    returnX = aabb->x + aabb->width;
+    returnY = aabb->y + aabb->height;
+    break;
+
+  default:
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Unhandled pivot mode");
+    break;
+  }
+
+  Vec2 returnVal = {returnX, returnY};
+  return returnVal;
+}
+
+void ApplyGravity(Sprite *inSpr, Vec2 *accel)
+{
+
+  // TEMP:
+  if (inSpr->input.down)
+  {
+    accel->y = SUB_GRAVITY;
+  }
+  if (inSpr->input.up)
+  {
+    accel->y = -SUB_GRAVITY;
+  }
+}
+
+typedef enum
+{
+  DIR_UP,
+  DIR_DOWN,
+  DIR_LEFT,
+  DIR_RIGHT
+} Direction;
+
+typedef struct
+{
+
+  // Used to work out which pivot points
+  // to use
+  Direction dir;
+
+  // the points we'll look up
+  // e.g. top row, bottom row, etc
+  // used to work out the bounding box collision
+  // check points
+  Pivot piv[3];
+
+  // e.g. for downward would be
+  // bottom left, bottom middle, bottom right
+  Vec2 worldPos[3];
+
+  // top left to bottom right
+  // e.g. top left, top middle, top right
+  // or top left, middle left, bottom left
+  // -1 for nothing
+  int blockID[3];
+
+  bool hitSomething;
+
+} HitInfo;
+
+HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *offsetOrNull)
+{
+
+  HitInfo rVal;
+
+  rVal.dir = dir;
+
+  // get a list of points to check for
+  // whatever direction we're moving
+  switch (dir)
+  {
+  case DIR_UP:
+    // top row
+    rVal.piv[0] = PIV_LEFT_TOP;
+    rVal.piv[1] = PIV_MIDDLE_TOP;
+    rVal.piv[2] = PIV_RIGHT_TOP;
+    break;
+
+  case DIR_RIGHT:
+    rVal.piv[0] = PIV_RIGHT_TOP;
+    rVal.piv[1] = PIV_RIGHT_MIDDLE;
+    rVal.piv[2] = PIV_RIGHT_BOTTOM;
+    break;
+
+  case DIR_DOWN:
+    rVal.piv[0] = PIV_LEFT_BOTTOM;
+    rVal.piv[1] = PIV_MIDDLE_BOTTOM;
+    rVal.piv[2] = PIV_RIGHT_BOTTOM;
+    break;
+
+  case DIR_LEFT:
+    rVal.piv[0] = PIV_LEFT_TOP;
+    rVal.piv[1] = PIV_LEFT_MIDDLE;
+    rVal.piv[2] = PIV_LEFT_BOTTOM;
+    break;
+
+  default:
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Unknown direction");
+    break;
+  }
+
+  // convert the pivot points to actual world points
+  for (int i = 0; i < 3; i++)
+  {
+    rVal.worldPos[i] = GetWorldPointOnSprite(spr, rVal.piv[i]);
+
+    if (offsetOrNull != NULL)
+    {
+      AddVec(&rVal.worldPos[i], offsetOrNull);
+    }
+
+    // let's debug to screen
+    Vec2 screenPos = World2Screen(&rVal.worldPos[i]);
+    vmupro_draw_rect(screenPos.x - 2, screenPos.y - 2, screenPos.x + 4, screenPos.y + 4, VMUPRO_COLOR_GREY);
+  }
+
+  // and clear the collision return vals
+
+  rVal.hitSomething = false;
+
+  // finally run some tile collision checks:
+  for (int i = 0; i < 3; i++)
+  {
+    int tileCol = rVal.worldPos[i].x / TILE_SIZE_PX;
+    int tileRow = rVal.worldPos[i].y / TILE_SIZE_PX;
+    int blockId = GetBlockIDAtColRow(tileCol, tileRow);
+    if (blockId != BLOCK_NULL)
+    {
+      rVal.hitSomething = true;
+      rVal.blockID[i] = blockId;
+    }
+    else
+    {
+      rVal.blockID[i] = BLOCK_NULL;
+    }
+  }
+
+  return rVal;
+}
+
+void PrintHitInfo(HitInfo *info)
+{
+
+  printf("HitInfo dir %d hit = %d,  ids = %d, %d, %d\n", (int)info->dir, info->hitSomething, info->blockID[0], info->blockID[1], info->blockID[2]);
+}
+
+// Attempts to apply velo to pos, taking collisions into account
+void TryMove(Sprite *spr, bool horz)
+{
+
+  bool movingRight = spr->subVelo.x > 0;
+  bool movingLeft = spr->subVelo.x < 0;
+  bool movingDown = spr->subVelo.y > 0;
+  bool movingUp = spr->subVelo.y < 0;
+
+  Vec2 worldCheckOffset = {0, 0};
+
+  Direction dir = DIR_RIGHT;
+  if (horz)
+  {
+    if (movingRight)
+    {
+      dir = DIR_RIGHT;
+    }
+    else if (movingLeft)
+    {
+      dir = DIR_LEFT;
+    }
+    else
+    {
+      return;
+    }
+    worldCheckOffset.x = spr->subVelo.x >> SHIFT;
+  }
+  else
+  {
+    if (movingDown)
+    {
+      dir = DIR_DOWN;
+    }
+    else if (movingUp)
+    {
+      dir = DIR_UP;
+    }
+    else
+    {
+      return;
+    }
+    worldCheckOffset.y = spr->subVelo.y >> SHIFT;
+  }
+
+  HitInfo info = NewHitInfo(spr, dir, &worldCheckOffset);
+
+  // if ( info.hitSomething ){
+  PrintHitInfo(&info);
+  //}
+
+  // just apply the movement for now for debugging
+  // __TEST__
+  if (horz)
+  {
+    AddSubPos2(spr, spr->subVelo.x, 0);
+  }
+  else
+  {
+    AddSubPos2(spr, 0, spr->subVelo.y);
+  }
+}
+
 void SolvePlayer()
 {
 
@@ -647,11 +937,10 @@ void SolvePlayer()
   }
 
   Vec2 subAccel = {subAccelX, subAccelY};
+  ApplyGravity(spr, &subAccel);
 
   // apply acceleration to the velo
   AddVec(&spr->subVelo, &subAccel);
-
-  // apply velo to the
 
   //
   // Dampen
@@ -672,13 +961,14 @@ void SolvePlayer()
       subDampX = -spr->subVelo.x;
     }
     // it's already +ve so will be subbed from a neg
-  } else {
+  }
+  else
+  {
     subDampX = 0;
   }
 
   Vec2 subDamp = {subDampX, subDampY};
   AddVec(&spr->subVelo, &subDamp);
-  
 
   //
   // Clamp
@@ -704,25 +994,29 @@ void SolvePlayer()
   }
 
   // Add velo to pos
-  AddVec(&spr->subPos, &spr->subVelo);
+  // AddVec(&spr->subPos, &spr->subVelo);
+
+  // Start with H movement
+  TryMove(spr, true);
+  // TryMove(spr, false);
 
   /*
-  if (inp->right)
-  {
-    AddSubPos2(spr, 3, 0);
-  }
-  if (inp->left)
-  {
-    AddSubPos2(spr, -3, 0);
-  }
+  // check for foot collision
+  Vec2 worldFootPos = GetWorldPointOnSprite(spr, PIV_MIDDLE_BOTTOM);
 
-  if (inp->up)
-  {
-    AddSubPos2(spr, 0, -3);
-  }
-  if (inp->down)
-  {
-    AddSubPos2(spr, 0, 3);
+
+  // for debugging
+  // __TEST__
+  Vec2 screenFootPos = World2Screen(&worldFootPos);
+  vmupro_draw_rect( screenFootPos.x, screenFootPos.y, screenFootPos.x + 2, screenFootPos.y + 2, VMUPRO_COLOR_GREY );
+
+  int tileCol = worldFootPos.x / TILE_SIZE_PX;
+  int tileRow = worldFootPos.y / TILE_SIZE_PX;
+
+  int blockId = GetBlockIDAtColRow(tileCol, tileRow);
+
+  if ( blockId > -1 ){
+    printf("block id at %dx%d = %d\n", tileCol, tileRow, blockId);
   }
   */
 }
@@ -789,8 +1083,8 @@ void DrawPlayer()
   vmupro_drawflags_t flags = (spr->facingRight * VMUPRO_DRAWFLAGS_FLIP_H) | (goingUp * VMUPRO_DRAWFLAGS_FLIP_V);
   vmupro_blit_buffer_transparent(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height, VMUPRO_COLOR_BLACK, flags);
 
-  //vmupro_drawflags_t flags = (spr->facingRight * VMUPRO_DRAWFLAGS_FLIP_H) | (goingUp * VMUPRO_DRAWFLAGS_FLIP_V);
-  //vmupro_blit_buffer_flipped(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height, flags);
+  // vmupro_drawflags_t flags = (spr->facingRight * VMUPRO_DRAWFLAGS_FLIP_H) | (goingUp * VMUPRO_DRAWFLAGS_FLIP_V);
+  // vmupro_blit_buffer_flipped(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height, flags);
 
   // draw something at the player's feet pos for debugging
   // vmupro_blit_buffer_at(img->data, screenFeetPos.x, screenFeetPos.y, img->width, img->height);
