@@ -28,6 +28,14 @@ const bool DEBUG_BBOX = false;
 
 #define BLOCK_NULL 0xFFFFFFFF
 
+// maximum speed (in subpixels) while walking or running
+const int MAX_SUBSPEED_WALK = 16;
+const int MAX_SUBSPEED_RUN = 16;
+
+const int SUBACCEL_WALK = 12;
+const int SUBACCEL_RUN = 9;
+const int SUBACCEL_AIR = 6;
+
 int camX = 0;
 int camY = 0;
 int frameCounter = 0;
@@ -69,20 +77,99 @@ typedef struct
 
 typedef struct
 {
+  bool up;
+  bool down;
+  bool left;
+  bool right;
+  bool run;
+  bool jump;
+} Inputs;
+
+typedef enum
+{
+
+  MM_FALL,
+  MM_WALK,
+  MM_RUN,
+  MM_JUMPFROMWALK,
+  MM_JUMPFROMRUN
+
+} MoveMode;
+
+typedef struct
+{
   // typically the image's bbox
-  BBox bbox;
+  BBox worldBBox;
   // the actual image data
   const Img *img;
-  // since the player's pos might be
-  // the feet pos for example
-  Vec2 pos;
-  Vec2 lastAbsPos;
+  // Player's pos will be the feet pos for example
+  // the sprite will be offset from this by -(width/2)
+  // these values are subpixel / fixed point
+  Vec2 subPos;
+  // calculated at the end of the frame
+  // since we may do multiple tweaks per frame
+  Vec2 lastSubPos;
+
+  Vec2 subAccel;
+  Vec2 lastSubAccel;
+
+  bool isPlayer;
+  bool facingRight;
+  Inputs input;
+  MoveMode moveMode;
 } Sprite;
+
+#define SHIFT 4
+
+Vec2 Sub2World(Vec2 *inVec)
+{
+  Vec2 rVal = {inVec->x >> SHIFT, inVec->y >> SHIFT};
+  return rVal;
+}
+
+Vec2 World2Sub(Vec2 *inVec)
+{
+  Vec2 rVal = {inVec->x << SHIFT, inVec->y << SHIFT};
+  return rVal;
+}
+
+Vec2 World2Screen(Vec2 *srcPos)
+{
+
+  Vec2 returnVal;
+  returnVal.x = srcPos->x - camX;
+  returnVal.y = srcPos->y - camY;
+  return returnVal;
+}
+
+Vec2 Sub2Screen(Vec2 *srcPos)
+{
+  Vec2 sub2world = Sub2World(srcPos);
+  Vec2 world2Scr = World2Screen(&sub2world);
+  return world2Scr;
+}
+
+Vec2 GetSubPos(Sprite *inSprite)
+{
+  return inSprite->subPos;
+}
+
+Vec2 GetWorldPos(Sprite *inSprite)
+{
+  Vec2 rVal = Sub2World(&inSprite->subPos);
+  return rVal;
+}
+
+// Returns the foot/center pos
+// not your sprite pos
+Vec2 GetScreenPos(Sprite *inSprite)
+{
+  return Sub2Screen(&inSprite->subPos);
+}
 
 typedef struct
 {
   Sprite spr;
-  bool facingRight;
 } Player;
 
 typedef struct
@@ -93,32 +180,20 @@ typedef struct
 Player player;
 Mob testMob;
 
-// in: absolute position in level
-// out: position on screen
-// (obvs might be off screen, check that elsewhere)
-Vec2 GetScreenPlayerPos(Vec2 *srcPos)
-{
-
-  Vec2 returnVal;
-  returnVal.x = srcPos->x - camX;
-  returnVal.y = srcPos->y - camY;
-  return returnVal;
-}
-
 // in screen spsace
 void DrawSpriteBoundingBox(Sprite *inSprite, uint16_t inCol)
 {
 
-  BBox *box = &inSprite->bbox;
-  Vec2 absPos = inSprite->bbox.vecs.pos;
-  Vec2 screenPos = GetScreenPlayerPos(&absPos);
+  BBox *box = &inSprite->worldBBox;
+  Vec2 worldPos = inSprite->worldBBox.vecs.pos;
+  Vec2 screenPos = World2Screen(&worldPos);
   int x2 = screenPos.x + box->width;
   int y2 = screenPos.y + box->height;
   vmupro_draw_rect(screenPos.x, screenPos.y, x2, y2, inCol);
 }
 
 // Updates the bounding box when the pos or img changes
-void OnSpriteUpdated(Sprite *spr, bool forPlayer)
+void OnSpriteUpdated(Sprite *spr)
 {
 
   if (spr == NULL)
@@ -135,64 +210,120 @@ void OnSpriteUpdated(Sprite *spr, bool forPlayer)
     return;
   }
 
+  bool forPlayer = spr->isPlayer;
+  Vec2 worldOrigin = GetWorldPos(spr);
   if (forPlayer)
   {
     // if it's the player, we'll centre around the feet
-    spr->bbox.x = spr->pos.x - (img->width / 2);
-    spr->bbox.y = spr->pos.y - (img->height);
-    spr->bbox.width = img->width;
-    spr->bbox.height = img->height;
+    spr->worldBBox.x = worldOrigin.x - (img->width / 2);
+    spr->worldBBox.y = worldOrigin.y - (img->height);
+    spr->worldBBox.width = img->width;
+    spr->worldBBox.height = img->height;
   }
   else
   {
     // else we'll centre around the centre.
-    spr->bbox.x = spr->pos.x - (img->width / 2);
-    spr->bbox.y = spr->pos.y - (img->height / 2);
-    spr->bbox.width = img->width;
-    spr->bbox.height = img->height;
+    spr->worldBBox.x = worldOrigin.x - (img->width / 2);
+    spr->worldBBox.y = worldOrigin.y - (img->height / 2);
+    spr->worldBBox.width = img->width;
+    spr->worldBBox.height = img->height;
   }
 }
 
-Vec2 *GetAbsPlayerPos()
+void AddVec(Vec2 *targ, Vec2 *delta)
 {
-
-  return &player.spr.pos;
+  targ->x += delta->x;
+  targ->y += delta->y;
 }
 
-void SetPlayerPos(int inX, int inY)
+void AddVecInts(Vec2 *targ, int x, int y)
 {
-
-  player.spr.pos.x = inX;
-  player.spr.pos.y = inY;
-  OnSpriteUpdated(&player.spr, true);
+  targ->x += x;
+  targ->y += y;
 }
 
-void MovePlayer(int inX, int inY)
+Vec2 ZeroVec()
 {
-
-  Vec2 tPos = *GetAbsPlayerPos();
-  tPos.x += inX;
-  tPos.y += inY;
-  SetPlayerPos(tPos.x, tPos.y);
+  Vec2 rVal = {0, 0};
+  return rVal;
 }
 
-void ResetPlayer(Player *ply)
+// can't use GetPlayercamPos
+// since the cam's (usually) based on
+// the player's position
+Vec2 GetPlayerWorldPos()
+{
+  Vec2 wPos = GetWorldPos(&player.spr);
+  return wPos;
+}
+
+void SetSubPos(Sprite *spr, Vec2 *newPos)
+{
+  spr->subPos = *newPos;
+  OnSpriteUpdated(spr);
+}
+
+void AddSubPos(Sprite *spr, Vec2 *delta)
+{
+  AddVec(&spr->subPos, delta);
+  OnSpriteUpdated(spr);
+}
+
+void AddSubPos2(Sprite *spr, int xDelta, int yDelta)
+{
+  Vec2 combined = {xDelta, yDelta};
+  AddSubPos(spr, &combined);
+}
+
+void SetWorldPos(Sprite *spr, Vec2 *newPos)
+{
+  Vec2 world2Sub = World2Sub(newPos);
+  SetSubPos(spr, &world2Sub);
+}
+
+bool SpriteInAir(Sprite *spr)
 {
 
-  ply->spr.img = &img_player_idle_raw;
-  Vec2 startPos = {80, MAP_HEIGHT_PIXELS - (TILE_SIZE_PX * 4)};
-  SetPlayerPos(startPos.x, startPos.y);
+  MoveMode mm = spr->moveMode;
+  if (mm == MM_FALL || mm == MM_JUMPFROMRUN || mm == MM_JUMPFROMWALK)
+  {
+    return true;
+  }
+  return false;
+}
+
+void SetMoveMode(Sprite *spr, MoveMode inMode)
+{
+
+  spr->moveMode = inMode;
+
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Move mode %d", (int)inMode);
+}
+
+void ResetSprite(Sprite *spr)
+{
+
+  spr->img = &img_player_idle_raw;
+
+  // temp
+  Vec2 worldStartPos = {80, MAP_HEIGHT_PIXELS - (TILE_SIZE_PX * 4)};
+  SetWorldPos(spr, &worldStartPos);
 
   // update other struct vals
-  ply->facingRight = true;
-  ply->spr.lastAbsPos = ply->spr.pos;
+  spr->facingRight = true;
+  spr->subPos = ZeroVec();
+  spr->lastSubPos = ZeroVec();
+  spr->subAccel = ZeroVec();
+  spr->lastSubAccel = ZeroVec();
+  SetMoveMode(spr, MM_FALL);
+  memset(&spr->input, 0, sizeof(Inputs));
 }
 
 void LoadLevel(int levelNum)
 {
 
   currentLevel = (LevelData *)level_1_layer_0_data;
-  ResetPlayer(&player);
+  ResetSprite(&player.spr);
 }
 
 // returns atlas block 0-max
@@ -222,30 +353,18 @@ uint32_t GetBlockIDAtPos(int x, int y)
   return block - 1;
 }
 
-void UpdateInputs()
+void UpdatePlayerInputs()
 {
 
   vmupro_btn_read();
 
-  Vec2 *pPos = GetAbsPlayerPos();
-  if (vmupro_btn_held(DPad_Right))
-  {
+  Sprite *spr = &player.spr;
+  Inputs *inp = &spr->input;
 
-    MovePlayer(3, 0);
-  }
-  if (vmupro_btn_held(DPad_Left))
-  {
-    MovePlayer(-3, 0);
-  }
-
-  if (vmupro_btn_held(DPad_Up))
-  {
-    MovePlayer(0, -3);
-  }
-  if (vmupro_btn_held(DPad_Down))
-  {
-    MovePlayer(0, 3);
-  }
+  inp->up = vmupro_btn_held(DPad_Up);
+  inp->down = vmupro_btn_held(DPad_Down);
+  inp->left = vmupro_btn_held(DPad_Left);
+  inp->right = vmupro_btn_held(DPad_Right);
 }
 
 void DrawLevelBlock(int x, int y)
@@ -275,10 +394,11 @@ void DrawLevelBlock(int x, int y)
 void SolveCamera()
 {
 
-  Vec2 *pPos = GetAbsPlayerPos();
+  Sprite *spr = &player.spr;
+  Vec2 playerWorldPos = GetWorldPos(spr);
 
   // check if cam's going off left of the level
-  int camLeft = pPos->x - (SCREEN_WIDTH / 2);
+  int camLeft = playerWorldPos.x - (SCREEN_WIDTH / 2);
   if (camLeft < 0)
     camLeft = 0;
 
@@ -293,7 +413,7 @@ void SolveCamera()
   // check if cam's going off the top of the level
   // player's about 3/4 of the way down the screen
   int playerYOffset = (SCREEN_WIDTH * 4) / 3;
-  int camTop = pPos->y - (SCREEN_WIDTH / 2);
+  int camTop = playerWorldPos.y - (SCREEN_WIDTH / 2);
   if (camTop < 0)
   {
     camTop = 0;
@@ -353,42 +473,70 @@ void DrawGroundtiles()
 // do it at the end of the frame in case
 // the pos is updated multiple times in a frame
 // (collision, etc)
-void SetLastAbsPos(Sprite *inSpr)
+void EndOfFrame(Sprite *inSpr)
 {
-  inSpr->lastAbsPos = inSpr->pos;
+
+  inSpr->lastSubPos = inSpr->subPos;
+  inSpr->lastSubAccel = inSpr->subAccel;
 }
 
-void EndOfFrame()
+void SolvePlayer()
 {
-  SetLastAbsPos(&player.spr);
+
+  Sprite *spr = &player.spr;
+  Inputs *inp = &spr->input;
+
+  MoveMode mm = spr->moveMode;
+  bool inAir = SpriteInAir(spr);
+
+  if (inp->right)
+  {
+    AddSubPos2(spr, 3, 0);
+  }
+  if (inp->left)
+  {
+    AddSubPos2(spr, -3, 0);
+  }
+
+  if (inp->up)
+  {
+    AddSubPos2(spr, 0, -3);
+  }
+  if (inp->down)
+  {
+    AddSubPos2(spr, 0, 3);
+  }
 }
 
 void DrawPlayer()
 {
 
-  Vec2 *absFeetPos = GetAbsPlayerPos();
-  Vec2 screenFeetPos = GetScreenPlayerPos(absFeetPos);
+  Sprite *spr = &player.spr;
+
+  Vec2 worldOrigin = GetWorldPos(spr);
+  Vec2 screenOrigin = World2Screen(&worldOrigin);
 
   // draw based on the actual bounding box
-  Vec2 absBoxPos = player.spr.bbox.vecs.pos;
-  Vec2 screenBoxPos = GetScreenPlayerPos(&absBoxPos);
+  Vec2 worldBoxPos = spr->worldBBox.vecs.pos;
+  Vec2 screenBoxPos = World2Screen(&worldBoxPos);
 
   const Img *img = player.spr.img;
 
   // we moved left/right?
-  Vec2 *lastPlayerAbsPos = &player.spr.lastAbsPos;
-  int xDelta = absFeetPos->x - lastPlayerAbsPos->x;
-  int yDelta = absFeetPos->y - lastPlayerAbsPos->y;
+  Vec2 *lastSubPos = &player.spr.lastSubPos;
+  Vec2 subPos = GetSubPos(spr);
+  int xDelta = subPos.x - lastSubPos->x;
+  int yDelta = subPos.y - lastSubPos->y;
 
-  if (player.facingRight && xDelta < 0)
+  if (spr->facingRight && xDelta < 0)
   {
     // moved left
-    player.facingRight = false;
+    spr->facingRight = false;
   }
-  if (!player.facingRight && xDelta > 0)
+  if (!spr->facingRight && xDelta > 0)
   {
     // moved right
-    player.facingRight = true;
+    spr->facingRight = true;
   }
 
   bool goingUp = yDelta < 0;
@@ -396,29 +544,17 @@ void DrawPlayer()
   // __TEST__ temporary thing
   if (goingUp)
   {
-    player.spr.img = &img_player_fall_raw;
-    OnSpriteUpdated(&player.spr, true);
+    spr->img = &img_player_fall_raw;
+    OnSpriteUpdated(&player.spr);
   }
   else
   {
-    player.spr.img = &img_player_idle_raw;
-    OnSpriteUpdated(&player.spr, true);
+    spr->img = &img_player_idle_raw;
+    OnSpriteUpdated(&player.spr);
   }
 
   // update the img pointer
   img = player.spr.img;
-
-
-  if (player.facingRight)
-  {
-    
-  }
-  else
-  {
-
-    //vmupro_blit_buffer_flip_h(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height);
-    
-  }
 
   /* __TEST__ using masks
   vmupro_drawflags_t flags = (player.facingRight * VMUPRO_DRAWFLAGS_FLIP_H) | (goingUp * VMUPRO_DRAWFLAGS_FLIP_V);
@@ -431,10 +567,10 @@ void DrawPlayer()
   vmupro_blit_buffer_masked(img->data, mask, screenBoxPos.x, screenBoxPos.y, img->width, img->height, flags);
   */
 
-  //vmupro_drawflags_t flags = (player.facingRight * VMUPRO_DRAWFLAGS_FLIP_H) | (goingUp * VMUPRO_DRAWFLAGS_FLIP_V);
-  //vmupro_blit_buffer_transparent(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height, VMUPRO_COLOR_BLACK, flags);
+  // vmupro_drawflags_t flags = (player.facingRight * VMUPRO_DRAWFLAGS_FLIP_H) | (goingUp * VMUPRO_DRAWFLAGS_FLIP_V);
+  // vmupro_blit_buffer_transparent(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height, VMUPRO_COLOR_BLACK, flags);
 
-  vmupro_drawflags_t flags = (player.facingRight * VMUPRO_DRAWFLAGS_FLIP_H) | (goingUp * VMUPRO_DRAWFLAGS_FLIP_V);
+  vmupro_drawflags_t flags = (spr->facingRight * VMUPRO_DRAWFLAGS_FLIP_H) | (goingUp * VMUPRO_DRAWFLAGS_FLIP_V);
   vmupro_blit_buffer_flipped(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height, flags);
 
   // draw something at the player's feet pos for debugging
@@ -463,6 +599,9 @@ void app_main(void)
     DrawBackground();
     DrawGroundtiles();
 
+    UpdatePlayerInputs();
+    SolvePlayer();
+
     DrawPlayer();
 
     if (DEBUG_BBOX)
@@ -472,13 +611,11 @@ void app_main(void)
 
     vmupro_push_double_buffer_frame();
 
-    EndOfFrame();
+    EndOfFrame(&player.spr);
 
     vmupro_sleep_ms(10);
 
-    UpdateInputs();
-
-    if (vmupro_btn_confirm_pressed())
+    if (vmupro_btn_held(Btn_Mode))
     {
       break;
     }
