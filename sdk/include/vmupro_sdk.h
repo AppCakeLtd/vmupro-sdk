@@ -18,6 +18,7 @@
 #include "vmupro_utils.h"
 #include "vmupro_buttons.h"
 #include "vmupro_file.h"
+#include "vmupro_audio.h"
 #include "vmupro_stdlib_docs.h"
 
 #ifdef __cplusplus
