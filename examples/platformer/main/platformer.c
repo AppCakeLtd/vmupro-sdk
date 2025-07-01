@@ -581,9 +581,16 @@ void SolvePlayer()
   int subAccelX = GetXSubAccelForMode(mm, spr->wasRunningLastTimeWasOnGround);
   int subAccelY = 0;
 
-  bool playerMoving = inp->right || inp->left;
+  bool playerInput = inp->right || inp->left;
+  bool movingRight = spr->subVelo.x > 0;
+  bool movingLeft = spr->subPos.x < 0;
 
-  if (!playerMoving)
+  // increase accel while turning
+  bool turning = (inp->left && movingRight) || (inp->right && movingLeft);
+  if (turning)
+    subAccelX = (subAccelX * 4) / 3;
+
+  if (!playerInput)
   {
     subAccelX = 0;
   }
@@ -592,17 +599,15 @@ void SolvePlayer()
 
     if (inp->left)
     {
-      subAccelX = subAccelX;
+      subAccelX = -subAccelX;
     }
     if (inp->right)
     {
-      subAccelX = -subAccelX;
+      subAccelX = subAccelX;
     }
   }
 
   Vec2 subAccel = {subAccelX, 0};
-
-  // vmupro_log(VMUPRO_LOG_INFO, TAG, "__TEST__Subaccelx %d!", subAccelX);
 
   // apply acceleration to the velo
   AddVec(&spr->subVelo, &subAccel);
