@@ -71,8 +71,8 @@ void vmupro_audio_exit_listen_mode(void);
  * 
  * @param samples Pointer to array of 16-bit signed audio samples
  * @param count Number of samples to add (not bytes)
- * @param blocking If true, function blocks until samples can be queued.
- *                 If false, function returns immediately even if samples cannot be queued.
+ * @param applyGlobalVolume If true, applies the firmware's global volume level to the samples.
+ *                          If false, allows user to control their own volume levels.
  * 
  * @return Number of samples actually queued (may be less than count if buffer is full)
  * 
@@ -89,13 +89,13 @@ void vmupro_audio_exit_listen_mode(void);
  *     samples[i] = (int16_t)(sin(2.0 * M_PI * 440.0 * i / 44100.0) * 16000);
  * }
  * 
- * int queued = vmupro_audio_add_stream_samples(samples, 1024, false);
+ * int queued = vmupro_audio_add_stream_samples(samples, 1024, true);
  * if (queued < 1024) {
  *     // Audio buffer is full, try again later
  * }
  * @endcode
  */
-int vmupro_audio_add_stream_samples(const vmupro_audio_sample_t *samples, int count, bool blocking);
+int vmupro_audio_add_stream_samples(const vmupro_audio_sample_t *samples, int count, bool applyGlobalVolume);
 
 /**
  * @brief Clear the audio ring buffer
