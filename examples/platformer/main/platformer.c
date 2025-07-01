@@ -305,10 +305,6 @@ void ResetSprite(Sprite *spr)
 
   spr->img = &img_player_idle_raw;
 
-  // temp
-  Vec2 worldStartPos = {80, MAP_HEIGHT_PIXELS - (TILE_SIZE_PX * 4)};
-  SetWorldPos(spr, &worldStartPos);
-
   // update other struct vals
   spr->facingRight = true;
   spr->subPos = ZeroVec();
@@ -317,6 +313,11 @@ void ResetSprite(Sprite *spr)
   spr->lastSubAccel = ZeroVec();
   SetMoveMode(spr, MM_FALL);
   memset(&spr->input, 0, sizeof(Inputs));
+
+
+  // temp sensible start pos
+  Vec2 worldStartPos = {80, MAP_HEIGHT_PIXELS - (TILE_SIZE_PX * 4)};
+  SetWorldPos(spr, &worldStartPos);
 }
 
 void LoadLevel(int levelNum)
