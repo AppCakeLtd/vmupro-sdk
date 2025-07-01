@@ -42,6 +42,10 @@ const int SUBACCEL_WALK = 12;
 const int SUBACCEL_RUN = 9;
 const int SUBACCEL_AIR = 6;
 
+const int SUBDAMPING_WALK = 8;
+const int SUBDAMPING_RUN = 6;
+const int SUBDAMPING_AIR = 4;
+
 int camX = 0;
 int camY = 0;
 int frameCounter = 0;
@@ -567,6 +571,39 @@ int GetMaxXSubSpeedForMode(MoveMode inMode, bool wasRunningWhenLastGrounded)
   }
 }
 
+int GetXDampingForMode(MoveMode inMode, bool wasRunningWhenLastGrounded)
+{
+
+  switch (inMode)
+  {
+  default:
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Unhandled movement mode: %d", (int)inMode);
+    return MAX_SUBSPEED_WALK;
+    break;
+
+  case MM_JUMP:
+  case MM_FALL:
+    if (wasRunningWhenLastGrounded)
+    {
+      return SUBDAMPING_RUN;
+    }
+    else
+    {
+      return SUBDAMPING_WALK;
+    }
+
+    break;
+
+  case MM_WALK:
+    return SUBDAMPING_WALK;
+    break;
+
+  case MM_RUN:
+    return SUBDAMPING_RUN;
+    break;
+  }
+}
+
 void SolvePlayer()
 {
 
@@ -580,10 +617,12 @@ void SolvePlayer()
   int maxSubSpeedX = GetMaxXSubSpeedForMode(mm, spr->wasRunningLastTimeWasOnGround);
   int subAccelX = GetXSubAccelForMode(mm, spr->wasRunningLastTimeWasOnGround);
   int subAccelY = 0;
+  int subDampX = GetXDampingForMode(mm, spr->wasRunningLastTimeWasOnGround);
+  int subDampY = 0;
 
   bool playerInput = inp->right || inp->left;
   bool movingRight = spr->subVelo.x > 0;
-  bool movingLeft = spr->subPos.x < 0;
+  bool movingLeft = spr->subVelo.x < 0;
 
   // increase accel while turning
   bool turning = (inp->left && movingRight) || (inp->right && movingLeft);
@@ -607,14 +646,43 @@ void SolvePlayer()
     }
   }
 
-  Vec2 subAccel = {subAccelX, 0};
+  Vec2 subAccel = {subAccelX, subAccelY};
 
   // apply acceleration to the velo
   AddVec(&spr->subVelo, &subAccel);
 
   // apply velo to the
 
-  // TODO: dampen
+  //
+  // Dampen
+  //
+  if (movingRight && !inp->right)
+  {
+    // clamp it so we don't go into the negative
+    if (subDampX > spr->subVelo.x)
+    {
+      subDampX = spr->subVelo.x;
+    }
+    subDampX *= -1;
+  }
+  else if (movingLeft && !inp->left)
+  {
+    if (subDampX > -spr->subVelo.x)
+    {
+      subDampX = -spr->subVelo.x;
+    }
+    // it's already +ve so will be subbed from a neg
+  } else {
+    subDampX = 0;
+  }
+
+  Vec2 subDamp = {subDampX, subDampY};
+  AddVec(&spr->subVelo, &subDamp);
+  
+
+  //
+  // Clamp
+  //
 
   if (spr->subVelo.x > maxSubSpeedX)
   {
@@ -718,11 +786,11 @@ void DrawPlayer()
   vmupro_blit_buffer_masked(img->data, mask, screenBoxPos.x, screenBoxPos.y, img->width, img->height, flags);
   */
 
-  // vmupro_drawflags_t flags = (player.facingRight * VMUPRO_DRAWFLAGS_FLIP_H) | (goingUp * VMUPRO_DRAWFLAGS_FLIP_V);
-  // vmupro_blit_buffer_transparent(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height, VMUPRO_COLOR_BLACK, flags);
-
   vmupro_drawflags_t flags = (spr->facingRight * VMUPRO_DRAWFLAGS_FLIP_H) | (goingUp * VMUPRO_DRAWFLAGS_FLIP_V);
-  vmupro_blit_buffer_flipped(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height, flags);
+  vmupro_blit_buffer_transparent(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height, VMUPRO_COLOR_BLACK, flags);
+
+  //vmupro_drawflags_t flags = (spr->facingRight * VMUPRO_DRAWFLAGS_FLIP_H) | (goingUp * VMUPRO_DRAWFLAGS_FLIP_V);
+  //vmupro_blit_buffer_flipped(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height, flags);
 
   // draw something at the player's feet pos for debugging
   // vmupro_blit_buffer_at(img->data, screenFeetPos.x, screenFeetPos.y, img->width, img->height);
