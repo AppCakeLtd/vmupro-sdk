@@ -20,7 +20,7 @@ const bool NO_GRAV = true;
 #define SCREEN_HEIGHT 240
 #define TILE_SIZE_PX 16
 // e.g. 1 tile is 256 subpixel units
-#define TILE_SIZE_SUB (16 << SHIFT)
+#define TILE_SIZE_SUB (TILE_SIZE_PX << SHIFT)
 
 // the spritesheet/atlas
 #define TILEMAP_WIDTH_TILES 8
@@ -128,9 +128,10 @@ typedef enum
 typedef struct
 {
   // typically the image's bbox
+  // in world coords
   BBox worldBBox;
-  // we're just using the sprite bbox for now
-  BBox worldHitBox;
+  // the actual hitbox in subpixel space
+  BBox subHitBox;
 
   // the actual image data
   const Img *img;
@@ -234,7 +235,7 @@ void OnSpriteMoved(Sprite *spr)
 
   if (spr == NULL)
   {
-    vmupro_log(VMUPRO_LOG_ERROR, TAG, "OnSpriteUpdated() - null sprite");
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "OnSpriteMoved() - null sprite");
     return;
   }
 
@@ -246,24 +247,44 @@ void OnSpriteMoved(Sprite *spr)
     return;
   }
 
+  // store the sprite box pos in world space
+  // and the hitbox pos in subpixel space
+
   bool forPlayer = spr->isPlayer;
   Vec2 worldOrigin = GetWorldPos(spr);
+  Vec2 subOrigin = spr->subPos;
+
+  spr->worldBBox.x = worldOrigin.x;
+  spr->subHitBox.x = subOrigin.x;
+  spr->worldBBox.y = worldOrigin.y;
+  spr->subHitBox.y = subOrigin.y;
+
+  int worldWidth = img->width;
+  int worldHeight = img->height;
+  int subWidth = (worldWidth << SHIFT);
+  int subHeight = (worldHeight << SHIFT);
+
+  spr->worldBBox.width = worldWidth;
+  spr->worldBBox.height = worldHeight;
+  spr->subHitBox.width = subWidth;
+  spr->subHitBox.height = subHeight;
 
   // horizontal part
   if (spr->anchorH == ANCHOR_HLEFT)
   {
-    // sprite's aligned along the left
-    spr->worldBBox.x = worldOrigin.x;
+    // sprite's left side is the object's origin. we're good
   }
   else if (spr->anchorH == ANCHOR_HMID)
   {
-    // centred horizontally
-    spr->worldBBox.x = worldOrigin.x - (img->width / 2);
+    // sprite's h centre is the object's origin
+    spr->worldBBox.x -= worldWidth / 2;
+    spr->subHitBox.x -= subWidth / 2;
   }
   else if (spr->anchorH == ANCHOR_HRIGHT)
   {
-    // right-aligned
-    spr->worldBBox.x = worldOrigin.x - img->width;
+    // sprite's right side is the object's origin.
+    spr->worldBBox.x -= img->width;
+    spr->subHitBox.x -= subWidth;
   }
   else
   {
@@ -273,27 +294,24 @@ void OnSpriteMoved(Sprite *spr)
   // vertical part
   if (spr->anchorV == ANCHOR_VTOP)
   {
-    // top of the sprite aligns with the obj pos (something crawling on the ceiling, etc)
-    spr->worldBBox.y = worldOrigin.y;
+    // top of the sprite aligns with the obj origin (something crawling on the ceiling, etc)
   }
   else if (spr->anchorV == ANCHOR_VMID)
   {
-    spr->worldBBox.y = worldOrigin.y - (img->height / 2);
+    spr->worldBBox.y += worldHeight / 2;
+    spr->subHitBox.y += subHeight / 2;
   }
   else if (spr->anchorV == ANCHOR_VBOTTOM)
   {
-    spr->worldBBox.y = worldOrigin.y - img->height;
+    spr->worldBBox.y += worldHeight;
+    spr->subHitBox.y += subHeight;
   }
   else
   {
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite has unhandled vert alginment type");
   }
 
-  spr->worldBBox.width = img->width;
-  spr->worldBBox.height = img->height;
 
-  // TODO: inset the hitbox a bit
-  spr->worldHitBox = spr->worldBBox;
 }
 
 void AddVec(Vec2 *targ, Vec2 *delta)
@@ -401,7 +419,7 @@ void ResetSprite(Sprite *spr)
   memset(&spr->input, 0, sizeof(Inputs));
 
   // temporary config stuff
-  Vec2 worldStartPos = {80, MAP_HEIGHT_PIXELS - (TILE_SIZE_PX * 4)};
+  Vec2 worldStartPos = {80, MAP_HEIGHT_PIXELS - (TILE_SIZE_PX * 8)};
   SetWorldPos(spr, &worldStartPos);
   spr->isPlayer = true;
   spr->anchorH = ANCHOR_HMID;
@@ -662,7 +680,9 @@ int GetXDampingForMode(MoveMode inMode, bool wasRunningWhenLastGrounded)
   }
 }
 
-Vec2 GetWorldPointOnSprite(Sprite *spr, Anchor_H anchorH, Anchor_V anchorV)
+// hitbox = false: return sprite box in world coords
+// hitbox = true: return hitbox in subpixel coords
+Vec2 GetPointOnSprite(Sprite *spr, bool hitBox, Anchor_H anchorH, Anchor_V anchorV)
 {
 
   // TODO: switch to an actual hitbox
@@ -670,7 +690,7 @@ Vec2 GetWorldPointOnSprite(Sprite *spr, Anchor_H anchorH, Anchor_V anchorV)
   int returnX = 0;
   int returnY = 0;
 
-  BBox *aabb = &spr->worldHitBox;
+  BBox *aabb = hitBox? &spr->subHitBox : &spr->worldBBox;
 
   if (anchorH == ANCHOR_HLEFT)
   {
@@ -739,9 +759,10 @@ typedef struct
   Anchor_H anchorH[3];
   Anchor_V anchorV[3];
 
-  // e.g. for downward would be
+  // the point(s) we're checking for collision
+  // e.g. for moving down we'd use 3:
   // bottom left, bottom middle, bottom right
-  Vec2 worldPos[3];
+  Vec2 subCheckPos[3];
 
   // top left to bottom right
   // e.g. top left, top middle, top right
@@ -753,24 +774,53 @@ typedef struct
   // e.g. if we're moving right, it'll be
   // - the x coord of the block's left edge
   // - the y coord of the hitbox point we're checking
-  Vec2 worldEjectionPoint[3];
+  Vec2 subEjectionPoint[3];
 
-  // how far we've pushed into the wall
-  // note: rough va
-  int worldSnapDistance;
 
   bool hitSomething;
   int lastHitIndex;
 
 } HitInfo;
 
-HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *offsetOrNull)
+Vec2 GetTileRowAndColFromSubPos(Vec2 * subPos){
+
+    Vec2 returnVal;
+    // rounding down is not an issue here.
+    // if the check pos is 257 for example, this shifts down to 
+    // worldPos = (257>>4) = 16
+    // then
+    // tileCol = 16 / TILE_SIZE_PX = 1
+    // which is what we want    
+    // 255 would be tile col 0
+    // e.g.
+    //Vec2 worldPoint = Sub2World(subPos);
+    //returnVal.x = worldPoint.x / TILE_SIZE_PX;
+    //returnVal.y = worldPoint.y / TILE_SIZE_PX;
+    // but we can simplify
+    returnVal.x = subPos->x / TILE_SIZE_SUB;
+    returnVal.y = subPos->y / TILE_SIZE_SUB;
+    return returnVal;
+
+}
+
+Vec2 GetTileSubPosFromRowAndCol(Vec2 * rowAndcol){
+
+  Vec2 returnVal;
+  returnVal.x = rowAndcol->x * TILE_SIZE_SUB;
+  returnVal.y = rowAndcol->y * TILE_SIZE_SUB;
+  return returnVal;
+
+}
+
+// subOffsetOrNull adds an offset to where we check for collisions
+// e.g. when moving right we check currentPos.x + velo.x
+// for where we'll be, rather than where we are
+HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *subOffsetOrNull)
 {
 
   HitInfo rVal;
 
-  rVal.dir = dir;
-  rVal.worldSnapDistance = 0;
+  rVal.dir = dir;  
   rVal.lastHitIndex = -1;
 
   // get a list of points to check for
@@ -822,15 +872,15 @@ HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *offsetOrNull)
   // convert the pivot points to actual world points
   for (int i = 0; i < 3; i++)
   {
-    rVal.worldPos[i] = GetWorldPointOnSprite(spr, rVal.anchorH[i], rVal.anchorV[i]);
+    rVal.subCheckPos[i] = GetPointOnSprite(spr, true, rVal.anchorH[i], rVal.anchorV[i]);
 
-    if (offsetOrNull != NULL)
+    if (subOffsetOrNull != NULL)
     {
-      AddVec(&rVal.worldPos[i], offsetOrNull);
+      AddVec(&rVal.subCheckPos[i], subOffsetOrNull);
     }
 
-    // let's debug to screen
-    Vec2 screenPos = World2Screen(&rVal.worldPos[i]);
+    // let's debug to screen    
+    Vec2 screenPos = Sub2Screen(&rVal.subCheckPos[i]);
     vmupro_draw_rect(screenPos.x - 2, screenPos.y - 2, screenPos.x + 4, screenPos.y + 4, VMUPRO_COLOR_WHITE);
   }
 
@@ -841,45 +891,47 @@ HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *offsetOrNull)
   // finally run some tile collision checks:
   for (int i = 0; i < 3; i++)
   {
-    int tileCol = rVal.worldPos[i].x / TILE_SIZE_PX;
-    int tileRow = rVal.worldPos[i].y / TILE_SIZE_PX;
-    int blockId = GetBlockIDAtColRow(tileCol, tileRow);
+
+    // just the literal tile indexes into the x/y grid
+    Vec2 tileRowAndCol = GetTileRowAndColFromSubPos(&rVal.subCheckPos[i]);
+
+    int blockId = GetBlockIDAtColRow(tileRowAndCol.x, tileRowAndCol.y);
     if (blockId != BLOCK_NULL)
     {
       rVal.hitSomething = true;
       rVal.blockID[i] = blockId;
       rVal.lastHitIndex = i;
 
+      // essentially we're rounding down and then back up
+      Vec2 tileSubPos = GetTileSubPosFromRowAndCol(&tileRowAndCol);
+
       // calculate the world ejection point based on the dir
       if (dir == DIR_RIGHT)
       {
         // left side of the block we hit
-        rVal.worldEjectionPoint[i].x = tileCol * TILE_SIZE_PX;
-        rVal.worldEjectionPoint[i].y = rVal.worldPos[i].y;
-        // what will it take to snap out
-        rVal.worldSnapDistance = rVal.worldEjectionPoint[i].x - rVal.worldPos[i].x;
+        rVal.subEjectionPoint[i].x = tileSubPos.x;
+        rVal.subEjectionPoint[i].y = rVal.subCheckPos[i].y;     
       }
       else if (dir == DIR_LEFT)
       {
         // we hit the right side of the block
-        rVal.worldEjectionPoint[i].x = (tileCol * TILE_SIZE_PX) + TILE_SIZE_PX;
-        rVal.worldEjectionPoint[i].y = rVal.worldPos[i].y;
-        // what will it take to snap out
-        rVal.worldSnapDistance = rVal.worldEjectionPoint[i].x - rVal.worldPos[i].x;
+        rVal.subEjectionPoint[i].x = tileSubPos.x + TILE_SIZE_SUB;
+        rVal.subEjectionPoint[i].y = rVal.subCheckPos[i].y;
+
       }
       else if (dir == DIR_DOWN)
       {
         // we hit the top of the block
-        rVal.worldEjectionPoint[i].x = rVal.worldPos[i].x;
-        rVal.worldEjectionPoint[i].y = (tileRow * TILE_SIZE_PX);
-        rVal.worldSnapDistance = rVal.worldEjectionPoint[i].y - rVal.worldPos[i].y;
+        rVal.subEjectionPoint[i].x = rVal.subCheckPos[i].x;
+        rVal.subEjectionPoint[i].y = tileSubPos.y;
+        
       }
       else if (dir == DIR_UP)
       {
         // we hit the bottom of the block
-        rVal.worldEjectionPoint[i].x = rVal.worldPos[i].x;
-        rVal.worldEjectionPoint[i].y = (tileRow * TILE_SIZE_PX) + TILE_SIZE_PX;
-        rVal.worldSnapDistance = rVal.worldEjectionPoint[i].y - rVal.worldPos[i].y;
+        rVal.subEjectionPoint[i].x = rVal.subCheckPos[i].x;
+        rVal.subEjectionPoint[i].y = tileSubPos.y + TILE_SIZE_SUB;
+        
       }
     }
     else
@@ -914,35 +966,41 @@ void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
     {
       AddSubPos2(spr, 0, spr->subVelo.y);
     }
+
+    return;
   }
-  return;
 
   int idx = info->lastHitIndex;
 
   if (dir == DIR_RIGHT)
   {
+
+    printf("eject right\n");
+
     // we hit something while moving right
     spr->subVelo.x = 0;
 
-    // the hitbox/spr box might be centered
-    // work out the difference between its
+    // e.g. the point on the block we just hit
+    int subX = info->subEjectionPoint[idx].x;
+        
 
-    int worldX = info->worldEjectionPoint[idx].x;
-
+    // hitbox might be anchored left/right/middle
+    // account for this
     if (spr->anchorH == ANCHOR_HLEFT)
     {
-      worldX -= spr->worldHitBox.width;
+      subX -= spr->subHitBox.width;
     }
     else if (spr->anchorH == ANCHOR_HMID)
     {
-      worldX -= spr->worldBBox.width / 2;
+      subX -= spr->subHitBox.width / 2;
     }
     else if (spr->anchorH == ANCHOR_HRIGHT)
     {
-      worldX -= 0;
+      subX -= 0;
     }
 
-    int subX = worldX << SHIFT;
+    printf("__TEST__ Ejecting to subx %d\n", subX);
+
     int subY = spr->subPos.y;
     Vec2 sub = {subX, subY};
     SetSubPos(spr, &sub);
@@ -953,22 +1011,21 @@ void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
 
     spr->subVelo.x = 0;
 
-    int worldX = info->worldEjectionPoint[idx].x;
+    int subX = info->subEjectionPoint[idx].x;
 
     if (spr->anchorH == ANCHOR_HLEFT)
     {
-      worldX += 0;
+      subX += 0;
     }
     else if (spr->anchorH == ANCHOR_HMID)
     {
-      worldX += spr->worldBBox.width / 2;
+      subX += spr->subHitBox.width / 2;
     }
     else if (spr->anchorH == ANCHOR_HRIGHT)
     {
-      worldX += spr->worldBBox.width;
+      subX += spr->subHitBox.width;
     }
 
-    int subX = worldX << SHIFT;
     int subY = spr->subPos.y;
     Vec2 sub = {subX, subY};
     SetSubPos(spr, &sub);
@@ -984,7 +1041,10 @@ void TryMove(Sprite *spr, bool horz)
   bool movingDown = spr->subVelo.y > 0;
   bool movingUp = spr->subVelo.y < 0;
 
-  Vec2 worldCheckOffset = {0, 0};
+  // when we do the sprite collision detection
+  // we might want to check where we'll *be* rather
+  // than where we *are*
+  Vec2 subCheckOffset = {0, 0};
 
   Direction dir = DIR_RIGHT;
   if (horz)
@@ -1001,7 +1061,7 @@ void TryMove(Sprite *spr, bool horz)
     {
       return;
     }
-    worldCheckOffset.x = spr->subVelo.x >> SHIFT;
+    subCheckOffset.x = spr->subVelo.x;
   }
   else
   {
@@ -1017,10 +1077,10 @@ void TryMove(Sprite *spr, bool horz)
     {
       return;
     }
-    worldCheckOffset.y = spr->subVelo.y >> SHIFT;
+    subCheckOffset.y = spr->subVelo.y >> SHIFT;
   }
 
-  HitInfo info = NewHitInfo(spr, dir, &worldCheckOffset);
+  HitInfo info = NewHitInfo(spr, dir, &subCheckOffset);
 
   if (info.hitSomething)
   {
@@ -1053,6 +1113,15 @@ void SolvePlayer()
   bool movingLeft = spr->subVelo.x < 0;
   bool movingUp = spr->subVelo.y < 0;
   bool movingDown = spr->subVelo.y > 0;
+
+  if (inp->right && !spr->facingRight)
+  {
+    spr->facingRight = true;
+  }
+  if (inp->left && spr->facingRight)
+  {
+    spr->facingRight = false;
+  }
 
   // Debug/testing
   if (NO_GRAV)
@@ -1240,17 +1309,6 @@ void DrawPlayer()
   int xDelta = subPos.x - lastSubPos->x;
   int yDelta = subPos.y - lastSubPos->y;
 
-  if (spr->facingRight && xDelta < 0)
-  {
-    // moved left
-    spr->facingRight = false;
-  }
-  if (!spr->facingRight && xDelta > 0)
-  {
-    // moved right
-    spr->facingRight = true;
-  }
-
   bool goingUp = yDelta < 0;
 
   // __TEST__ temporary thing
@@ -1335,13 +1393,14 @@ void app_main(void)
     // test: cycle through sprite offsets
     if (vmupro_btn_pressed(Btn_A))
     {
-      player.spr.anchorH = (player.spr.anchorH + 1) % (3);
-      OnSpriteMoved(&player.spr);
+      // OnSpriteMoved(&player.spr);
+      printf("Playerx %d\n", GetWorldPos(&player.spr).x);
     }
 
     if (vmupro_btn_pressed(Btn_B))
     {
-      player.spr.anchorV = (player.spr.anchorV + 1) % (3);
+      // player.spr.anchorV = (player.spr.anchorV + 1) % (3);
+      player.spr.anchorH = (player.spr.anchorH + 1) % (3);
       OnSpriteMoved(&player.spr);
     }
 
