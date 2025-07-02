@@ -124,7 +124,8 @@ WARN_LOGFILE           =
 
 INPUT                  = README.md \
                          sdk/include \
-                         examples/minimal
+                         examples/minimal \
+                         docs/stdlib_functions.md
 INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          = *.c \
                          *.cc \
