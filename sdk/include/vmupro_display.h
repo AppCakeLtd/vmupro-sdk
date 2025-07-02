@@ -136,6 +136,32 @@ extern "C"
   void vmupro_stop_double_buffer_renderer();
 
   /**
+   * @brief Pause the double buffer renderer
+   *
+   * Temporarily pauses the double buffering system without stopping it completely.
+   * This allows you to suspend automatic buffer swapping while maintaining the
+   * double buffer state. Useful for pause menus, loading screens, or when you
+   * need to temporarily halt rendering updates.
+   *
+   * @note The renderer can be resumed with vmupro_resume_double_buffer_renderer()
+   * @note Pausing does not clear or reset the buffers
+   * @note Must be called after vmupro_start_double_buffer_renderer()
+   */
+  void vmupro_pause_double_buffer_renderer();
+
+  /**
+   * @brief Resume the double buffer renderer
+   *
+   * Resumes the double buffering system after it has been paused.
+   * This restores automatic buffer swapping and rendering operations.
+   *
+   * @note Must be called after vmupro_pause_double_buffer_renderer()
+   * @note Resuming continues from the current buffer state
+   * @note Double buffer system must have been started first
+   */
+  void vmupro_resume_double_buffer_renderer();
+
+  /**
    * @brief Swap and display the current framebuffer
    *
    * Swaps the front and back framebuffers and displays the newly swapped
