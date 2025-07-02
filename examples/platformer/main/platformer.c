@@ -10,6 +10,9 @@ const char *TAG = "[Platformer]";
 
 const bool DEBUG_BBOX = false;
 
+// float in air for collision testing
+const bool NO_GRAV = true;
+
 // shift fixed point maths to/from world/subpixel coords
 #define SHIFT 4
 
@@ -108,14 +111,15 @@ typedef enum
 
 } MoveMode;
 
-
-typedef enum {
+typedef enum
+{
   ANCHOR_HLEFT,
   ANCHOR_HMID,
   ANCHOR_HRIGHT,
 } Anchor_H;
 
-typedef enum {
+typedef enum
+{
   ANCHOR_VTOP,
   ANCHOR_VMID,
   ANCHOR_VBOTTOM,
@@ -241,35 +245,47 @@ void OnSpriteMoved(Sprite *spr)
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Set the sprite img before attempting to update the bboxs");
     return;
   }
-  
+
   bool forPlayer = spr->isPlayer;
   Vec2 worldOrigin = GetWorldPos(spr);
 
-  
-
   // horizontal part
-  if ( spr->anchorH == ANCHOR_HLEFT ){
+  if (spr->anchorH == ANCHOR_HLEFT)
+  {
     // sprite's aligned along the left
     spr->worldBBox.x = worldOrigin.x;
-  } else if ( spr->anchorH == ANCHOR_HMID ){
+  }
+  else if (spr->anchorH == ANCHOR_HMID)
+  {
     // centred horizontally
-    spr->worldBBox.x = worldOrigin.x - (img->width/2);
-  } else if ( spr->anchorH == ANCHOR_HRIGHT ){
+    spr->worldBBox.x = worldOrigin.x - (img->width / 2);
+  }
+  else if (spr->anchorH == ANCHOR_HRIGHT)
+  {
     // right-aligned
     spr->worldBBox.x = worldOrigin.x - img->width;
-  } else {
+  }
+  else
+  {
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite has unhandled horz alginment type");
   }
 
   // vertical part
-  if ( spr->anchorV == ANCHOR_VTOP ){
+  if (spr->anchorV == ANCHOR_VTOP)
+  {
     // top of the sprite aligns with the obj pos (something crawling on the ceiling, etc)
     spr->worldBBox.y = worldOrigin.y;
-  } else if ( spr->anchorV == ANCHOR_VMID ){
-    spr->worldBBox.y = worldOrigin.y - (img->height /2);
-  } else if ( spr->anchorV == ANCHOR_VBOTTOM){
+  }
+  else if (spr->anchorV == ANCHOR_VMID)
+  {
+    spr->worldBBox.y = worldOrigin.y - (img->height / 2);
+  }
+  else if (spr->anchorV == ANCHOR_VBOTTOM)
+  {
     spr->worldBBox.y = worldOrigin.y - img->height;
-  } else {
+  }
+  else
+  {
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite has unhandled vert alginment type");
   }
 
@@ -278,7 +294,6 @@ void OnSpriteMoved(Sprite *spr)
 
   // TODO: inset the hitbox a bit
   spr->worldHitBox = spr->worldBBox;
-
 }
 
 void AddVec(Vec2 *targ, Vec2 *delta)
@@ -401,7 +416,6 @@ void LoadLevel(int levelNum)
 
   currentLevel = (LevelData *)level_1_layer_0_data;
   ResetSprite(&player.spr);
-
 }
 
 // returns atlas block 0-max
@@ -648,8 +662,6 @@ int GetXDampingForMode(MoveMode inMode, bool wasRunningWhenLastGrounded)
   }
 }
 
-
-
 Vec2 GetWorldPointOnSprite(Sprite *spr, Anchor_H anchorH, Anchor_V anchorV)
 {
 
@@ -660,24 +672,38 @@ Vec2 GetWorldPointOnSprite(Sprite *spr, Anchor_H anchorH, Anchor_V anchorV)
 
   BBox *aabb = &spr->worldHitBox;
 
-  if (anchorH == ANCHOR_HLEFT ){
+  if (anchorH == ANCHOR_HLEFT)
+  {
     returnX = aabb->x;
-  } else if ( anchorH == ANCHOR_HMID ){
-    returnX = aabb->x + (aabb->width /2);
-  } else if (anchorH == ANCHOR_HRIGHT){
+  }
+  else if (anchorH == ANCHOR_HMID)
+  {
+    returnX = aabb->x + (aabb->width / 2);
+  }
+  else if (anchorH == ANCHOR_HRIGHT)
+  {
     returnX = aabb->x + aabb->width;
-  } else {
-    vmupro_log(VMUPRO_LOG_ERROR, "TAG", "Unknown H alignment");    
+  }
+  else
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, "TAG", "Unknown H alignment");
   }
 
-  if ( anchorV == ANCHOR_VTOP ){
+  if (anchorV == ANCHOR_VTOP)
+  {
     returnY = aabb->y;
-  } else if (anchorV == ANCHOR_VMID ){
-    returnY = aabb->y + (aabb->height /2);
-  } else if ( anchorV == ANCHOR_VBOTTOM){
+  }
+  else if (anchorV == ANCHOR_VMID)
+  {
+    returnY = aabb->y + (aabb->height / 2);
+  }
+  else if (anchorV == ANCHOR_VBOTTOM)
+  {
     returnY = aabb->y + aabb->height;
-  } else {
-    vmupro_log(VMUPRO_LOG_ERROR, "TAG", "Unknown V alignment");    
+  }
+  else
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, "TAG", "Unknown V alignment");
   }
 
   Vec2 returnVal = {returnX, returnY};
@@ -687,15 +713,8 @@ Vec2 GetWorldPointOnSprite(Sprite *spr, Anchor_H anchorH, Anchor_V anchorV)
 void ApplyGravity(Sprite *inSpr, Vec2 *accel)
 {
 
-  // TEMP:
-  if (inSpr->input.down)
-  {
-    accel->y = SUB_GRAVITY;
-  }
-  if (inSpr->input.up)
-  {
-    accel->y = -SUB_GRAVITY;
-  }
+  if (NO_GRAV)
+    return;
 }
 
 typedef enum
@@ -703,7 +722,7 @@ typedef enum
   DIR_UP,
   DIR_RIGHT,
   DIR_DOWN,
-  DIR_LEFT,  
+  DIR_LEFT,
 } Direction;
 
 typedef struct
@@ -832,30 +851,36 @@ HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *offsetOrNull)
       rVal.lastHitIndex = i;
 
       // calculate the world ejection point based on the dir
-      if ( dir == DIR_RIGHT ){
+      if (dir == DIR_RIGHT)
+      {
         // left side of the block we hit
         rVal.worldEjectionPoint[i].x = tileCol * TILE_SIZE_PX;
         rVal.worldEjectionPoint[i].y = rVal.worldPos[i].y;
         // what will it take to snap out
         rVal.worldSnapDistance = rVal.worldEjectionPoint[i].x - rVal.worldPos[i].x;
-      } else if ( dir == DIR_LEFT ){
+      }
+      else if (dir == DIR_LEFT)
+      {
         // we hit the right side of the block
         rVal.worldEjectionPoint[i].x = (tileCol * TILE_SIZE_PX) + TILE_SIZE_PX;
         rVal.worldEjectionPoint[i].y = rVal.worldPos[i].y;
         // what will it take to snap out
         rVal.worldSnapDistance = rVal.worldEjectionPoint[i].x - rVal.worldPos[i].x;
-      } else if ( dir == DIR_DOWN ){
+      }
+      else if (dir == DIR_DOWN)
+      {
         // we hit the top of the block
         rVal.worldEjectionPoint[i].x = rVal.worldPos[i].x;
         rVal.worldEjectionPoint[i].y = (tileRow * TILE_SIZE_PX);
         rVal.worldSnapDistance = rVal.worldEjectionPoint[i].y - rVal.worldPos[i].y;
-      } else if (dir == DIR_UP ){
+      }
+      else if (dir == DIR_UP)
+      {
         // we hit the bottom of the block
         rVal.worldEjectionPoint[i].x = rVal.worldPos[i].x;
         rVal.worldEjectionPoint[i].y = (tileRow * TILE_SIZE_PX) + TILE_SIZE_PX;
         rVal.worldSnapDistance = rVal.worldEjectionPoint[i].y - rVal.worldPos[i].y;
       }
-
     }
     else
     {
@@ -873,15 +898,20 @@ void PrintHitInfo(HitInfo *info)
 }
 
 // Perform the ejection part after collecting hit info
-void EjectHitInfo(Sprite * spr, HitInfo * info, bool horz){
+void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
+{
 
   Direction dir = info->dir;
 
   // simple early exit
-  if ( !info->hitSomething ){
-    if ( horz ){
+  if (!info->hitSomething)
+  {
+    if (horz)
+    {
       AddSubPos2(spr, spr->subVelo.x, 0);
-    } else {
+    }
+    else
+    {
       AddSubPos2(spr, 0, spr->subVelo.y);
     }
   }
@@ -889,42 +919,52 @@ void EjectHitInfo(Sprite * spr, HitInfo * info, bool horz){
 
   int idx = info->lastHitIndex;
 
-  
-  if ( dir == DIR_RIGHT ){
-      // we hit something while moving right
-      spr->subVelo.x = 0;
+  if (dir == DIR_RIGHT)
+  {
+    // we hit something while moving right
+    spr->subVelo.x = 0;
 
-      // the hitbox/spr box might be centered
-      // work out the difference between its 
-      
-      int worldX = info->worldEjectionPoint[idx].x;
+    // the hitbox/spr box might be centered
+    // work out the difference between its
 
-      if ( spr->anchorH == ANCHOR_HLEFT){
-        worldX -= spr->worldHitBox.width;
-      } else if ( spr->anchorH == ANCHOR_HMID ){
-        worldX -= spr->worldBBox.width /2;
-      } else if ( spr->anchorH == ANCHOR_HRIGHT ){
-        worldX -= 0;
-      }
+    int worldX = info->worldEjectionPoint[idx].x;
 
-      int subX = worldX << SHIFT;
-      int subY = spr->subPos.y;
-      Vec2 sub = {subX, subY};
-      SetSubPos(spr, &sub);
-      
+    if (spr->anchorH == ANCHOR_HLEFT)
+    {
+      worldX -= spr->worldHitBox.width;
+    }
+    else if (spr->anchorH == ANCHOR_HMID)
+    {
+      worldX -= spr->worldBBox.width / 2;
+    }
+    else if (spr->anchorH == ANCHOR_HRIGHT)
+    {
+      worldX -= 0;
+    }
+
+    int subX = worldX << SHIFT;
+    int subY = spr->subPos.y;
+    Vec2 sub = {subX, subY};
+    SetSubPos(spr, &sub);
   }
 
-  if ( dir == DIR_LEFT ){
+  if (dir == DIR_LEFT)
+  {
 
     spr->subVelo.x = 0;
 
     int worldX = info->worldEjectionPoint[idx].x;
 
-    if ( spr->anchorH == ANCHOR_HLEFT){
+    if (spr->anchorH == ANCHOR_HLEFT)
+    {
       worldX += 0;
-    } else if ( spr->anchorH == ANCHOR_HMID ){
-      worldX += spr->worldBBox.width /2;
-    } else if ( spr->anchorH == ANCHOR_HRIGHT ){
+    }
+    else if (spr->anchorH == ANCHOR_HMID)
+    {
+      worldX += spr->worldBBox.width / 2;
+    }
+    else if (spr->anchorH == ANCHOR_HRIGHT)
+    {
       worldX += spr->worldBBox.width;
     }
 
@@ -932,10 +972,7 @@ void EjectHitInfo(Sprite * spr, HitInfo * info, bool horz){
     int subY = spr->subPos.y;
     Vec2 sub = {subX, subY};
     SetSubPos(spr, &sub);
-
   }
-
-
 }
 
 // Attempts to apply velo to pos, taking collisions into account
@@ -985,12 +1022,12 @@ void TryMove(Sprite *spr, bool horz)
 
   HitInfo info = NewHitInfo(spr, dir, &worldCheckOffset);
 
-  if ( info.hitSomething ){
-    //PrintHitInfo(&info);
+  if (info.hitSomething)
+  {
+    // PrintHitInfo(&info);
   }
 
   EjectHitInfo(spr, &info, horz);
-
 }
 
 void SolvePlayer()
@@ -1004,21 +1041,47 @@ void SolvePlayer()
   bool isJumping = SpriteJumping(spr);
 
   int maxSubSpeedX = GetMaxXSubSpeedForMode(mm, spr->wasRunningLastTimeWasOnGround);
+  int maxSubSpeedY = MAX_SUBFALLSPEED;
   int subAccelX = GetXSubAccelForMode(mm, spr->wasRunningLastTimeWasOnGround);
-  int subAccelY = 0;
+  int subAccelY = SUB_GRAVITY;
   int subDampX = GetXDampingForMode(mm, spr->wasRunningLastTimeWasOnGround);
   int subDampY = 0;
 
-  bool playerInput = inp->right || inp->left;
+  bool playerXInput = inp->right || inp->left;
+  bool playerYInput = inp->up || inp->down;
   bool movingRight = spr->subVelo.x > 0;
   bool movingLeft = spr->subVelo.x < 0;
+  bool movingUp = spr->subVelo.y < 0;
+  bool movingDown = spr->subVelo.y > 0;
+
+  // Debug/testing
+  if (NO_GRAV)
+  {
+    subDampY = 1;
+
+    if (!playerYInput)
+    {
+      subAccelY = 0;
+    }
+    else
+    {
+      if (inp->up)
+      {
+        subAccelY = -subAccelY;
+      }
+      if (inp->down)
+      {
+        subAccelY = subAccelY;
+      }
+    }
+  }
 
   // increase accel while turning
   bool turning = (inp->left && movingRight) || (inp->right && movingLeft);
   if (turning)
     subAccelX = (subAccelX * 4) / 3;
 
-  if (!playerInput)
+  if (!playerXInput)
   {
     subAccelX = 0;
   }
@@ -1066,6 +1129,34 @@ void SolvePlayer()
     subDampX = 0;
   }
 
+  if (NO_GRAV)
+  {
+
+    if (movingDown && !inp->down)
+    {
+
+      // clamp it to avoid going into the negative
+      if (subDampY > spr->subVelo.y)
+      {
+        subDampY = spr->subVelo.y;
+      }
+      subDampY *= -1;
+    }
+    else if (movingUp && !inp->up)
+    {
+
+      if (subDampY > -spr->subVelo.y)
+      {
+        subDampY = -spr->subVelo.y;
+      }
+      // already negative, so will be double negative
+    }
+    else
+    {
+      subDampY = 0;
+    }
+  } // no-grav
+
   Vec2 subDamp = {subDampX, subDampY};
   AddVec(&spr->subVelo, &subDamp);
 
@@ -1080,6 +1171,15 @@ void SolvePlayer()
   else if (spr->subVelo.x < -maxSubSpeedX)
   {
     spr->subVelo.x = -maxSubSpeedX;
+  }
+
+  if (spr->subVelo.y > maxSubSpeedY)
+  {
+    spr->subVelo.y = maxSubSpeedY;
+  }
+  else if (spr->subVelo.y < -maxSubSpeedY)
+  {
+    spr->subVelo.y = -maxSubSpeedY;
   }
 
   // some sanity checks?
@@ -1097,7 +1197,7 @@ void SolvePlayer()
 
   // Start with H movement
   TryMove(spr, true);
-  // TryMove(spr, false);
+  TryMove(spr, false);
 
   /*
   // check for foot collision
@@ -1233,13 +1333,15 @@ void app_main(void)
     }
 
     // test: cycle through sprite offsets
-    if ( vmupro_btn_pressed(Btn_A) ){
-      player.spr.anchorH = (player.spr.anchorH +1) % (3);
+    if (vmupro_btn_pressed(Btn_A))
+    {
+      player.spr.anchorH = (player.spr.anchorH + 1) % (3);
       OnSpriteMoved(&player.spr);
     }
 
-    if ( vmupro_btn_pressed(Btn_B) ){
-      player.spr.anchorV = (player.spr.anchorV +1) % (3);
+    if (vmupro_btn_pressed(Btn_B))
+    {
+      player.spr.anchorV = (player.spr.anchorV + 1) % (3);
       OnSpriteMoved(&player.spr);
     }
 
