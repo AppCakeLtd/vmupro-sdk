@@ -8,10 +8,10 @@
 
 const char *TAG = "[Platformer]";
 
-const bool DEBUG_BBOX = false;
-
 // float in air for collision testing
 const bool NO_GRAV = true;
+const bool DEBUG_SPRITEBOX = false;
+const bool DEBUG_HITPOINTS = true;
 
 // shift fixed point maths to/from world/subpixel coords
 #define SHIFT 4
@@ -417,7 +417,7 @@ void ResetSprite(Sprite *spr)
   memset(&spr->input, 0, sizeof(Inputs));
 
   // temporary config stuff
-  Vec2 worldStartPos = {80, MAP_HEIGHT_PIXELS - (TILE_SIZE_PX * 8)};
+  Vec2 worldStartPos = {80, MAP_HEIGHT_PIXELS - (TILE_SIZE_PX * 4)};
   SetWorldPos(spr, &worldStartPos);
   spr->isPlayer = true;
   spr->anchorH = ANCHOR_HMID;
@@ -902,9 +902,12 @@ HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *subOffsetOrNull)
       AddVec(&rVal.subCheckPos[i], subOffsetOrNull);
     }
 
-    // let's debug to screen
-    Vec2 screenPos = Sub2Screen(&rVal.subCheckPos[i]);
-    vmupro_draw_rect(screenPos.x - 2, screenPos.y - 2, screenPos.x + 4, screenPos.y + 4, VMUPRO_COLOR_WHITE);
+    if (DEBUG_HITPOINTS)
+    {
+      // let's debug to screen
+      Vec2 screenPos = Sub2Screen(&rVal.subCheckPos[i]);
+      vmupro_draw_rect(screenPos.x - 2, screenPos.y - 2, screenPos.x + 4, screenPos.y + 4, VMUPRO_COLOR_WHITE);
+    }
   }
 
   // and clear the collision return vals
@@ -917,8 +920,6 @@ HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *subOffsetOrNull)
 
     // just the literal tile indexes into the x/y grid
     Vec2 tileRowAndCol = GetTileRowAndColFromSubPos(&rVal.subCheckPos[i]);
-
-    
 
     int blockId = GetBlockIDAtColRow(tileRowAndCol.x, tileRowAndCol.y);
     if (blockId != BLOCK_NULL)
@@ -937,29 +938,28 @@ HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *subOffsetOrNull)
       rVal.subEjectionPoint[i].x = rVal.subCheckPos[i].x;
       rVal.subEjectionPoint[i].y = rVal.subCheckPos[i].y;
 
-      
       if (dir == DIR_RIGHT)
       {
         // collided on the sprite's right
         // so the hit point is the block's X pos
-        rVal.subEjectionPoint[i].x = tileSubPos.x;          
+        rVal.subEjectionPoint[i].x = tileSubPos.x;
       }
       else if (dir == DIR_LEFT)
       {
         // collided on the sprite's left
         // so the hit point is the block's x+width
-        rVal.subEjectionPoint[i].x = tileSubPos.x + TILE_SIZE_SUB;        
+        rVal.subEjectionPoint[i].x = tileSubPos.x + TILE_SIZE_SUB;
       }
       else if (dir == DIR_DOWN)
       {
         // collided on the sprite's bottom
-        // so the hitpoint is the block's top        
+        // so the hitpoint is the block's top
         rVal.subEjectionPoint[i].y = tileSubPos.y;
       }
       else if (dir == DIR_UP)
       {
         // collided on the sprite's top
-        // so the hitpoint is teh block's bottom        
+        // so the hitpoint is teh block's bottom
         rVal.subEjectionPoint[i].y = tileSubPos.y + TILE_SIZE_SUB;
       }
     }
@@ -1067,7 +1067,8 @@ void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
     SetSubPos(spr, &sub);
   }
 
-  if ( dir == DIR_UP ){
+  if (dir == DIR_UP)
+  {
 
     printf("__TEST__ eject up\n");
 
@@ -1075,21 +1076,26 @@ void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
 
     int subY = info->subEjectionPoint[idx].y;
 
-    if ( spr->anchorV == ANCHOR_VTOP ){
+    if (spr->anchorV == ANCHOR_VTOP)
+    {
       subY += 0;
-    } else if ( spr->anchorV == ANCHOR_VMID ){
-      subY += spr->subHitBox.height /2;
-    } else if ( spr->anchorV == ANCHOR_VBOTTOM ){
+    }
+    else if (spr->anchorV == ANCHOR_VMID)
+    {
+      subY += spr->subHitBox.height / 2;
+    }
+    else if (spr->anchorV == ANCHOR_VBOTTOM)
+    {
       subY += spr->subHitBox.height;
     }
 
     int subX = spr->subPos.x;
     Vec2 sub = {subX, subY};
     SetSubPos(spr, &sub);
-
   }
 
-  if ( dir == DIR_DOWN ){
+  if (dir == DIR_DOWN)
+  {
 
     printf("__TEST__ eject down\n");
 
@@ -1097,20 +1103,23 @@ void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
 
     int subY = info->subEjectionPoint[idx].y;
 
-    if ( spr->anchorV == ANCHOR_VTOP ){
+    if (spr->anchorV == ANCHOR_VTOP)
+    {
       subY -= spr->subHitBox.height;
-    } else if ( spr->anchorV == ANCHOR_VMID ){
-      subY -= spr->subHitBox.height /2;
-    } else if ( spr->anchorV == ANCHOR_VBOTTOM ){
+    }
+    else if (spr->anchorV == ANCHOR_VMID)
+    {
+      subY -= spr->subHitBox.height / 2;
+    }
+    else if (spr->anchorV == ANCHOR_VBOTTOM)
+    {
       subY -= 0;
     }
 
     int subX = spr->subPos.x;
     Vec2 sub = {subX, subY};
     SetSubPos(spr, &sub);
-
   }
-
 }
 
 // Attempts to apply velo to pos, taking collisions into account
@@ -1165,8 +1174,7 @@ void TryMove(Sprite *spr, bool horz)
 
   if (info.hitSomething)
   {
-    //__TEST__
-    PrintHitInfo(&info);
+    // PrintHitInfo(&info);
   }
 
   EjectHitInfo(spr, &info, horz);
@@ -1349,26 +1357,6 @@ void SolvePlayer()
   // Start with H movement
   TryMove(spr, true);
   TryMove(spr, false);
-
-  /*
-  // check for foot collision
-  Vec2 worldFootPos = GetWorldPointOnSprite(spr, PIV_MIDDLE_BOTTOM);
-
-
-  // for debugging
-  // __TEST__
-  Vec2 screenFootPos = World2Screen(&worldFootPos);
-  vmupro_draw_rect( screenFootPos.x, screenFootPos.y, screenFootPos.x + 2, screenFootPos.y + 2, VMUPRO_COLOR_GREY );
-
-  int tileCol = worldFootPos.x / TILE_SIZE_PX;
-  int tileRow = worldFootPos.y / TILE_SIZE_PX;
-
-  int blockId = GetBlockIDAtColRow(tileCol, tileRow);
-
-  if ( blockId > -1 ){
-    printf("block id at %dx%d = %d\n", tileCol, tileRow, blockId);
-  }
-  */
 }
 
 void DrawPlayer()
@@ -1385,8 +1373,7 @@ void DrawPlayer()
 
   const Img *img = player.spr.img;
 
-
-  bool goingUp = player.spr.subVelo.y<0;
+  bool goingUp = player.spr.subVelo.y < 0;
 
   // __TEST__ temporary thing
   if (goingUp)
@@ -1403,10 +1390,9 @@ void DrawPlayer()
   // update the img pointer
   img = player.spr.img;
 
-
   vmupro_drawflags_t flags = (spr->facingRight * VMUPRO_DRAWFLAGS_FLIP_H) | (goingUp * VMUPRO_DRAWFLAGS_FLIP_V);
-  vmupro_blit_buffer_transparent(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height, VMUPRO_COLOR_BLACK, flags);
-
+  uint16_t mask = *(uint16_t*)&img->data[0];
+  vmupro_blit_buffer_transparent(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height, mask, flags);
 }
 
 void app_main(void)
@@ -1436,7 +1422,7 @@ void app_main(void)
 
     DrawPlayer();
 
-    if (DEBUG_BBOX)
+    if (DEBUG_SPRITEBOX)
     {
       DrawSpriteBoundingBox(&player.spr, VMUPRO_COLOR_WHITE);
     }
@@ -1462,7 +1448,7 @@ void app_main(void)
     if (vmupro_btn_pressed(Btn_B))
     {
       player.spr.anchorV = (player.spr.anchorV + 1) % (3);
-      //player.spr.anchorH = (player.spr.anchorH + 1) % (3);
+      // player.spr.anchorH = (player.spr.anchorH + 1) % (3);
       OnSpriteMoved(&player.spr);
     }
 
