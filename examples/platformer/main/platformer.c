@@ -915,6 +915,8 @@ HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *subOffsetOrNull)
     // just the literal tile indexes into the x/y grid
     Vec2 tileRowAndCol = GetTileRowAndColFromSubPos(&rVal.subCheckPos[i]);
 
+    
+
     int blockId = GetBlockIDAtColRow(tileRowAndCol.x, tileRowAndCol.y);
     if (blockId != BLOCK_NULL)
     {
@@ -927,29 +929,34 @@ HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *subOffsetOrNull)
       // essentially we're rounding down and then back up
       Vec2 tileSubPos = GetTileSubPosFromRowAndCol(&tileRowAndCol);
 
-      // calculate the world ejection point based on the dir
+      // default to the hit point being wherever we cheked on the sprite
+      // we'll tweak the x/y in a sec, depending on where we hit the block
+      rVal.subEjectionPoint[i].x = rVal.subCheckPos[i].x;
+      rVal.subEjectionPoint[i].y = rVal.subCheckPos[i].y;
+
+      
       if (dir == DIR_RIGHT)
       {
-        // left side of the block we hit
-        rVal.subEjectionPoint[i].x = tileSubPos.x;
-        rVal.subEjectionPoint[i].y = rVal.subCheckPos[i].y;
+        // collided on the sprite's right
+        // so the hit point is the block's X pos
+        rVal.subEjectionPoint[i].x = tileSubPos.x;          
       }
       else if (dir == DIR_LEFT)
       {
-        // we hit the right side of the block
-        rVal.subEjectionPoint[i].x = tileSubPos.x + TILE_SIZE_SUB;
-        rVal.subEjectionPoint[i].y = rVal.subCheckPos[i].y;
+        // collided on the sprite's left
+        // so the hit point is the block's x+width
+        rVal.subEjectionPoint[i].x = tileSubPos.x + TILE_SIZE_SUB;        
       }
       else if (dir == DIR_DOWN)
       {
-        // we hit the top of the block
-        rVal.subEjectionPoint[i].x = rVal.subCheckPos[i].x;
+        // collided on the sprite's bottom
+        // so the hitpoint is the block's top        
         rVal.subEjectionPoint[i].y = tileSubPos.y;
       }
       else if (dir == DIR_UP)
       {
-        // we hit the bottom of the block
-        rVal.subEjectionPoint[i].x = rVal.subCheckPos[i].x;
+        // collided on the sprite's top
+        // so the hitpoint is teh block's bottom        
         rVal.subEjectionPoint[i].y = tileSubPos.y + TILE_SIZE_SUB;
       }
     }
@@ -977,6 +984,7 @@ void PrintHitInfo(HitInfo *info)
 void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
 {
 
+  // the direction we hit something at
   Direction dir = info->dir;
 
   // simple early exit
@@ -1055,6 +1063,51 @@ void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
     Vec2 sub = {subX, subY};
     SetSubPos(spr, &sub);
   }
+
+  if ( dir == DIR_UP ){
+
+    printf("__TEST__ eject up\n");
+
+    spr->subVelo.y = 0;
+
+    int subY = info->subEjectionPoint[idx].y;
+
+    if ( spr->anchorV == ANCHOR_VTOP ){
+      subY += 0;
+    } else if ( spr->anchorV == ANCHOR_VMID ){
+      subY += spr->subHitBox.height /2;
+    } else if ( spr->anchorV == ANCHOR_VBOTTOM ){
+      subY += spr->subHitBox.height;
+    }
+
+    int subX = spr->subPos.x;
+    Vec2 sub = {subX, subY};
+    SetSubPos(spr, &sub);
+
+  }
+
+  if ( dir == DIR_DOWN ){
+
+    printf("__TEST__ eject down\n");
+
+    spr->subVelo.y = 0;
+
+    int subY = info->subEjectionPoint[idx].y;
+
+    if ( spr->anchorV == ANCHOR_VTOP ){
+      subY -= spr->subHitBox.height;
+    } else if ( spr->anchorV == ANCHOR_VMID ){
+      subY -= spr->subHitBox.height /2;
+    } else if ( spr->anchorV == ANCHOR_VBOTTOM ){
+      subY -= 0;
+    }
+
+    int subX = spr->subPos.x;
+    Vec2 sub = {subX, subY};
+    SetSubPos(spr, &sub);
+
+  }
+
 }
 
 // Attempts to apply velo to pos, taking collisions into account
