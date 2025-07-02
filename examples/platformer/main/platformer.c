@@ -713,9 +713,9 @@ void ApplyGravity(Sprite *inSpr, Vec2 *accel)
 typedef enum
 {
   DIR_UP,
+  DIR_RIGHT,
   DIR_DOWN,
-  DIR_LEFT,
-  DIR_RIGHT
+  DIR_LEFT,  
 } Direction;
 
 typedef struct
@@ -741,7 +741,18 @@ typedef struct
   // -1 for nothing
   int blockID[3];
 
+  // the ejection edge for the block we hit
+  // e.g. if we're moving right, it'll be
+  // - the x coord of the block's left edge
+  // - the y coord of the hitbox point we're checking
+  Vec2 worldEjectionPoint[3];
+
+  // how far we've pushed into the wall
+  // note: rough va
+  int worldSnapDistance;
+
   bool hitSomething;
+  int lastHitIndex;
 
 } HitInfo;
 
@@ -751,6 +762,8 @@ HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *offsetOrNull)
   HitInfo rVal;
 
   rVal.dir = dir;
+  rVal.worldSnapDistance = 0;
+  rVal.lastHitIndex = -1;
 
   // get a list of points to check for
   // whatever direction we're moving
@@ -798,7 +811,7 @@ HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *offsetOrNull)
 
     // let's debug to screen
     Vec2 screenPos = World2Screen(&rVal.worldPos[i]);
-    vmupro_draw_rect(screenPos.x - 2, screenPos.y - 2, screenPos.x + 4, screenPos.y + 4, VMUPRO_COLOR_GREY);
+    vmupro_draw_rect(screenPos.x - 2, screenPos.y - 2, screenPos.x + 4, screenPos.y + 4, VMUPRO_COLOR_WHITE);
   }
 
   // and clear the collision return vals
@@ -815,6 +828,33 @@ HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *offsetOrNull)
     {
       rVal.hitSomething = true;
       rVal.blockID[i] = blockId;
+      rVal.lastHitIndex = i;
+
+      // calculate the world ejection point based on the dir
+      if ( dir == DIR_RIGHT ){
+        // left side of the block we hit
+        rVal.worldEjectionPoint[i].x = tileCol * TILE_SIZE_PX;
+        rVal.worldEjectionPoint[i].y = rVal.worldPos[i].y;
+        // what will it take to snap out
+        rVal.worldSnapDistance = rVal.worldEjectionPoint[i].x - rVal.worldPos[i].x;
+      } else if ( dir == DIR_LEFT ){
+        // we hit the right side of the block
+        rVal.worldEjectionPoint[i].x = (tileCol * TILE_SIZE_PX) + TILE_SIZE_PX;
+        rVal.worldEjectionPoint[i].y = rVal.worldPos[i].y;
+        // what will it take to snap out
+        rVal.worldSnapDistance = rVal.worldEjectionPoint[i].x - rVal.worldPos[i].x;
+      } else if ( dir == DIR_DOWN ){
+        // we hit the top of the block
+        rVal.worldEjectionPoint[i].x = rVal.worldPos[i].x;
+        rVal.worldEjectionPoint[i].y = (tileRow * TILE_SIZE_PX);
+        rVal.worldSnapDistance = rVal.worldEjectionPoint[i].y - rVal.worldPos[i].y;
+      } else if (dir == DIR_UP ){
+        // we hit the bottom of the block
+        rVal.worldEjectionPoint[i].x = rVal.worldPos[i].x;
+        rVal.worldEjectionPoint[i].y = (tileRow * TILE_SIZE_PX) + TILE_SIZE_PX;
+        rVal.worldSnapDistance = rVal.worldEjectionPoint[i].y - rVal.worldPos[i].y;
+      }
+
     }
     else
     {
@@ -878,15 +918,30 @@ void TryMove(Sprite *spr, bool horz)
 
   HitInfo info = NewHitInfo(spr, dir, &worldCheckOffset);
 
-  // if ( info.hitSomething ){
-  PrintHitInfo(&info);
-  //}
+  if ( info.hitSomething ){
+    //PrintHitInfo(&info);
+  }
 
   // just apply the movement for now for debugging
   // __TEST__
   if (horz)
   {
-    AddSubPos2(spr, spr->subVelo.x, 0);
+    
+    if ( info.hitSomething ){
+      int idx = info.lastHitIndex;
+      spr->subVelo.x = 0;
+      
+      // __TEST__ we'll split this into another function in a sec
+      int worldX = info.worldEjectionPoint[idx].x -spr->worldHitBox.width/2;
+      int subX = worldX << SHIFT;
+      int subY = spr->subPos.y;
+      Vec2 sub = {subX, subY};
+      SetSubPos(spr, &sub);
+      
+
+    } else {
+      AddSubPos2(spr, spr->subVelo.x, 0);
+    }
   }
   else
   {
