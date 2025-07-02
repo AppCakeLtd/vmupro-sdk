@@ -108,19 +108,18 @@ typedef enum
 
 } MoveMode;
 
-typedef enum
-{
-  PIV_LEFT_TOP,
-  PIV_MIDDLE_TOP,
-  PIV_RIGHT_TOP,
-  PIV_LEFT_MIDDLE,
-  PIV_MIDDLE_MIDDLE,
-  PIV_RIGHT_MIDDLE,
-  PIV_LEFT_BOTTOM,
-  PIV_MIDDLE_BOTTOM,
-  PIV_RIGHT_BOTTOM,
-  PIV_NONE_NONE
-} Pivot;
+
+typedef enum {
+  ANCHOR_HLEFT,
+  ANCHOR_HMID,
+  ANCHOR_HRIGHT,
+} Anchor_H;
+
+typedef enum {
+  ANCHOR_VTOP,
+  ANCHOR_VMID,
+  ANCHOR_VBOTTOM,
+} Anchor_V;
 
 typedef struct
 {
@@ -144,7 +143,8 @@ typedef struct
 
   // config options
   bool isPlayer;
-  Pivot spriteOffset;
+  Anchor_H anchorH;
+  Anchor_V anchorV;
 
   bool facingRight;
   bool wasRunningLastTimeWasOnGround;
@@ -241,20 +241,20 @@ void OnSpriteMoved(Sprite *spr)
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Set the sprite img before attempting to update the bboxs");
     return;
   }
-
-  Pivot piv = spr->spriteOffset;
-
+  
   bool forPlayer = spr->isPlayer;
   Vec2 worldOrigin = GetWorldPos(spr);
 
+  
+
   // horizontal part
-  if ( piv == PIV_LEFT_TOP || piv == PIV_LEFT_MIDDLE || piv == PIV_LEFT_BOTTOM ){
+  if ( spr->anchorH == ANCHOR_HLEFT ){
     // sprite's aligned along the left
     spr->worldBBox.x = worldOrigin.x;
-  } else if ( piv == PIV_MIDDLE_TOP || piv == PIV_MIDDLE_MIDDLE || piv == PIV_MIDDLE_BOTTOM ){
+  } else if ( spr->anchorH == ANCHOR_HMID ){
     // centred horizontally
     spr->worldBBox.x = worldOrigin.x - (img->width/2);
-  } else if ( piv == PIV_RIGHT_TOP || piv == PIV_RIGHT_MIDDLE || piv == PIV_RIGHT_BOTTOM ){
+  } else if ( spr->anchorH == ANCHOR_HRIGHT ){
     // right-aligned
     spr->worldBBox.x = worldOrigin.x - img->width;
   } else {
@@ -262,12 +262,12 @@ void OnSpriteMoved(Sprite *spr)
   }
 
   // vertical part
-  if ( piv == PIV_LEFT_TOP || piv == PIV_MIDDLE_TOP || piv == PIV_RIGHT_TOP ){
+  if ( spr->anchorV == ANCHOR_VTOP ){
     // top of the sprite aligns with the obj pos (something crawling on the ceiling, etc)
     spr->worldBBox.y = worldOrigin.y;
-  } else if ( piv == PIV_LEFT_MIDDLE || piv == PIV_MIDDLE_MIDDLE || piv == PIV_RIGHT_MIDDLE ){
+  } else if ( spr->anchorV == ANCHOR_VMID ){
     spr->worldBBox.y = worldOrigin.y - (img->height /2);
-  } else if ( piv == PIV_LEFT_BOTTOM || piv == PIV_MIDDLE_BOTTOM || piv == PIV_RIGHT_BOTTOM ){
+  } else if ( spr->anchorV == ANCHOR_VBOTTOM){
     spr->worldBBox.y = worldOrigin.y - img->height;
   } else {
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite has unhandled vert alginment type");
@@ -389,7 +389,8 @@ void ResetSprite(Sprite *spr)
   Vec2 worldStartPos = {80, MAP_HEIGHT_PIXELS - (TILE_SIZE_PX * 4)};
   SetWorldPos(spr, &worldStartPos);
   spr->isPlayer = true;
-  spr->spriteOffset = PIV_MIDDLE_BOTTOM;
+  spr->anchorH = ANCHOR_HMID;
+  spr->anchorV = ANCHOR_VBOTTOM;
 
   // update the hitbox, bounding box, etc
   OnSpriteMoved(spr);
@@ -649,7 +650,7 @@ int GetXDampingForMode(MoveMode inMode, bool wasRunningWhenLastGrounded)
 
 
 
-Vec2 GetWorldPointOnSprite(Sprite *spr, Pivot piv)
+Vec2 GetWorldPointOnSprite(Sprite *spr, Anchor_H anchorH, Anchor_V anchorV)
 {
 
   // TODO: switch to an actual hitbox
@@ -659,60 +660,24 @@ Vec2 GetWorldPointOnSprite(Sprite *spr, Pivot piv)
 
   BBox *aabb = &spr->worldHitBox;
 
-  switch (piv)
-  {
-
-  // top row
-  case PIV_LEFT_TOP:
+  if (anchorH == ANCHOR_HLEFT ){
     returnX = aabb->x;
-    returnY = aabb->y;
-    break;
-
-  case PIV_MIDDLE_TOP:
-    returnX = aabb->x + (aabb->width / 2);
-    returnY = aabb->y;
-    break;
-
-  case PIV_RIGHT_TOP:
+  } else if ( anchorH == ANCHOR_HMID ){
+    returnX = aabb->x + (aabb->width /2);
+  } else if (anchorH == ANCHOR_HRIGHT){
     returnX = aabb->x + aabb->width;
+  } else {
+    vmupro_log(VMUPRO_LOG_ERROR, "TAG", "Unknown H alignment");    
+  }
+
+  if ( anchorV == ANCHOR_VTOP ){
     returnY = aabb->y;
-    break;
-
-  // middle row
-  case PIV_LEFT_MIDDLE:
-    returnX = aabb->x;
-    returnY = aabb->y + (aabb->height / 2);
-    break;
-
-  case PIV_MIDDLE_MIDDLE:
-    returnX = aabb->x + (aabb->width / 2);
-    returnY = aabb->y + (aabb->height / 2);
-    break;
-
-  case PIV_RIGHT_MIDDLE:
-    returnX = aabb->x + aabb->width;
-    returnY = aabb->y + (aabb->height / 2);
-    break;
-
-  // bottom row
-  case PIV_LEFT_BOTTOM:
-    returnX = aabb->x;
+  } else if (anchorV == ANCHOR_VMID ){
+    returnY = aabb->y + (aabb->height /2);
+  } else if ( anchorV == ANCHOR_VBOTTOM){
     returnY = aabb->y + aabb->height;
-    break;
-
-  case PIV_MIDDLE_BOTTOM:
-    returnX = aabb->x + (aabb->width / 2);
-    returnY = aabb->y + aabb->height;
-    break;
-
-  case PIV_RIGHT_BOTTOM:
-    returnX = aabb->x + aabb->width;
-    returnY = aabb->y + aabb->height;
-    break;
-
-  default:
-    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Unhandled pivot mode");
-    break;
+  } else {
+    vmupro_log(VMUPRO_LOG_ERROR, "TAG", "Unknown V alignment");    
   }
 
   Vec2 returnVal = {returnX, returnY};
@@ -752,7 +717,8 @@ typedef struct
   // e.g. top row, bottom row, etc
   // used to work out the bounding box collision
   // check points
-  Pivot piv[3];
+  Anchor_H anchorH[3];
+  Anchor_V anchorV[3];
 
   // e.g. for downward would be
   // bottom left, bottom middle, bottom right
@@ -794,27 +760,39 @@ HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *offsetOrNull)
   {
   case DIR_UP:
     // top row
-    rVal.piv[0] = PIV_LEFT_TOP;
-    rVal.piv[1] = PIV_MIDDLE_TOP;
-    rVal.piv[2] = PIV_RIGHT_TOP;
+    rVal.anchorH[0] = ANCHOR_HLEFT;
+    rVal.anchorH[1] = ANCHOR_HMID;
+    rVal.anchorH[2] = ANCHOR_HRIGHT;
+    rVal.anchorV[0] = ANCHOR_VTOP;
+    rVal.anchorV[1] = ANCHOR_VTOP;
+    rVal.anchorV[2] = ANCHOR_VTOP;
     break;
 
   case DIR_RIGHT:
-    rVal.piv[0] = PIV_RIGHT_TOP;
-    rVal.piv[1] = PIV_RIGHT_MIDDLE;
-    rVal.piv[2] = PIV_RIGHT_BOTTOM;
+    rVal.anchorH[0] = ANCHOR_HRIGHT;
+    rVal.anchorH[1] = ANCHOR_HRIGHT;
+    rVal.anchorH[2] = ANCHOR_HRIGHT;
+    rVal.anchorV[0] = ANCHOR_VTOP;
+    rVal.anchorV[1] = ANCHOR_VMID;
+    rVal.anchorV[2] = ANCHOR_VBOTTOM;
     break;
 
   case DIR_DOWN:
-    rVal.piv[0] = PIV_LEFT_BOTTOM;
-    rVal.piv[1] = PIV_MIDDLE_BOTTOM;
-    rVal.piv[2] = PIV_RIGHT_BOTTOM;
+    rVal.anchorH[0] = ANCHOR_HLEFT;
+    rVal.anchorH[1] = ANCHOR_HMID;
+    rVal.anchorH[2] = ANCHOR_HRIGHT;
+    rVal.anchorV[0] = ANCHOR_VBOTTOM;
+    rVal.anchorV[1] = ANCHOR_VBOTTOM;
+    rVal.anchorV[2] = ANCHOR_VBOTTOM;
     break;
 
   case DIR_LEFT:
-    rVal.piv[0] = PIV_LEFT_TOP;
-    rVal.piv[1] = PIV_LEFT_MIDDLE;
-    rVal.piv[2] = PIV_LEFT_BOTTOM;
+    rVal.anchorH[0] = ANCHOR_HLEFT;
+    rVal.anchorH[1] = ANCHOR_HLEFT;
+    rVal.anchorH[2] = ANCHOR_HLEFT;
+    rVal.anchorV[0] = ANCHOR_VTOP;
+    rVal.anchorV[1] = ANCHOR_VMID;
+    rVal.anchorV[2] = ANCHOR_VBOTTOM;
     break;
 
   default:
@@ -825,7 +803,7 @@ HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *offsetOrNull)
   // convert the pivot points to actual world points
   for (int i = 0; i < 3; i++)
   {
-    rVal.worldPos[i] = GetWorldPointOnSprite(spr, rVal.piv[i]);
+    rVal.worldPos[i] = GetWorldPointOnSprite(spr, rVal.anchorH[i], rVal.anchorV[i]);
 
     if (offsetOrNull != NULL)
     {
@@ -910,6 +888,8 @@ void EjectHitInfo(Sprite * spr, HitInfo * info, bool horz){
   return;
 
   int idx = info->lastHitIndex;
+
+  // might've been a plan to split
 
   if ( dir == DIR_RIGHT ){
       // we hit something while moving right
@@ -1225,7 +1205,12 @@ void app_main(void)
 
     // test: cycle through sprite offsets
     if ( vmupro_btn_pressed(Btn_A) ){
-      player.spr.spriteOffset = (player.spr.spriteOffset +1) % (PIV_NONE_NONE);
+      player.spr.anchorH = (player.spr.anchorH +1) % (3);
+      OnSpriteMoved(&player.spr);
+    }
+
+    if ( vmupro_btn_pressed(Btn_B) ){
+      player.spr.anchorV = (player.spr.anchorV +1) % (3);
       OnSpriteMoved(&player.spr);
     }
 
