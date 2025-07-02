@@ -245,6 +245,27 @@ extern "C"
   void vmupro_blit_buffer_blended(uint8_t *buffer, int x, int y, int width, int height, uint8_t alpha_level);
 
   /**
+   * @brief Blit a buffer with dithering effect
+   *
+   * Applies dithering to a buffer when blitting to the screen. Dithering creates
+   * the illusion of additional colors by using patterns of existing pixels.
+   * This is particularly useful for creating smooth gradients and reducing 
+   * color banding on displays with limited color palettes.
+   *
+   * @param buffer Pointer to the source pixel buffer
+   * @param x X coordinate where to blit the buffer
+   * @param y Y coordinate where to blit the buffer  
+   * @param width Width of the buffer
+   * @param height Height of the buffer
+   * @param dither_strength Dithering intensity (0 = no dithering, higher values = more dithering)
+   * 
+   * @note Dithering helps create smoother gradients on limited color displays
+   * @note Higher dither_strength values create more visible patterns but better color approximation
+   * @note Recommended dither_strength range: 1-8 for most applications
+   */
+  void vmupro_blit_buffer_dithered(uint8_t *buffer, int x, int y, int width, int height, int dither_strength);
+
+  /**
    * @brief Blit a buffer with horizontal flipping
    * 
    * Copies pixel data from a source buffer to the display framebuffer,
