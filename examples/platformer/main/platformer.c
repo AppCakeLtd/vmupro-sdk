@@ -889,8 +889,7 @@ void EjectHitInfo(Sprite * spr, HitInfo * info, bool horz){
 
   int idx = info->lastHitIndex;
 
-  // might've been a plan to split
-
+  
   if ( dir == DIR_RIGHT ){
       // we hit something while moving right
       spr->subVelo.x = 0;
@@ -898,12 +897,42 @@ void EjectHitInfo(Sprite * spr, HitInfo * info, bool horz){
       // the hitbox/spr box might be centered
       // work out the difference between its 
       
-      int worldX = info->worldEjectionPoint[idx].x -spr->worldHitBox.width/2;
+      int worldX = info->worldEjectionPoint[idx].x;
+
+      if ( spr->anchorH == ANCHOR_HLEFT){
+        worldX -= spr->worldHitBox.width;
+      } else if ( spr->anchorH == ANCHOR_HMID ){
+        worldX -= spr->worldBBox.width /2;
+      } else if ( spr->anchorH == ANCHOR_HRIGHT ){
+        worldX -= 0;
+      }
+
       int subX = worldX << SHIFT;
       int subY = spr->subPos.y;
       Vec2 sub = {subX, subY};
       SetSubPos(spr, &sub);
       
+  }
+
+  if ( dir == DIR_LEFT ){
+
+    spr->subVelo.x = 0;
+
+    int worldX = info->worldEjectionPoint[idx].x;
+
+    if ( spr->anchorH == ANCHOR_HLEFT){
+      worldX += 0;
+    } else if ( spr->anchorH == ANCHOR_HMID ){
+      worldX += spr->worldBBox.width /2;
+    } else if ( spr->anchorH == ANCHOR_HRIGHT ){
+      worldX += spr->worldBBox.width;
+    }
+
+    int subX = worldX << SHIFT;
+    int subY = spr->subPos.y;
+    Vec2 sub = {subX, subY};
+    SetSubPos(spr, &sub);
+
   }
 
 
