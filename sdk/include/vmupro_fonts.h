@@ -22,37 +22,29 @@ extern "C" {
 #endif
 
 /**
- * @brief Font structure for VMUPro SDK
+ * @brief Font index enumeration for VMUPro SDK
  * 
- * Defines a bitmap font with all necessary metadata for text rendering.
- * Fonts are stored as vertical bitmap strips where each byte represents
- * 8 vertical pixels.
+ * Defines all available fonts in the system. Fonts are organized by size
+ * from smallest to largest. Use these enum values to select fonts.
  */
-typedef struct {
-  const uint8_t* FontData;  ///< Raw font bitmap data
-  int Width;                ///< Character width in pixels
-  int Height;               ///< Character height in pixels
-  int StartChar;            ///< First character (usually ' ' = 32)
-  int EndChar;              ///< Last character (usually '\xFF' = 255)
-  int Monospace;            ///< Whether font is monospaced (0=false, 1=true)
-} vmupro_font_t;
-
-// Predefined fonts - organized by size from smallest to largest
-extern const vmupro_font_t VMUPRO_FONT_TINY_6x8;          ///< Smallest font (6×8px)
-extern const vmupro_font_t VMUPRO_FONT_MONO_7x13;         ///< Tiny monospace (7×13px)
-extern const vmupro_font_t VMUPRO_FONT_MONO_9x15;         ///< Small liberation mono (9×15px)
-extern const vmupro_font_t VMUPRO_FONT_SANS_11x13;        ///< Small sans-serif (11×13px)
-extern const vmupro_font_t VMUPRO_FONT_MONO_13x21;        ///< Medium liberation mono (13×21px)
-extern const vmupro_font_t VMUPRO_FONT_MONO_13x24;        ///< Medium monospace (13×24px)
-extern const vmupro_font_t VMUPRO_FONT_SANS_15x17;        ///< Medium sans-serif (15×17px)
-extern const vmupro_font_t VMUPRO_FONT_OPEN_SANS_15x18;   ///< Open Sans medium (15×18px)
-extern const vmupro_font_t VMUPRO_FONT_MONO_16x31;        ///< Large monospace (16×31px)
-extern const vmupro_font_t VMUPRO_FONT_MONO_17x30;        ///< Large liberation mono (17×30px)
-extern const vmupro_font_t VMUPRO_FONT_QUANTICO_19x21;    ///< UI font medium (19×21px)
-extern const vmupro_font_t VMUPRO_FONT_SANS_24x28;        ///< Large sans-serif (24×28px)
-extern const vmupro_font_t VMUPRO_FONT_QUANTICO_25x29;    ///< UI font large (25×29px)
-extern const vmupro_font_t VMUPRO_FONT_QUANTICO_29x33;    ///< UI font extra large (29×33px)
-extern const vmupro_font_t VMUPRO_FONT_QUANTICO_32x37;    ///< UI font largest (32×37px)
+typedef enum {
+  VMUPRO_FONT_TINY_6x8 = 0,          ///< Smallest font (6×8px)
+  VMUPRO_FONT_MONO_7x13,             ///< Tiny monospace (7×13px)
+  VMUPRO_FONT_MONO_9x15,             ///< Small liberation mono (9×15px)
+  VMUPRO_FONT_SANS_11x13,            ///< Small sans-serif (11×13px)
+  VMUPRO_FONT_MONO_13x21,            ///< Medium liberation mono (13×21px)
+  VMUPRO_FONT_MONO_13x24,            ///< Medium monospace (13×24px)
+  VMUPRO_FONT_SANS_15x17,            ///< Medium sans-serif (15×17px)
+  VMUPRO_FONT_OPEN_SANS_15x18,       ///< Open Sans medium (15×18px)
+  VMUPRO_FONT_MONO_16x31,            ///< Large monospace (16×31px)
+  VMUPRO_FONT_MONO_17x30,            ///< Large liberation mono (17×30px)
+  VMUPRO_FONT_QUANTICO_19x21,        ///< UI font medium (19×21px)
+  VMUPRO_FONT_SANS_24x28,            ///< Large sans-serif (24×28px)
+  VMUPRO_FONT_QUANTICO_25x29,        ///< UI font large (25×29px)
+  VMUPRO_FONT_QUANTICO_29x33,        ///< UI font extra large (29×33px)
+  VMUPRO_FONT_QUANTICO_32x37,        ///< UI font largest (32×37px)
+  VMUPRO_FONT_COUNT                  ///< Total number of fonts (internal use)
+} vmupro_font_id_t;
 
 // Font convenience aliases for common use cases
 #define VMUPRO_FONT_SMALL    VMUPRO_FONT_SANS_11x13     ///< Alias for small readable font
@@ -61,30 +53,45 @@ extern const vmupro_font_t VMUPRO_FONT_QUANTICO_32x37;    ///< UI font largest (
 #define VMUPRO_FONT_DEFAULT  VMUPRO_FONT_MEDIUM         ///< Default font for applications
 
 /**
+ * @brief Font information structure
+ * 
+ * Contains read-only information about a font's characteristics.
+ * Use vmupro_get_font_info() to retrieve this information.
+ */
+typedef struct {
+  int Width;                ///< Character width in pixels
+  int Height;               ///< Character height in pixels
+  int Monospace;            ///< Whether font is monospaced (0=false, 1=true)
+} vmupro_font_info_t;
+
+/**
  * @brief Set the current font for text rendering
  *
  * Sets the active font to be used for subsequent text rendering operations.
- * The font must be one of the predefined VMUPRO_FONT_* constants.
+ * Use one of the VMUPRO_FONT_* enum values.
  *
- * @param font Pointer to a vmupro_font_t structure (use predefined fonts)
+ * @param font_id Font ID from vmupro_font_id_t enum
  * 
  * @note This setting affects all subsequent vmupro_draw_text() calls
  * @note Font settings persist until changed or the application exits
- * @note Use predefined fonts like VMUPRO_FONT_DEFAULT, VMUPRO_FONT_SMALL, etc.
+ * @note Invalid font IDs will default to VMUPRO_FONT_MEDIUM
  * 
  * @example
  * @code
  * // Set font to default medium size
- * vmupro_set_font(&VMUPRO_FONT_DEFAULT);
+ * vmupro_set_font(VMUPRO_FONT_DEFAULT);
  * 
  * // Set font to large for titles
- * vmupro_set_font(&VMUPRO_FONT_LARGE);
+ * vmupro_set_font(VMUPRO_FONT_LARGE);
+ * 
+ * // Set specific font by name
+ * vmupro_set_font(VMUPRO_FONT_QUANTICO_25x29);
  * 
  * // Now all text drawing will use this font
- * vmupro_draw_text("Hello, VMUPro!", 10, 20);
+ * vmupro_draw_text("Hello, VMUPro!", 10, 20, 0xFFFF, 0x0000);
  * @endcode
  */
-void vmupro_set_font(const vmupro_font_t* font);
+void vmupro_set_font(vmupro_font_id_t font_id);
 
 /**
  * @brief Draw text to the screen with specified colors
@@ -108,7 +115,7 @@ void vmupro_set_font(const vmupro_font_t* font);
  * @example
  * @code
  * // Set font and draw white text on black background
- * vmupro_set_font(&VMUPRO_FONT_DEFAULT);
+ * vmupro_set_font(VMUPRO_FONT_DEFAULT);
  * vmupro_draw_text("Score: 1000", 5, 5, 0xFFFF, 0x0000);
  * 
  * // Draw red text on white background
@@ -117,8 +124,12 @@ void vmupro_set_font(const vmupro_font_t* font);
  * // Draw green text with matching background (transparent effect)
  * vmupro_draw_text("Player 1", 10, 10, 0x07E0, 0x07E0);
  * 
- * // Common RGB565 colors:
- * // Black: 0x0000, White: 0xFFFF, Red: 0xF800, Green: 0x07E0, Blue: 0x001F
+ * // Use different font sizes
+ * vmupro_set_font(VMUPRO_FONT_LARGE);
+ * vmupro_draw_text("TITLE", 5, 0, 0xFFFF, 0x0000);
+ * 
+ * vmupro_set_font(VMUPRO_FONT_SMALL);
+ * vmupro_draw_text("subtitle", 5, 30, 0xC618, 0x0000);
  * @endcode
  */
 void vmupro_draw_text(const char* text, int x, int y, uint16_t color, uint16_t bg_color);
@@ -142,25 +153,61 @@ void vmupro_draw_text(const char* text, int x, int y, uint16_t color, uint16_t b
  * @example
  * @code
  * // Center text on 48-pixel wide screen
- * vmupro_set_font(&VMUPRO_FONT_DEFAULT);
+ * vmupro_set_font(VMUPRO_FONT_DEFAULT);
  * const char* message = "Hello!";
  * int text_width = vmupro_calc_text_length(message);
  * int center_x = (48 - text_width) / 2;
- * vmupro_draw_text(message, center_x, 10);
+ * vmupro_draw_text(message, center_x, 10, 0xFFFF, 0x0000);
  * 
  * // Right-align text
- * vmupro_set_font(&VMUPRO_FONT_SMALL);
+ * vmupro_set_font(VMUPRO_FONT_SMALL);
  * const char* score = "Score: 1234";
  * int text_width = vmupro_calc_text_length(score);
- * vmupro_draw_text(score, 48 - text_width, 5);
+ * vmupro_draw_text(score, 48 - text_width, 5, 0xFFFF, 0x0000);
  * 
  * // Check if text fits on screen
  * if (vmupro_calc_text_length("Long message") <= 48) {
- *     vmupro_draw_text("Long message", 0, 0);
+ *     vmupro_draw_text("Long message", 0, 0, 0xFFFF, 0x0000);
  * }
  * @endcode
  */
 int vmupro_calc_text_length(const char* text);
+
+/**
+ * @brief Get information about a specific font
+ *
+ * Returns font characteristics such as width, height, and whether it's monospaced.
+ * Useful for layout calculations and font selection.
+ *
+ * @param font_id Font ID from vmupro_font_id_t enum
+ * @return Font information structure with width, height, and monospace flag
+ * 
+ * @note Returns information for any font, not just the currently active one
+ * @note Invalid font IDs will return info for the default fallback font
+ * @note Width is the maximum character width for proportional fonts
+ * 
+ * @example
+ * @code
+ * // Get info about different fonts to choose the best one
+ * vmupro_font_info_t small_info = vmupro_get_font_info(VMUPRO_FONT_SMALL);
+ * vmupro_font_info_t large_info = vmupro_get_font_info(VMUPRO_FONT_LARGE);
+ * 
+ * // Choose font based on available space
+ * int available_height = 20;
+ * if (large_info.Height <= available_height) {
+ *     vmupro_set_font(VMUPRO_FONT_LARGE);
+ * } else {
+ *     vmupro_set_font(VMUPRO_FONT_SMALL);
+ * }
+ * 
+ * // Calculate line spacing
+ * vmupro_font_info_t current_font = vmupro_get_font_info(VMUPRO_FONT_DEFAULT);
+ * int line_spacing = current_font.Height + 2; // 2 pixel gap
+ * vmupro_draw_text("Line 1", 0, 0, 0xFFFF, 0x0000);
+ * vmupro_draw_text("Line 2", 0, line_spacing, 0xFFFF, 0x0000);
+ * @endcode
+ */
+vmupro_font_info_t vmupro_get_font_info(vmupro_font_id_t font_id);
 
 #ifdef __cplusplus
 }
