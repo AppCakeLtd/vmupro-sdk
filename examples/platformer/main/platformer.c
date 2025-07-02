@@ -310,8 +310,6 @@ void OnSpriteMoved(Sprite *spr)
   {
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite has unhandled vert alginment type");
   }
-
-
 }
 
 void AddVec(Vec2 *targ, Vec2 *delta)
@@ -411,9 +409,6 @@ void ResetSprite(Sprite *spr)
 
   spr->subVelo = ZeroVec();
   spr->lastSubVelo = ZeroVec();
-
-  // spr->subAccel = ZeroVec();
-  // spr->lastSubAccel = ZeroVec();
 
   SetMoveMode(spr, MM_FALL);
   memset(&spr->input, 0, sizeof(Inputs));
@@ -690,7 +685,14 @@ Vec2 GetPointOnSprite(Sprite *spr, bool hitBox, Anchor_H anchorH, Anchor_V ancho
   int returnX = 0;
   int returnY = 0;
 
-  BBox *aabb = hitBox? &spr->subHitBox : &spr->worldBBox;
+  BBox *aabb = hitBox ? &spr->subHitBox : &spr->worldBBox;
+
+  // a note on hitbox widths...
+  // say we have a 16px wide player at x = 0;
+  // there's a column of blocks at index 1, or x = 16
+  // if we use playerx + width (or 0 + 16) we get 16
+  // which is *inside* the column, despite us not touching it
+  // i.e. the character occupies pixels 0-15, not 0-16
 
   if (anchorH == ANCHOR_HLEFT)
   {
@@ -703,6 +705,15 @@ Vec2 GetPointOnSprite(Sprite *spr, bool hitBox, Anchor_H anchorH, Anchor_V ancho
   else if (anchorH == ANCHOR_HRIGHT)
   {
     returnX = aabb->x + aabb->width;
+    // * see above
+    if (hitBox)
+    {
+      returnX -= (1 << SHIFT);
+    }
+    else
+    {
+      returnX -= 1;
+    }
   }
   else
   {
@@ -720,6 +731,15 @@ Vec2 GetPointOnSprite(Sprite *spr, bool hitBox, Anchor_H anchorH, Anchor_V ancho
   else if (anchorV == ANCHOR_VBOTTOM)
   {
     returnY = aabb->y + aabb->height;
+    // * see above
+    if (hitBox)
+    {
+      returnY -= (1 << SHIFT);
+    }
+    else
+    {
+      returnY -= 1;
+    }
   }
   else
   {
@@ -776,40 +796,39 @@ typedef struct
   // - the y coord of the hitbox point we're checking
   Vec2 subEjectionPoint[3];
 
-
   bool hitSomething;
   int lastHitIndex;
 
 } HitInfo;
 
-Vec2 GetTileRowAndColFromSubPos(Vec2 * subPos){
+Vec2 GetTileRowAndColFromSubPos(Vec2 *subPos)
+{
 
-    Vec2 returnVal;
-    // rounding down is not an issue here.
-    // if the check pos is 257 for example, this shifts down to 
-    // worldPos = (257>>4) = 16
-    // then
-    // tileCol = 16 / TILE_SIZE_PX = 1
-    // which is what we want    
-    // 255 would be tile col 0
-    // e.g.
-    //Vec2 worldPoint = Sub2World(subPos);
-    //returnVal.x = worldPoint.x / TILE_SIZE_PX;
-    //returnVal.y = worldPoint.y / TILE_SIZE_PX;
-    // but we can simplify
-    returnVal.x = subPos->x / TILE_SIZE_SUB;
-    returnVal.y = subPos->y / TILE_SIZE_SUB;
-    return returnVal;
-
+  Vec2 returnVal;
+  // rounding down is not an issue here.
+  // if the check pos is 257 for example, this shifts down to
+  // worldPos = (257>>4) = 16
+  // then
+  // tileCol = 16 / TILE_SIZE_PX = 1
+  // which is what we want
+  // 255 would be tile col 0
+  // e.g.
+  // Vec2 worldPoint = Sub2World(subPos);
+  // returnVal.x = worldPoint.x / TILE_SIZE_PX;
+  // returnVal.y = worldPoint.y / TILE_SIZE_PX;
+  // but we can simplify
+  returnVal.x = subPos->x / TILE_SIZE_SUB;
+  returnVal.y = subPos->y / TILE_SIZE_SUB;
+  return returnVal;
 }
 
-Vec2 GetTileSubPosFromRowAndCol(Vec2 * rowAndcol){
+Vec2 GetTileSubPosFromRowAndCol(Vec2 *rowAndcol)
+{
 
   Vec2 returnVal;
   returnVal.x = rowAndcol->x * TILE_SIZE_SUB;
   returnVal.y = rowAndcol->y * TILE_SIZE_SUB;
   return returnVal;
-
 }
 
 // subOffsetOrNull adds an offset to where we check for collisions
@@ -819,8 +838,9 @@ HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *subOffsetOrNull)
 {
 
   HitInfo rVal;
+  memset(&rVal, 0, sizeof(HitInfo));
 
-  rVal.dir = dir;  
+  rVal.dir = dir;
   rVal.lastHitIndex = -1;
 
   // get a list of points to check for
@@ -879,7 +899,7 @@ HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *subOffsetOrNull)
       AddVec(&rVal.subCheckPos[i], subOffsetOrNull);
     }
 
-    // let's debug to screen    
+    // let's debug to screen
     Vec2 screenPos = Sub2Screen(&rVal.subCheckPos[i]);
     vmupro_draw_rect(screenPos.x - 2, screenPos.y - 2, screenPos.x + 4, screenPos.y + 4, VMUPRO_COLOR_WHITE);
   }
@@ -898,7 +918,9 @@ HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *subOffsetOrNull)
     int blockId = GetBlockIDAtColRow(tileRowAndCol.x, tileRowAndCol.y);
     if (blockId != BLOCK_NULL)
     {
+
       rVal.hitSomething = true;
+
       rVal.blockID[i] = blockId;
       rVal.lastHitIndex = i;
 
@@ -910,28 +932,25 @@ HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *subOffsetOrNull)
       {
         // left side of the block we hit
         rVal.subEjectionPoint[i].x = tileSubPos.x;
-        rVal.subEjectionPoint[i].y = rVal.subCheckPos[i].y;     
+        rVal.subEjectionPoint[i].y = rVal.subCheckPos[i].y;
       }
       else if (dir == DIR_LEFT)
       {
         // we hit the right side of the block
         rVal.subEjectionPoint[i].x = tileSubPos.x + TILE_SIZE_SUB;
         rVal.subEjectionPoint[i].y = rVal.subCheckPos[i].y;
-
       }
       else if (dir == DIR_DOWN)
       {
         // we hit the top of the block
         rVal.subEjectionPoint[i].x = rVal.subCheckPos[i].x;
         rVal.subEjectionPoint[i].y = tileSubPos.y;
-        
       }
       else if (dir == DIR_UP)
       {
         // we hit the bottom of the block
         rVal.subEjectionPoint[i].x = rVal.subCheckPos[i].x;
         rVal.subEjectionPoint[i].y = tileSubPos.y + TILE_SIZE_SUB;
-        
       }
     }
     else
@@ -946,7 +965,12 @@ HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *subOffsetOrNull)
 void PrintHitInfo(HitInfo *info)
 {
 
-  printf("HitInfo dir %d hit = %d,  ids = %d, %d, %d\n", (int)info->dir, info->hitSomething, info->blockID[0], info->blockID[1], info->blockID[2]);
+  printf("HitInfo dir %d hit = %d\n", info->dir, (int)info->hitSomething);
+  printf("   ids = %d, %d, %d\n", info->blockID[0], info->blockID[1], info->blockID[2]);
+  printf("   chX = %d, %d, %d\n", info->subCheckPos[0].x, info->subCheckPos[1].x, info->subCheckPos[2].x);
+  printf("   chY = %d, %d, %d\n", info->subCheckPos[0].y, info->subCheckPos[1].y, info->subCheckPos[2].y);
+  printf("   ejX = %d, %d, %d\n", info->subEjectionPoint[0].x, info->subEjectionPoint[1].x, info->subEjectionPoint[2].x);
+  printf("   ejY = %d, %d, %d\n", info->subEjectionPoint[0].y, info->subEjectionPoint[1].y, info->subEjectionPoint[2].y);
 }
 
 // Perform the ejection part after collecting hit info
@@ -975,14 +999,13 @@ void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
   if (dir == DIR_RIGHT)
   {
 
-    printf("eject right\n");
+    printf("__TEST__ eject right\n");
 
     // we hit something while moving right
     spr->subVelo.x = 0;
 
     // e.g. the point on the block we just hit
     int subX = info->subEjectionPoint[idx].x;
-        
 
     // hitbox might be anchored left/right/middle
     // account for this
@@ -1008,6 +1031,8 @@ void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
 
   if (dir == DIR_LEFT)
   {
+
+    printf("__TEST__ eject left\n");
 
     spr->subVelo.x = 0;
 
@@ -1077,14 +1102,15 @@ void TryMove(Sprite *spr, bool horz)
     {
       return;
     }
-    subCheckOffset.y = spr->subVelo.y >> SHIFT;
+    subCheckOffset.y = spr->subVelo.y;
   }
 
   HitInfo info = NewHitInfo(spr, dir, &subCheckOffset);
 
   if (info.hitSomething)
   {
-    // PrintHitInfo(&info);
+    //__TEST__
+    PrintHitInfo(&info);
   }
 
   EjectHitInfo(spr, &info, horz);
@@ -1394,7 +1420,8 @@ void app_main(void)
     if (vmupro_btn_pressed(Btn_A))
     {
       // OnSpriteMoved(&player.spr);
-      printf("Playerx %d\n", GetWorldPos(&player.spr).x);
+      printf("PlayerX world:%d sub: %d \n", GetWorldPos(&player.spr).x, GetSubPos(&player.spr).x);
+      printf("PlayerY world:%d sub: %d \n", GetWorldPos(&player.spr).y, GetSubPos(&player.spr).y);
     }
 
     if (vmupro_btn_pressed(Btn_B))
