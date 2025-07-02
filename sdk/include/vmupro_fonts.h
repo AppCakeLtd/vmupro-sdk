@@ -45,6 +45,7 @@ extern const vmupro_font_t VMUPRO_FONT_SANS_11x13;        ///< Small sans-serif 
 extern const vmupro_font_t VMUPRO_FONT_MONO_13x21;        ///< Medium liberation mono (13×21px)
 extern const vmupro_font_t VMUPRO_FONT_MONO_13x24;        ///< Medium monospace (13×24px)
 extern const vmupro_font_t VMUPRO_FONT_SANS_15x17;        ///< Medium sans-serif (15×17px)
+extern const vmupro_font_t VMUPRO_FONT_OPEN_SANS_15x18;   ///< Open Sans medium (15×18px)
 extern const vmupro_font_t VMUPRO_FONT_MONO_16x31;        ///< Large monospace (16×31px)
 extern const vmupro_font_t VMUPRO_FONT_MONO_17x30;        ///< Large liberation mono (17×30px)
 extern const vmupro_font_t VMUPRO_FONT_QUANTICO_19x21;    ///< UI font medium (19×21px)
