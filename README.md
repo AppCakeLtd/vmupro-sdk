@@ -4,6 +4,7 @@ The VMUPro SDK is a development kit for creating applications for the VMUPro dev
 
 ## Table of Contents
 
+- [Documentation](#documentation)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Getting Started](#getting-started)
@@ -13,6 +14,23 @@ The VMUPro SDK is a development kit for creating applications for the VMUPro dev
 - [Deploying Applications](#deploying-applications)
 - [IDE Integration](#ide-integration)
 - [Troubleshooting](#troubleshooting)
+
+## Documentation
+
+### API Reference
+
+The VMUPro SDK provides comprehensive API documentation:
+
+- **[Online API Reference](https://appcakeltd.github.io/vmupro-sdk/)** - Complete SDK API documentation (Doxygen generated)
+- **[Standard Library Functions](docs/stdlib_functions.md)** - Reference for all available C standard library functions
+
+To generate the API documentation locally:
+
+```bash
+cd vmupro-sdk
+doxygen Doxyfile
+# Open docs/html/index.html in your browser
+```
 
 ## Prerequisites
 
