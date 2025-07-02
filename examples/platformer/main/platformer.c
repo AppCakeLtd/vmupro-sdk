@@ -252,7 +252,7 @@ void OnSpriteMoved(Sprite *spr)
 
   bool forPlayer = spr->isPlayer;
   Vec2 worldOrigin = GetWorldPos(spr);
-  Vec2 subOrigin = spr->subPos;
+  Vec2 subOrigin = GetSubPos(spr);
 
   spr->worldBBox.x = worldOrigin.x;
   spr->subHitBox.x = subOrigin.x;
@@ -272,17 +272,17 @@ void OnSpriteMoved(Sprite *spr)
   // horizontal part
   if (spr->anchorH == ANCHOR_HLEFT)
   {
-    // sprite's left side is the object's origin. we're good
+    // left side of the sprite is on the origin
   }
   else if (spr->anchorH == ANCHOR_HMID)
   {
-    // sprite's h centre is the object's origin
+    // sprite is h-centered on the origin
     spr->worldBBox.x -= worldWidth / 2;
     spr->subHitBox.x -= subWidth / 2;
   }
   else if (spr->anchorH == ANCHOR_HRIGHT)
   {
-    // sprite's right side is the object's origin.
+    // right side of sprite is on the origin
     spr->worldBBox.x -= img->width;
     spr->subHitBox.x -= subWidth;
   }
@@ -294,17 +294,20 @@ void OnSpriteMoved(Sprite *spr)
   // vertical part
   if (spr->anchorV == ANCHOR_VTOP)
   {
-    // top of the sprite aligns with the obj origin (something crawling on the ceiling, etc)
+    // top of the sprite is on the origin
+    // e.g. something crawling along a ceiling
   }
   else if (spr->anchorV == ANCHOR_VMID)
   {
-    spr->worldBBox.y += worldHeight / 2;
-    spr->subHitBox.y += subHeight / 2;
+    // sprite is v-centered on the origin
+    spr->worldBBox.y -= worldHeight / 2;
+    spr->subHitBox.y -= subHeight / 2;
   }
   else if (spr->anchorV == ANCHOR_VBOTTOM)
   {
-    spr->worldBBox.y += worldHeight;
-    spr->subHitBox.y += subHeight;
+    // bottom of the sprite is on the origin
+    spr->worldBBox.y -= worldHeight;
+    spr->subHitBox.y -= subHeight;
   }
   else
   {
@@ -1472,15 +1475,14 @@ void app_main(void)
     // test: cycle through sprite offsets
     if (vmupro_btn_pressed(Btn_A))
     {
-      // OnSpriteMoved(&player.spr);
       printf("PlayerX world:%d sub: %d \n", GetWorldPos(&player.spr).x, GetSubPos(&player.spr).x);
       printf("PlayerY world:%d sub: %d \n", GetWorldPos(&player.spr).y, GetSubPos(&player.spr).y);
     }
 
     if (vmupro_btn_pressed(Btn_B))
     {
-      // player.spr.anchorV = (player.spr.anchorV + 1) % (3);
-      player.spr.anchorH = (player.spr.anchorH + 1) % (3);
+      player.spr.anchorV = (player.spr.anchorV + 1) % (3);
+      //player.spr.anchorH = (player.spr.anchorH + 1) % (3);
       OnSpriteMoved(&player.spr);
     }
 
