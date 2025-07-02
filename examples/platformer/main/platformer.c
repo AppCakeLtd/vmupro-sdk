@@ -108,6 +108,20 @@ typedef enum
 
 } MoveMode;
 
+typedef enum
+{
+  PIV_LEFT_TOP,
+  PIV_MIDDLE_TOP,
+  PIV_RIGHT_TOP,
+  PIV_LEFT_MIDDLE,
+  PIV_MIDDLE_MIDDLE,
+  PIV_RIGHT_MIDDLE,
+  PIV_LEFT_BOTTOM,
+  PIV_MIDDLE_BOTTOM,
+  PIV_RIGHT_BOTTOM,
+  PIV_NONE_NONE
+} Pivot;
+
 typedef struct
 {
   // typically the image's bbox
@@ -128,10 +142,10 @@ typedef struct
   Vec2 subVelo;
   Vec2 lastSubVelo;
 
-  // Vec2 subAccel;
-  // Vec2 lastSubAccel;
-
+  // config options
   bool isPlayer;
+  Pivot spriteOffset;
+
   bool facingRight;
   bool wasRunningLastTimeWasOnGround;
 
@@ -211,7 +225,7 @@ void DrawSpriteBoundingBox(Sprite *inSprite, uint16_t inCol)
 }
 
 // Updates the bounding box when the pos or img changes
-void OnSpriteUpdated(Sprite *spr)
+void OnSpriteMoved(Sprite *spr)
 {
 
   if (spr == NULL)
@@ -228,26 +242,43 @@ void OnSpriteUpdated(Sprite *spr)
     return;
   }
 
+  Pivot piv = spr->spriteOffset;
+
   bool forPlayer = spr->isPlayer;
   Vec2 worldOrigin = GetWorldPos(spr);
-  if (forPlayer)
-  {
-    // if it's the player, we'll centre around the feet
-    spr->worldBBox.x = worldOrigin.x - (img->width / 2);
-    spr->worldBBox.y = worldOrigin.y - (img->height);
-    spr->worldBBox.width = img->width;
-    spr->worldBBox.height = img->height;
-  }
-  else
-  {
-    // else we'll centre around the centre.
-    spr->worldBBox.x = worldOrigin.x - (img->width / 2);
-    spr->worldBBox.y = worldOrigin.y - (img->height / 2);
-    spr->worldBBox.width = img->width;
-    spr->worldBBox.height = img->height;
+
+  // horizontal part
+  if ( piv == PIV_LEFT_TOP || piv == PIV_LEFT_MIDDLE || piv == PIV_LEFT_BOTTOM ){
+    // sprite's aligned along the left
+    spr->worldBBox.x = worldOrigin.x;
+  } else if ( piv == PIV_MIDDLE_TOP || piv == PIV_MIDDLE_MIDDLE || piv == PIV_MIDDLE_BOTTOM ){
+    // centred horizontally
+    spr->worldBBox.x = worldOrigin.x - (img->width/2);
+  } else if ( piv == PIV_RIGHT_TOP || piv == PIV_RIGHT_MIDDLE || piv == PIV_RIGHT_BOTTOM ){
+    // right-aligned
+    spr->worldBBox.x = worldOrigin.x - img->width;
+  } else {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite has unhandled horz alginment type");
   }
 
+  // vertical part
+  if ( piv == PIV_LEFT_TOP || piv == PIV_MIDDLE_TOP || piv == PIV_RIGHT_TOP ){
+    // top of the sprite aligns with the obj pos (something crawling on the ceiling, etc)
+    spr->worldBBox.y = worldOrigin.y;
+  } else if ( piv == PIV_LEFT_MIDDLE || piv == PIV_MIDDLE_MIDDLE || piv == PIV_RIGHT_MIDDLE ){
+    spr->worldBBox.y = worldOrigin.y - (img->height /2);
+  } else if ( piv == PIV_LEFT_BOTTOM || piv == PIV_MIDDLE_BOTTOM || piv == PIV_RIGHT_BOTTOM ){
+    spr->worldBBox.y = worldOrigin.y - img->height;
+  } else {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite has unhandled vert alginment type");
+  }
+
+  spr->worldBBox.width = img->width;
+  spr->worldBBox.height = img->height;
+
+  // TODO: inset the hitbox a bit
   spr->worldHitBox = spr->worldBBox;
+
 }
 
 void AddVec(Vec2 *targ, Vec2 *delta)
@@ -280,13 +311,13 @@ Vec2 GetPlayerWorldPos()
 void SetSubPos(Sprite *spr, Vec2 *newPos)
 {
   spr->subPos = *newPos;
-  OnSpriteUpdated(spr);
+  OnSpriteMoved(spr);
 }
 
 void AddSubPos(Sprite *spr, Vec2 *delta)
 {
   AddVec(&spr->subPos, delta);
-  OnSpriteUpdated(spr);
+  OnSpriteMoved(spr);
 }
 
 void AddSubPos2(Sprite *spr, int xDelta, int yDelta)
@@ -354,9 +385,14 @@ void ResetSprite(Sprite *spr)
   SetMoveMode(spr, MM_FALL);
   memset(&spr->input, 0, sizeof(Inputs));
 
-  // temp sensible start pos
+  // temporary config stuff
   Vec2 worldStartPos = {80, MAP_HEIGHT_PIXELS - (TILE_SIZE_PX * 4)};
   SetWorldPos(spr, &worldStartPos);
+  spr->isPlayer = true;
+  spr->spriteOffset = PIV_MIDDLE_BOTTOM;
+
+  // update the hitbox, bounding box, etc
+  OnSpriteMoved(spr);
 }
 
 void LoadLevel(int levelNum)
@@ -364,8 +400,7 @@ void LoadLevel(int levelNum)
 
   currentLevel = (LevelData *)level_1_layer_0_data;
   ResetSprite(&player.spr);
-  // filthy hack
-  player.spr.isPlayer = true;
+
 }
 
 // returns atlas block 0-max
@@ -612,19 +647,7 @@ int GetXDampingForMode(MoveMode inMode, bool wasRunningWhenLastGrounded)
   }
 }
 
-typedef enum
-{
-  PIV_LEFT_TOP,
-  PIV_MIDDLE_TOP,
-  PIV_RIGHT_TOP,
-  PIV_LEFT_MIDDLE,
-  PIV_MIDDLE_MIDDLE,
-  PIV_RIGHT_MIDDLE,
-  PIV_LEFT_BOTTOM,
-  PIV_MIDDLE_BOTTOM,
-  PIV_RIGHT_BOTTOM,
-  PIV_NONE_NONE
-} Pivot;
+
 
 Vec2 GetWorldPointOnSprite(Sprite *spr, Pivot piv)
 {
@@ -871,6 +894,41 @@ void PrintHitInfo(HitInfo *info)
   printf("HitInfo dir %d hit = %d,  ids = %d, %d, %d\n", (int)info->dir, info->hitSomething, info->blockID[0], info->blockID[1], info->blockID[2]);
 }
 
+// Perform the ejection part after collecting hit info
+void EjectHitInfo(Sprite * spr, HitInfo * info, bool horz){
+
+  Direction dir = info->dir;
+
+  // simple early exit
+  if ( !info->hitSomething ){
+    if ( horz ){
+      AddSubPos2(spr, spr->subVelo.x, 0);
+    } else {
+      AddSubPos2(spr, 0, spr->subVelo.y);
+    }
+  }
+  return;
+
+  int idx = info->lastHitIndex;
+
+  if ( dir == DIR_RIGHT ){
+      // we hit something while moving right
+      spr->subVelo.x = 0;
+
+      // the hitbox/spr box might be centered
+      // work out the difference between its 
+      
+      int worldX = info->worldEjectionPoint[idx].x -spr->worldHitBox.width/2;
+      int subX = worldX << SHIFT;
+      int subY = spr->subPos.y;
+      Vec2 sub = {subX, subY};
+      SetSubPos(spr, &sub);
+      
+  }
+
+
+}
+
 // Attempts to apply velo to pos, taking collisions into account
 void TryMove(Sprite *spr, bool horz)
 {
@@ -922,31 +980,8 @@ void TryMove(Sprite *spr, bool horz)
     //PrintHitInfo(&info);
   }
 
-  // just apply the movement for now for debugging
-  // __TEST__
-  if (horz)
-  {
-    
-    if ( info.hitSomething ){
-      int idx = info.lastHitIndex;
-      spr->subVelo.x = 0;
-      
-      // __TEST__ we'll split this into another function in a sec
-      int worldX = info.worldEjectionPoint[idx].x -spr->worldHitBox.width/2;
-      int subX = worldX << SHIFT;
-      int subY = spr->subPos.y;
-      Vec2 sub = {subX, subY};
-      SetSubPos(spr, &sub);
-      
+  EjectHitInfo(spr, &info, horz);
 
-    } else {
-      AddSubPos2(spr, spr->subVelo.x, 0);
-    }
-  }
-  else
-  {
-    AddSubPos2(spr, 0, spr->subVelo.y);
-  }
 }
 
 void SolvePlayer()
@@ -1113,12 +1148,12 @@ void DrawPlayer()
   if (goingUp)
   {
     spr->img = &img_player_fall_raw;
-    OnSpriteUpdated(&player.spr);
+    OnSpriteMoved(&player.spr);
   }
   else
   {
     spr->img = &img_player_idle_raw;
-    OnSpriteUpdated(&player.spr);
+    OnSpriteMoved(&player.spr);
   }
 
   // update the img pointer
@@ -1186,6 +1221,12 @@ void app_main(void)
     if (vmupro_btn_held(Btn_Mode))
     {
       break;
+    }
+
+    // test: cycle through sprite offsets
+    if ( vmupro_btn_pressed(Btn_A) ){
+      player.spr.spriteOffset = (player.spr.spriteOffset +1) % (PIV_NONE_NONE);
+      OnSpriteMoved(&player.spr);
     }
 
     frameCounter++;
