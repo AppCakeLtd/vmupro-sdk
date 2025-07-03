@@ -538,7 +538,10 @@ void DrawLevelBlock(int x, int y, int layer)
   uint32_t pixTargY = y * TILE_SIZE_PX;
 
   const Img *sheet = &img_tilemap_raw;
-  vmupro_blit_tile(sheet->data, pixTargX - camX, pixTargY - camY, pixSrcX, pixSrcY, TILE_SIZE_PX, TILE_SIZE_PX, sheet->width);
+  vmupro_drawflags_t flags = VMUPRO_DRAWFLAGS_NORMAL;
+  vmupro_color_t transColor = VMUPRO_COLOR_BLACK;
+  //vmupro_blit_tile(sheet->data, pixTargX - camX, pixTargY - camY, pixSrcX, pixSrcY, TILE_SIZE_PX, TILE_SIZE_PX, sheet->width);
+  vmupro_blit_tile_advanced(sheet->data, pixTargX - camX, pixTargY - camY, pixSrcX, pixSrcY, TILE_SIZE_PX, TILE_SIZE_PX, sheet->width, transColor, flags );
 }
 
 // center the camera on the player

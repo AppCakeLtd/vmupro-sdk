@@ -1030,6 +1030,9 @@ extern "C"
    */
   void vmupro_blit_tile(uint8_t *buffer, int x, int y, int src_x, int src_y, int width, int height, int tilemap_width);
 
+  // todo: add description from firmware
+  void vmupro_blit_tile_advanced(uint8_t* buffer, int x, int y, int atlas_src_x, int atlas_src_y, int width, int height, int tilemap_width, vmupro_color_t transparent_color, vmupro_drawflags_t flags);
+
   // return whether the last buffer sent to the GPU was
   // fb_side == 0, or fb_side == 1
   // so we don't throw new frames at it before it finishes
