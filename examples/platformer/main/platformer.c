@@ -226,10 +226,10 @@ typedef struct
 Player player;
 Mob testMob;
 
-//__TEST__
 //
 // Protos
 //
+//__TEST__ This can be scrubbed when things are moved to headers
 bool CheckGrounded(Sprite *spr);
 
 // in screen spsace
@@ -935,8 +935,9 @@ HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *subOffsetOrNull, const char
       dbgSubOffsetY = subOffsetOrNull->y;
     }
 
+    if (false)
     {
-      printf("__TEST__ Frame %d HitInfo'%s' GetPointOnSprite Anchors %d %d SubOffset %d %d\n", frameCounter, src, (int)rVal.anchorH[i], (int)rVal.anchorV[i], dbgSubOffsetX, dbgSubOffsetY);
+      printf("__DBG__ Frame %d HitInfo '%s' GetPointOnSprite Anchors %d %d SubOffset %d %d\n", frameCounter, src, (int)rVal.anchorH[i], (int)rVal.anchorV[i], dbgSubOffsetX, dbgSubOffsetY);
       printf("....Player    Pos   x=%d/%d y=%d/%d\n", dbgSprXPos, dbgSprXPos >> SHIFT, dbgSprYPos, dbgSprYPos >> SHIFT);
       printf("....CheckPos (pre)  x=%d/%d y=%d/%d\n", dbgCheckXPos, dbgCheckXPos >> SHIFT, dbgCheckYPos, dbgCheckYPos >> SHIFT);
       printf("....CheckPos (post) x=%d/%d y=%d/%d\n", rVal.subCheckPos[i].x, rVal.subCheckPos[i].x >> SHIFT, rVal.subCheckPos[i].y, rVal.subCheckPos[i].y >> SHIFT);
@@ -1047,8 +1048,6 @@ void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
   if (whereWasCollision == DIR_RIGHT)
   {
 
-    printf("__TEST__ eject from right\n");
-
     // we hit something while moving right
     spr->subVelo.x = 0;
 
@@ -1077,8 +1076,6 @@ void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
 
   if (whereWasCollision == DIR_LEFT)
   {
-
-    printf("__TEST__ eject from left\n");
 
     spr->subVelo.x = 0;
 
@@ -1156,18 +1153,20 @@ void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
   }
 
   // debug block
+  if (false)
   {
-    printf("__TEST__ Frame %d eject from dir (urdl) %d\n", frameCounter, whereWasCollision);
+    printf("__DBG__ Frame %d eject from dir (urdl) %d\n", frameCounter, whereWasCollision);
     printf("....from blockpos x=%d/%d y=%d/%d\n", dbgBlockX, dbgBlockX >> SHIFT, dbgBlockY, dbgBlockY >> SHIFT);
     printf("....from plry pos x=%d/%d y=%d/%d\n", dbgPlayerX, dbgPlayerX >> SHIFT, dbgPlayerY, dbgPlayerY >> SHIFT);
     Vec2 newPos = GetSubPos(spr);
     printf("....TO   plry pos x=%d/%d y=%d/%d\n", newPos.x, newPos.x >> SHIFT, newPos.y, newPos.y >> SHIFT);
-  }
 
-  if (whereWasCollision == DIR_DOWN)
-  {
-    bool groundedNow = CheckGrounded(spr);
-    printf("__TEST__ post ejection ground check = %d\n", (int)groundedNow);
+    // To double check your collision logics
+    if (whereWasCollision == DIR_DOWN)
+    {
+      bool groundedNow = CheckGrounded(spr);
+      printf("__DBG__ post ejection ground check = %d\n", (int)groundedNow);
+    }
   }
 }
 
@@ -1273,7 +1272,7 @@ void StopJumpBoost(Sprite *spr, const char *src)
 {
   if (spr->jumpFrameNum < MAX_JUMP_BOOST_FRAMES)
   {
-    printf("__TEST__ stop jump boost %s\n", src);
+    printf("__DBG__ jump boost canceled, src=%s\n", src);
     spr->jumpFrameNum = MAX_JUMP_BOOST_FRAMES;
   }
 }
@@ -1296,7 +1295,7 @@ void TryContinueJump(Sprite *spr)
   {
     // add jump velo
     spr->subVelo.y -= SUB_JUMPFORCE;
-    printf("__TEST__ Frame %d Applying jump on frame %d\n", frameCounter, spr->jumpFrameNum);
+    printf("__DBG__ Frame %d Applying jump on frame %d\n", frameCounter, spr->jumpFrameNum);
     spr->jumpFrameNum++;
   }
   else
@@ -1307,7 +1306,7 @@ void TryContinueJump(Sprite *spr)
   }
 }
 
-//__TEST__
+//__TEST__ Not yet applied
 // e.g. walking off an edge
 void CheckFallen(Sprite *spr)
 {
@@ -1353,7 +1352,10 @@ void CheckLanded(Sprite *spr)
     return;
   }
 
-  printf("__TEST__ Frame %d landed @ %d/%d\n", frameCounter, spr->subPos.y, spr->subPos.y >> SHIFT);
+  if (false)
+  {
+    printf("__DBG__ Frame %d landed @ %d/%d\n", frameCounter, spr->subPos.y, spr->subPos.y >> SHIFT);
+  }
   // we're on the ground
   // we weren't during the last frame
   if (spr->input.run)
