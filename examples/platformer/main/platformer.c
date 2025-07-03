@@ -921,16 +921,26 @@ HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *subOffsetOrNull, const char
   {
     rVal.subCheckPos[i] = GetPointOnSprite(spr, true, rVal.anchorH[i], rVal.anchorV[i]);
 
+    int dbgSprXPos = spr->subPos.x;
     int dbgSprYPos = spr->subPos.y;
+    int dbgCheckXPos = rVal.subCheckPos[i].x;
     int dbgCheckYPos = rVal.subCheckPos[i].y;
-    // printf("__TEST__ Frame %d %s GetPoint (before offset): spr ypos %d/%d point on spr %d/%d \n", frameCounter, src, dbgSprYPos, dbgSprYPos >> SHIFT, dbgCheckYPos, dbgCheckYPos >> SHIFT);
+    int dbgSubOffsetX = 0;
+    int dbgSubOffsetY = 0;
 
     if (subOffsetOrNull != NULL)
     {
       AddVec(&rVal.subCheckPos[i], subOffsetOrNull);
+      dbgSubOffsetX = subOffsetOrNull->x;
+      dbgSubOffsetY = subOffsetOrNull->y;
     }
 
-    // printf("__TEST__ Frame %d %s GetPoint (after offset): spr ypos %d/%d point on spr %d/%d \n", frameCounter, src, dbgSprYPos, dbgSprYPos >> SHIFT, dbgCheckYPos, dbgCheckYPos >> SHIFT);
+    {
+      printf("__TEST__ Frame %d HitInfo'%s' GetPointOnSprite Anchors %d %d SubOffset %d %d\n", frameCounter, src, (int)rVal.anchorH[i], (int)rVal.anchorV[i], dbgSubOffsetX, dbgSubOffsetY);
+      printf("....Player    Pos   x=%d/%d y=%d/%d\n", dbgSprXPos, dbgSprXPos >> SHIFT, dbgSprYPos, dbgSprYPos >> SHIFT);
+      printf("....CheckPos (pre)  x=%d/%d y=%d/%d\n", dbgCheckXPos, dbgCheckXPos >> SHIFT, dbgCheckYPos, dbgCheckYPos >> SHIFT);
+      printf("....CheckPos (post) x=%d/%d y=%d/%d\n", rVal.subCheckPos[i].x, rVal.subCheckPos[i].x >> SHIFT, rVal.subCheckPos[i].y, rVal.subCheckPos[i].y >> SHIFT);
+    }
 
     if (DEBUG_HITPOINTS)
     {
@@ -1029,6 +1039,11 @@ void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
   // and which of the 3 points generated a collision
   int idx = info->lastHitIndex;
 
+  int dbgBlockX = info->subEjectionPoint[idx].x;
+  int dbgPlayerX = spr->subPos.x;
+  int dbgBlockY = info->subEjectionPoint[idx].y;
+  int dbgPlayerY = spr->subPos.y;
+
   if (whereWasCollision == DIR_RIGHT)
   {
 
@@ -1090,8 +1105,6 @@ void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
   if (whereWasCollision == DIR_UP)
   {
 
-    printf("__TEST__ eject from up\n");
-
     spr->subVelo.y = 0;
 
     int subY = info->subEjectionPoint[idx].y;
@@ -1119,7 +1132,6 @@ void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
 
     int dbgBlockY = info->subEjectionPoint[idx].y;
     int dbgPlayerY = spr->subPos.y;
-    printf("__TEST__ Frame %d eject from down blockypos %d/%d playerypos %d/%d\n", frameCounter, dbgBlockY, dbgBlockY >> SHIFT, dbgPlayerY, dbgPlayerY >> SHIFT);
 
     spr->subVelo.y = 0;
 
@@ -1141,8 +1153,19 @@ void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
     int subX = spr->subPos.x;
     Vec2 sub = {subX, subY};
     SetSubPos(spr, &sub);
-    printf("__TEST__ Frame %d ejected to %d/%d\n", frameCounter, sub.y, sub.y >> SHIFT);
+  }
 
+  // debug block
+  {
+    printf("__TEST__ Frame %d eject from dir (urdl) %d\n", frameCounter, whereWasCollision);
+    printf("....from blockpos x=%d/%d y=%d/%d\n", dbgBlockX, dbgBlockX >> SHIFT, dbgBlockY, dbgBlockY >> SHIFT);
+    printf("....from plry pos x=%d/%d y=%d/%d\n", dbgPlayerX, dbgPlayerX >> SHIFT, dbgPlayerY, dbgPlayerY >> SHIFT);
+    Vec2 newPos = GetSubPos(spr);
+    printf("....TO   plry pos x=%d/%d y=%d/%d\n", newPos.x, newPos.x >> SHIFT, newPos.y, newPos.y >> SHIFT);
+  }
+
+  if (whereWasCollision == DIR_DOWN)
+  {
     bool groundedNow = CheckGrounded(spr);
     printf("__TEST__ post ejection ground check = %d\n", (int)groundedNow);
   }
@@ -1485,6 +1508,8 @@ void SolvePlayer()
       subDampX = 0;
     }
 
+    AddVecInts(&spr->subVelo, subDampX, 0);
+
     // Clamp X Velo
 
     if (spr->subVelo.x > maxSubSpeedX)
@@ -1502,8 +1527,8 @@ void SolvePlayer()
       vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite's x velo exceeds a full tile size!");
     }
 
-    // Apply X velo to X movement
-    AddVecInts(&spr->subPos, spr->subVelo.x, 0);
+    // Apply X velo to X movement + update bounding boxes
+    AddSubPos2(spr, spr->subVelo.x, 0);
 
     // Eject from any X Collisions
     TryMove(spr, true);
@@ -1547,6 +1572,8 @@ void SolvePlayer()
       }
     } // no-grav
 
+    AddVecInts(&spr->subVelo, 0, subDampY);
+
     // Clamp Y Velo
 
     if (spr->subVelo.y > maxSubSpeedY)
@@ -1558,17 +1585,14 @@ void SolvePlayer()
       spr->subVelo.y = -maxSubSpeedY;
     }
 
-    // Add Velo to movement
-    AddVecInts(&spr->subPos, 0, spr->subVelo.y);
-
-    Vec2 subDamp = {subDampX, subDampY};
-    AddVec(&spr->subVelo, &subDamp);
-
     // Sanity check
     if (Abs(spr->subVelo.y) > (TILE_SIZE_SUB))
     {
       vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite's y velo exceeds a full tile size!");
     }
+
+    // Apply Y velo to Y movement + update bounding boxes
+    AddSubPos2(spr, 0, spr->subVelo.y);
 
     // Eject from any Y collisions
     TryMove(spr, true);
