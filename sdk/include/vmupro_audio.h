@@ -116,6 +116,56 @@ int vmupro_audio_add_stream_samples(const vmupro_audio_sample_t *samples, int co
  */
 void vmupro_audio_clear_ring_buffer(void);
 
+/**
+ * @brief Get the current global audio volume
+ * 
+ * Returns the current global volume level used by the firmware.
+ * This is the volume applied when applyGlobalVolume is true in 
+ * vmupro_audio_add_stream_samples().
+ * 
+ * @return Current global volume level (0-100, where 0 is mute and 100 is maximum)
+ * 
+ * @note This is the system-wide volume setting
+ * @note Volume affects all audio output when applyGlobalVolume is enabled
+ * 
+ * @example
+ * @code
+ * // Check current volume before playing audio
+ * int current_volume = vmupro_get_global_volume();
+ * if (current_volume > 0) {
+ *     // Volume is not muted, safe to play audio
+ *     vmupro_audio_add_stream_samples(samples, count, true);
+ * }
+ * @endcode
+ */
+int vmupro_get_global_volume(void);
+
+/**
+ * @brief Set the global audio volume
+ * 
+ * Sets the global volume level used by the firmware for all audio output.
+ * This affects audio when applyGlobalVolume is true in vmupro_audio_add_stream_samples().
+ * 
+ * @param volume Volume level (0-100, where 0 is mute and 100 is maximum)
+ * 
+ * @note This is the system-wide volume setting
+ * @note Values outside 0-100 range will be clamped
+ * @note Changes take effect immediately for new audio samples
+ * 
+ * @example
+ * @code
+ * // Set volume to half
+ * vmupro_set_global_volume(50);
+ * 
+ * // Mute audio
+ * vmupro_set_global_volume(0);
+ * 
+ * // Restore full volume
+ * vmupro_set_global_volume(100);
+ * @endcode
+ */
+void vmupro_set_global_volume(int volume);
+
 #ifdef __cplusplus
 }
 #endif
