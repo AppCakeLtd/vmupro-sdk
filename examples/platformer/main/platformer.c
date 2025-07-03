@@ -12,6 +12,8 @@ const char *TAG = "[Platformer]";
 const bool NO_GRAV = false;
 const bool DEBUG_SPRITEBOX = false;
 const bool DEBUG_HITPOINTS = true;
+const bool DEBUG_NO_X = false;
+const bool DEBUG_NO_Y = false;
 
 // shift fixed point maths to/from world/subpixel coords
 #define SHIFT 4
@@ -449,8 +451,8 @@ void ResetSprite(Sprite *spr)
   Vec2 worldStartPos = {80, MAP_HEIGHT_PIXELS - (TILE_SIZE_PX * 4)};
   SetWorldPos(spr, &worldStartPos);
   spr->isPlayer = true;
-  spr->anchorH = ANCHOR_HMID;
-  spr->anchorV = ANCHOR_VBOTTOM;
+  spr->anchorH = ANCHOR_VTOP;
+  spr->anchorV = ANCHOR_HLEFT;
 
   // update the hitbox, bounding box, etc
   OnSpriteMoved(spr);
@@ -712,6 +714,7 @@ int GetXDampingForMode(MoveMode inMode, bool wasRunningWhenLastGrounded)
 
 // hitbox = false: return sprite box in world coords
 // hitbox = true: return hitbox in subpixel coords
+// note: returns a point INSIDE the hitbox, always
 Vec2 GetPointOnSprite(Sprite *spr, bool hitBox, Anchor_H anchorH, Anchor_V anchorV)
 {
 
@@ -722,12 +725,21 @@ Vec2 GetPointOnSprite(Sprite *spr, bool hitBox, Anchor_H anchorH, Anchor_V ancho
 
   BBox *aabb = hitBox ? &spr->subHitBox : &spr->worldBBox;
 
-  // a note on hitbox widths...
-  // say we have a 16px wide player at x = 0;
-  // there's a column of blocks at index 1, or x = 16
-  // if we use playerx + width (or 0 + 16) we get 16
-  // which is *inside* the column, despite us not touching it
-  // i.e. the character occupies pixels 0-15, not 0-16
+  // quick explainer on hitbox heights & widths
+  // let's say our player's pos is the top left
+  // it's 16 px tall, and tiles are 16px tall
+  // there's a row of ground at y=16
+  // our player is sat at y=0
+  // if we did y=0 + height=16, we'd get y = 16, which would be *inside* the ground
+  // but what we really need is 0-15, since that's 16 values
+  // likewise, horizontally, the character occupies pixels 0-15, not 0-16
+  // TLDR; BOTTOM = last pixel inside the box, vertically
+  ///      RIGHT  = last pixel inside the box, horizontally
+  //  ____
+  // |    |
+  // |    |  <-- hitbox @ (0,0), with width/height (4,4)
+  // |    |      the bottom right point is 3,3
+  // |___X|
 
   if (anchorH == ANCHOR_HLEFT)
   {
@@ -741,14 +753,7 @@ Vec2 GetPointOnSprite(Sprite *spr, bool hitBox, Anchor_H anchorH, Anchor_V ancho
   {
     returnX = aabb->x + aabb->width;
     // * see above
-    if (hitBox)
-    {
-      returnX -= (1 << SHIFT);
-    }
-    else
-    {
-      returnX -= 1;
-    }
+    returnX -= 1;
   }
   else
   {
@@ -767,14 +772,7 @@ Vec2 GetPointOnSprite(Sprite *spr, bool hitBox, Anchor_H anchorH, Anchor_V ancho
   {
     returnY = aabb->y + aabb->height;
     // * see above
-    if (hitBox)
-    {
-      returnY -= (1 << SHIFT);
-    }
-    else
-    {
-      returnY -= 1;
-    }
+    returnY -= 1;
   }
   else
   {
@@ -798,7 +796,7 @@ typedef struct
 
   // Used to work out which pivot points
   // to use
-  Direction dir;
+  Direction whereWasCollision;
 
   // the points we'll look up
   // e.g. top row, bottom row, etc
@@ -869,7 +867,7 @@ HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *subOffsetOrNull, const char
   HitInfo rVal;
   memset(&rVal, 0, sizeof(HitInfo));
 
-  rVal.dir = dir;
+  rVal.whereWasCollision = dir;
   rVal.lastHitIndex = -1;
 
   // get a list of points to check for
@@ -923,14 +921,16 @@ HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *subOffsetOrNull, const char
   {
     rVal.subCheckPos[i] = GetPointOnSprite(spr, true, rVal.anchorH[i], rVal.anchorV[i]);
 
-    printf("__TEST__ Frame %d %s ypos on sprite %d\n", frameCounter, src, rVal.subCheckPos[i].y);
+    int dbgSprYPos = spr->subPos.y;
+    int dbgCheckYPos = rVal.subCheckPos[i].y;
+    // printf("__TEST__ Frame %d %s GetPoint (before offset): spr ypos %d/%d point on spr %d/%d \n", frameCounter, src, dbgSprYPos, dbgSprYPos >> SHIFT, dbgCheckYPos, dbgCheckYPos >> SHIFT);
 
     if (subOffsetOrNull != NULL)
     {
       AddVec(&rVal.subCheckPos[i], subOffsetOrNull);
     }
 
-    printf("__TEST__ Frame %d %s ypos with offset %d\n", frameCounter, src, rVal.subCheckPos[i].y);
+    // printf("__TEST__ Frame %d %s GetPoint (after offset): spr ypos %d/%d point on spr %d/%d \n", frameCounter, src, dbgSprYPos, dbgSprYPos >> SHIFT, dbgCheckYPos, dbgCheckYPos >> SHIFT);
 
     if (DEBUG_HITPOINTS)
     {
@@ -1006,7 +1006,7 @@ HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *subOffsetOrNull, const char
 void PrintHitInfo(HitInfo *info)
 {
 
-  printf("HitInfo dir %d hit = %d\n", info->dir, (int)info->hitSomething);
+  printf("HitInfo dir %d hit = %d\n", info->whereWasCollision, (int)info->hitSomething);
   printf("   ids = %d, %d, %d\n", info->blockID[0], info->blockID[1], info->blockID[2]);
   printf("   chX = %d, %d, %d\n", info->subCheckPos[0].x, info->subCheckPos[1].x, info->subCheckPos[2].x);
   printf("   chY = %d, %d, %d\n", info->subCheckPos[0].y, info->subCheckPos[1].y, info->subCheckPos[2].y);
@@ -1018,30 +1018,21 @@ void PrintHitInfo(HitInfo *info)
 void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
 {
 
-  // the direction we hit something at
-  Direction dir = info->dir;
-
   // simple early exit
   if (!info->hitSomething)
   {
-    if (horz)
-    {
-      AddSubPos2(spr, spr->subVelo.x, 0);
-    }
-    else
-    {
-      AddSubPos2(spr, 0, spr->subVelo.y);
-    }
-
     return;
   }
 
+  // the direction we hit something at
+  Direction whereWasCollision = info->whereWasCollision;
+  // and which of the 3 points generated a collision
   int idx = info->lastHitIndex;
 
-  if (dir == DIR_RIGHT)
+  if (whereWasCollision == DIR_RIGHT)
   {
 
-    printf("__TEST__ eject right\n");
+    printf("__TEST__ eject from right\n");
 
     // we hit something while moving right
     spr->subVelo.x = 0;
@@ -1069,10 +1060,10 @@ void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
     SetSubPos(spr, &sub);
   }
 
-  if (dir == DIR_LEFT)
+  if (whereWasCollision == DIR_LEFT)
   {
 
-    printf("__TEST__ eject left\n");
+    printf("__TEST__ eject from left\n");
 
     spr->subVelo.x = 0;
 
@@ -1096,10 +1087,10 @@ void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
     SetSubPos(spr, &sub);
   }
 
-  if (dir == DIR_UP)
+  if (whereWasCollision == DIR_UP)
   {
 
-    printf("__TEST__ eject up\n");
+    printf("__TEST__ eject from up\n");
 
     spr->subVelo.y = 0;
 
@@ -1123,10 +1114,12 @@ void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
     SetSubPos(spr, &sub);
   }
 
-  if (dir == DIR_DOWN)
+  if (whereWasCollision == DIR_DOWN)
   {
 
-    printf("__TEST__ Frame %d eject down from %d\n", frameCounter, spr->subPos.y);
+    int dbgBlockY = info->subEjectionPoint[idx].y;
+    int dbgPlayerY = spr->subPos.y;
+    printf("__TEST__ Frame %d eject from down blockypos %d/%d playerypos %d/%d\n", frameCounter, dbgBlockY, dbgBlockY >> SHIFT, dbgPlayerY, dbgPlayerY >> SHIFT);
 
     spr->subVelo.y = 0;
 
@@ -1148,7 +1141,7 @@ void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
     int subX = spr->subPos.x;
     Vec2 sub = {subX, subY};
     SetSubPos(spr, &sub);
-    printf("__TEST__ Frame %d ejected to %d\n", frameCounter, sub.y);
+    printf("__TEST__ Frame %d ejected to %d/%d\n", frameCounter, sub.y, sub.y >> SHIFT);
 
     bool groundedNow = CheckGrounded(spr);
     printf("__TEST__ post ejection ground check = %d\n", (int)groundedNow);
@@ -1167,9 +1160,8 @@ int TryMove(Sprite *spr, bool horz)
   bool movingDown = spr->subVelo.y > 0;
   bool movingUp = spr->subVelo.y < 0;
 
-  // when we do the sprite collision detection
-  // we might want to check where we'll *be* rather
-  // than where we *are*
+  // We're not using prediction by default
+  // but it could later be applied
   Vec2 subCheckOffset = {0, 0};
 
   Direction dir = DIR_RIGHT;
@@ -1187,8 +1179,6 @@ int TryMove(Sprite *spr, bool horz)
     {
       return 0;
     }
-    //__TEST__
-    // subCheckOffset.x = spr->subVelo.x;
   }
   else
   {
@@ -1204,8 +1194,6 @@ int TryMove(Sprite *spr, bool horz)
     {
       return 0;
     }
-    //__TEST__
-    // subCheckOffset.y = spr->subVelo.y;
   }
 
   HitInfo info = NewHitInfo(spr, dir, &subCheckOffset, "TryMove");
@@ -1219,6 +1207,7 @@ int TryMove(Sprite *spr, bool horz)
 
   if (info.hitSomething)
   {
+    // return sign of direction
     return (dir == DIR_RIGHT || dir == DIR_DOWN) ? 1 : -1;
   }
   return 0;
@@ -1227,8 +1216,8 @@ int TryMove(Sprite *spr, bool horz)
 bool CheckGrounded(Sprite *spr)
 {
 
-  // Check 1 subpix below the player
-  Vec2 subGroundCheckOffset = {0, 0};
+  // the hitbox ends on the very last subpixel
+  Vec2 subGroundCheckOffset = {0, 1};
   HitInfo nhi = NewHitInfo(spr, DIR_DOWN, &subGroundCheckOffset, "groundcheck");
 
   return nhi.hitSomething;
@@ -1466,117 +1455,126 @@ void SolvePlayer()
   // can introduce challenges when adding new features
   // if not designed with this in mind.
 
-  //
-  // X/Horizontal damp, clamp, move, eject
-  //
-
-  // Damp X Velo
-
-  if (movingRight && !inp->right)
+  if (!DEBUG_NO_X)
   {
-    // clamp it so we don't go into the negative
-    if (subDampX > spr->subVelo.x)
+    //
+    // X/Horizontal damp, clamp, move, eject
+    //
+
+    // Damp X Velo
+
+    if (movingRight && !inp->right)
     {
-      subDampX = spr->subVelo.x;
-    }
-    subDampX *= -1;
-  }
-  else if (movingLeft && !inp->left)
-  {
-    if (subDampX > -spr->subVelo.x)
-    {
-      subDampX = -spr->subVelo.x;
-    }
-    // it's already +ve so will be subbed from a neg
-  }
-  else
-  {
-    subDampX = 0;
-  }
-
-  // Clamp X Velo
-
-  if (spr->subVelo.x > maxSubSpeedX)
-  {
-    spr->subVelo.x = maxSubSpeedX;
-  }
-  else if (spr->subVelo.x < -maxSubSpeedX)
-  {
-    spr->subVelo.x = -maxSubSpeedX;
-  }
-
-  // Sanity check
-  if (Abs(spr->subVelo.x) > (TILE_SIZE_SUB))
-  {
-    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite's x velo exceeds a full tile size!");
-  }
-
-  // Apply X velo to X movement
-  AddVecInts(&spr->subPos, spr->subVelo.x, 0);
-
-  // Eject from any X Collisions
-  TryMove(spr, true);
-
-  //
-  // Y/Horizontal damp, clamp, move, eject
-  //
-
-  // Damp Y Velo
-
-  if (NO_GRAV)
-  {
-
-    if (movingDown && !inp->down)
-    {
-
-      // clamp it to avoid going into the negative
-      if (subDampY > spr->subVelo.y)
+      // clamp it so we don't go into the negative
+      if (subDampX > spr->subVelo.x)
       {
-        subDampY = spr->subVelo.y;
+        subDampX = spr->subVelo.x;
       }
-      subDampY *= -1;
+      subDampX *= -1;
     }
-    else if (movingUp && !inp->up)
+    else if (movingLeft && !inp->left)
     {
-
-      if (subDampY > -spr->subVelo.y)
+      if (subDampX > -spr->subVelo.x)
       {
-        subDampY = -spr->subVelo.y;
+        subDampX = -spr->subVelo.x;
       }
-      // already negative, so will be double negative
+      // it's already +ve so will be subbed from a neg
     }
     else
     {
-      subDampY = 0;
+      subDampX = 0;
     }
-  } // no-grav
 
-  // Clamp Y Velo
+    // Clamp X Velo
 
-  if (spr->subVelo.y > maxSubSpeedY)
+    if (spr->subVelo.x > maxSubSpeedX)
+    {
+      spr->subVelo.x = maxSubSpeedX;
+    }
+    else if (spr->subVelo.x < -maxSubSpeedX)
+    {
+      spr->subVelo.x = -maxSubSpeedX;
+    }
+
+    // Sanity check
+    if (Abs(spr->subVelo.x) > (TILE_SIZE_SUB))
+    {
+      vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite's x velo exceeds a full tile size!");
+    }
+
+    // Apply X velo to X movement
+    AddVecInts(&spr->subPos, spr->subVelo.x, 0);
+
+    // Eject from any X Collisions
+    TryMove(spr, true);
+
+  } // DEBUG_NO_X
+
+  int vBonk = 0;
+  if (!DEBUG_NO_Y)
   {
-    spr->subVelo.y = maxSubSpeedY;
-  }
-  else if (spr->subVelo.y < -maxSubSpeedY)
-  {
-    spr->subVelo.y = -maxSubSpeedY;
-  }
+    //
+    // Y/Horizontal damp, clamp, move, eject
+    //
 
-  // Add Velo to movement
-  AddVecInts(&spr->subPos, 0, spr->subVelo.y);
+    // Damp Y Velo
 
-  Vec2 subDamp = {subDampX, subDampY};
-  AddVec(&spr->subVelo, &subDamp);
+    if (NO_GRAV)
+    {
 
-  // Sanity check
-  if (Abs(spr->subVelo.y) > (TILE_SIZE_SUB))
-  {
-    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite's y velo exceeds a full tile size!");
-  }
+      if (movingDown && !inp->down)
+      {
 
-  // Eject from any Y collisions
-  TryMove(spr, true);
-  int vBonk = TryMove(spr, false);
+        // clamp it to avoid going into the negative
+        if (subDampY > spr->subVelo.y)
+        {
+          subDampY = spr->subVelo.y;
+        }
+        subDampY *= -1;
+      }
+      else if (movingUp && !inp->up)
+      {
+
+        if (subDampY > -spr->subVelo.y)
+        {
+          subDampY = -spr->subVelo.y;
+        }
+        // already negative, so will be double negative
+      }
+      else
+      {
+        subDampY = 0;
+      }
+    } // no-grav
+
+    // Clamp Y Velo
+
+    if (spr->subVelo.y > maxSubSpeedY)
+    {
+      spr->subVelo.y = maxSubSpeedY;
+    }
+    else if (spr->subVelo.y < -maxSubSpeedY)
+    {
+      spr->subVelo.y = -maxSubSpeedY;
+    }
+
+    // Add Velo to movement
+    AddVecInts(&spr->subPos, 0, spr->subVelo.y);
+
+    Vec2 subDamp = {subDampX, subDampY};
+    AddVec(&spr->subVelo, &subDamp);
+
+    // Sanity check
+    if (Abs(spr->subVelo.y) > (TILE_SIZE_SUB))
+    {
+      vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite's y velo exceeds a full tile size!");
+    }
+
+    // Eject from any Y collisions
+    TryMove(spr, true);
+    vBonk = TryMove(spr, false);
+
+  } // DEBUG_NO_Y
 
   spr->isGrounded = CheckGrounded(spr);
 
@@ -1588,7 +1586,6 @@ void SolvePlayer()
   {
     StopJumpBoost(spr, "bonk");
   }
-  
 }
 
 void DrawPlayer()
