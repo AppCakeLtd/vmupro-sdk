@@ -9,7 +9,7 @@
 const char *TAG = "[Platformer]";
 
 // float in air for collision testing
-const bool NO_GRAV = true;
+const bool NO_GRAV = false;
 const bool DEBUG_SPRITEBOX = false;
 const bool DEBUG_HITPOINTS = true;
 
@@ -49,6 +49,9 @@ const int SUBDAMPING_WALK = 8;
 const int SUBDAMPING_RUN = 6;
 const int SUBDAMPING_AIR = 4;
 
+// max frames for which the up force is applied
+const int MAX_JUMP_BOOST_FRAMES = 16;
+const int SUB_JUMPFORCE = 12 * 2;
 const int SUB_GRAVITY = 2;
 const int MAX_SUBFALLSPEED = 40;
 
@@ -146,6 +149,10 @@ typedef struct
   Vec2 subVelo;
   Vec2 lastSubVelo;
 
+  bool isGrounded;
+  bool onGroundLastFrame;
+  int jumpFrameNum;
+
   // config options
   bool isPlayer;
   Anchor_H anchorH;
@@ -216,6 +223,12 @@ typedef struct
 
 Player player;
 Mob testMob;
+
+//__TEST__
+//
+// Protos
+//
+bool CheckGrounded(Sprite *spr);
 
 // in screen spsace
 void DrawSpriteBoundingBox(Sprite *inSprite, uint16_t inCol)
@@ -373,11 +386,22 @@ int Abs(int inVal)
   return inVal;
 }
 
-bool SpriteInAir(Sprite *spr)
+bool MoveModeInAir(Sprite *spr)
 {
 
   MoveMode mm = spr->moveMode;
   if (mm == MM_FALL || mm == MM_JUMP)
+  {
+    return true;
+  }
+  return false;
+}
+
+bool MoveModeOnGround(Sprite *spr)
+{
+
+  MoveMode mm = spr->moveMode;
+  if (mm == MM_RUN || mm == MM_WALK)
   {
     return true;
   }
@@ -395,11 +419,13 @@ void SetMoveMode(Sprite *spr, MoveMode inMode)
 
   spr->moveMode = inMode;
 
-  vmupro_log(VMUPRO_LOG_INFO, TAG, "Move mode %d", (int)inMode);
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Move mode %d", frameCounter, (int)inMode);
 }
 
 void ResetSprite(Sprite *spr)
 {
+
+  memset(spr, 0, sizeof(Sprite));
 
   spr->img = &img_player_idle_raw;
 
@@ -414,7 +440,10 @@ void ResetSprite(Sprite *spr)
   spr->lastSubVelo = ZeroVec();
 
   SetMoveMode(spr, MM_FALL);
-  memset(&spr->input, 0, sizeof(Inputs));
+
+  spr->isGrounded = false;
+  spr->onGroundLastFrame = false;
+  spr->jumpFrameNum = 0;
 
   // temporary config stuff
   Vec2 worldStartPos = {80, MAP_HEIGHT_PIXELS - (TILE_SIZE_PX * 4)};
@@ -473,6 +502,8 @@ void UpdatePlayerInputs()
   inp->down = vmupro_btn_held(DPad_Down);
   inp->left = vmupro_btn_held(DPad_Left);
   inp->right = vmupro_btn_held(DPad_Right);
+  inp->jump = vmupro_btn_held(Btn_B);
+  inp->run = vmupro_btn_held(Btn_A);
 }
 
 void DrawLevelBlock(int x, int y)
@@ -585,6 +616,7 @@ void EndOfFrame(Sprite *inSpr)
 {
   inSpr->lastSubPos = inSpr->subPos;
   inSpr->lastSubVelo = inSpr->subVelo;
+  inSpr->onGroundLastFrame = inSpr->isGrounded;
   // inSpr->lastSubAccel = inSpr->subAccel;
 }
 
@@ -753,13 +785,6 @@ Vec2 GetPointOnSprite(Sprite *spr, bool hitBox, Anchor_H anchorH, Anchor_V ancho
   return returnVal;
 }
 
-void ApplyGravity(Sprite *inSpr, Vec2 *accel)
-{
-
-  if (NO_GRAV)
-    return;
-}
-
 typedef enum
 {
   DIR_UP,
@@ -837,7 +862,8 @@ Vec2 GetTileSubPosFromRowAndCol(Vec2 *rowAndcol)
 // subOffsetOrNull adds an offset to where we check for collisions
 // e.g. when moving right we check currentPos.x + velo.x
 // for where we'll be, rather than where we are
-HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *subOffsetOrNull)
+// Used for for collision and for ground checks
+HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *subOffsetOrNull, const char *src)
 {
 
   HitInfo rVal;
@@ -897,16 +923,21 @@ HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *subOffsetOrNull)
   {
     rVal.subCheckPos[i] = GetPointOnSprite(spr, true, rVal.anchorH[i], rVal.anchorV[i]);
 
+    printf("__TEST__ Frame %d %s ypos on sprite %d\n", frameCounter, src, rVal.subCheckPos[i].y);
+
     if (subOffsetOrNull != NULL)
     {
       AddVec(&rVal.subCheckPos[i], subOffsetOrNull);
     }
 
+    printf("__TEST__ Frame %d %s ypos with offset %d\n", frameCounter, src, rVal.subCheckPos[i].y);
+
     if (DEBUG_HITPOINTS)
     {
       // let's debug to screen
       Vec2 screenPos = Sub2Screen(&rVal.subCheckPos[i]);
-      vmupro_draw_rect(screenPos.x - 2, screenPos.y - 2, screenPos.x + 4, screenPos.y + 4, VMUPRO_COLOR_WHITE);
+      uint16_t col = VMUPRO_COLOR_WHITE;
+      vmupro_draw_rect(screenPos.x - 2, screenPos.y - 2, screenPos.x + 4, screenPos.y + 4, col);
     }
   }
 
@@ -1033,8 +1064,6 @@ void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
       subX -= 0;
     }
 
-    printf("__TEST__ Ejecting to subx %d\n", subX);
-
     int subY = spr->subPos.y;
     Vec2 sub = {subX, subY};
     SetSubPos(spr, &sub);
@@ -1097,7 +1126,7 @@ void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
   if (dir == DIR_DOWN)
   {
 
-    printf("__TEST__ eject down\n");
+    printf("__TEST__ Frame %d eject down from %d\n", frameCounter, spr->subPos.y);
 
     spr->subVelo.y = 0;
 
@@ -1119,11 +1148,18 @@ void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
     int subX = spr->subPos.x;
     Vec2 sub = {subX, subY};
     SetSubPos(spr, &sub);
+    printf("__TEST__ Frame %d ejected to %d\n", frameCounter, sub.y);
+
+    bool groundedNow = CheckGrounded(spr);
+    printf("__TEST__ post ejection ground check = %d\n", (int)groundedNow);
   }
 }
 
 // Attempts to apply velo to pos, taking collisions into account
-void TryMove(Sprite *spr, bool horz)
+// returns the sign of the movement direction
+// e.g. -1 for jump, 1 for ground
+// e.g. -1 for left, 1 for right
+int TryMove(Sprite *spr, bool horz)
 {
 
   bool movingRight = spr->subVelo.x > 0;
@@ -1149,9 +1185,10 @@ void TryMove(Sprite *spr, bool horz)
     }
     else
     {
-      return;
+      return 0;
     }
-    subCheckOffset.x = spr->subVelo.x;
+    //__TEST__
+    // subCheckOffset.x = spr->subVelo.x;
   }
   else
   {
@@ -1165,12 +1202,13 @@ void TryMove(Sprite *spr, bool horz)
     }
     else
     {
-      return;
+      return 0;
     }
-    subCheckOffset.y = spr->subVelo.y;
+    //__TEST__
+    // subCheckOffset.y = spr->subVelo.y;
   }
 
-  HitInfo info = NewHitInfo(spr, dir, &subCheckOffset);
+  HitInfo info = NewHitInfo(spr, dir, &subCheckOffset, "TryMove");
 
   if (info.hitSomething)
   {
@@ -1178,7 +1216,154 @@ void TryMove(Sprite *spr, bool horz)
   }
 
   EjectHitInfo(spr, &info, horz);
+
+  if (info.hitSomething)
+  {
+    return (dir == DIR_RIGHT || dir == DIR_DOWN) ? 1 : -1;
+  }
+  return 0;
 }
+
+bool CheckGrounded(Sprite *spr)
+{
+
+  // Check 1 subpix below the player
+  Vec2 subGroundCheckOffset = {0, 0};
+  HitInfo nhi = NewHitInfo(spr, DIR_DOWN, &subGroundCheckOffset, "groundcheck");
+
+  return nhi.hitSomething;
+}
+
+// the first part of the jump, triggering it
+void TryJump(Sprite *spr)
+{
+
+  if (!spr->input.jump)
+  {
+    return;
+  }
+
+  if (SpriteJumping(spr))
+  {
+    return;
+  }
+  if (!spr->isGrounded)
+  {
+    return;
+  }
+
+  SetMoveMode(spr, MM_JUMP);
+  spr->jumpFrameNum = 0;
+}
+
+// prevent the jump button applying further up force
+void StopJumpBoost(Sprite *spr, const char *src)
+{
+  if (spr->jumpFrameNum < MAX_JUMP_BOOST_FRAMES)
+  {
+    printf("__TEST__ stop jump boost %s\n", src);
+    spr->jumpFrameNum = MAX_JUMP_BOOST_FRAMES;
+  }
+}
+
+void TryContinueJump(Sprite *spr)
+{
+
+  if (!SpriteJumping(spr))
+  {
+    return;
+  }
+  if (spr->jumpFrameNum >= MAX_JUMP_BOOST_FRAMES)
+  {
+    return;
+  }
+
+  // we're jumping, and we've not run out of boost frames
+
+  if (spr->input.jump)
+  {
+    // add jump velo
+    spr->subVelo.y -= SUB_JUMPFORCE;
+    printf("__TEST__ Frame %d Applying jump on frame %d\n", frameCounter, spr->jumpFrameNum);
+    spr->jumpFrameNum++;
+  }
+  else
+  {
+    // user has released jump, prevent further re-presses
+    // until we land
+    StopJumpBoost(spr, "fc");
+  }
+}
+
+//__TEST__
+// e.g. walking off an edge
+void CheckFallen(Sprite *spr)
+{
+
+  // we were walking/running
+  // we were on the ground
+  // we are no longer on the ground
+
+  if (!MoveModeOnGround(spr))
+  {
+    return;
+  }
+  if (!spr->isGrounded)
+  {
+    return;
+  }
+  if (!spr->onGroundLastFrame)
+  {
+    return;
+  }
+
+  // we were on the ground, but are no longer
+  // we're not jumping...
+  // so we're falling
+  printf("__TEST__ walked off a ledge\n");
+  SetMoveMode(spr, MM_FALL);
+}
+
+void CheckLanded(Sprite *spr)
+{
+
+  if (!spr->isGrounded)
+  {
+    return;
+  }
+  // let's also check if movemode is air
+  // in case the character jumped and landed on the
+  // same frame due to odd geometry, etc
+
+  bool someKindaOffTheGround = (!spr->onGroundLastFrame) || MoveModeInAir(spr);
+  if (!someKindaOffTheGround)
+  {
+    return;
+  }
+
+  printf("__TEST__ Frame %d landed @ %d/%d\n", frameCounter, spr->subPos.y, spr->subPos.y >> SHIFT);
+  // we're on the ground
+  // we weren't during the last frame
+  if (spr->input.run)
+  {
+    SetMoveMode(spr, MM_RUN);
+  }
+  else
+  {
+    SetMoveMode(spr, MM_WALK);
+  }
+}
+
+// basic order of operations
+// - use state from previous frame, since it's fully resolved
+// - check inputs
+// - apply acceleration to velo
+// - apply X velo to position
+// - resolve horz collisions
+// - apply Y velo to positions
+// - resolve vert collisions
+// - check ground state
+// - check landing, etc
 
 void SolvePlayer()
 {
@@ -1186,16 +1371,26 @@ void SolvePlayer()
   Sprite *spr = &player.spr;
   Inputs *inp = &spr->input;
 
+  // set up all of our state values
+  // as the result of the previous frame
+  // i.e. we don't want to check the grounded state now
+  // then perform a jump + land in the same frame.
+
   MoveMode mm = spr->moveMode;
-  bool inAir = SpriteInAir(spr);
+  bool inAir = MoveModeInAir(spr);
   bool isJumping = SpriteJumping(spr);
 
   int maxSubSpeedX = GetMaxXSubSpeedForMode(mm, spr->wasRunningLastTimeWasOnGround);
   int maxSubSpeedY = MAX_SUBFALLSPEED;
+
   int subAccelX = GetXSubAccelForMode(mm, spr->wasRunningLastTimeWasOnGround);
-  int subAccelY = SUB_GRAVITY;
+  int subAccelY = spr->isGrounded ? 0 : SUB_GRAVITY;
+
   int subDampX = GetXDampingForMode(mm, spr->wasRunningLastTimeWasOnGround);
   int subDampY = 0;
+
+  TryJump(spr);
+  TryContinueJump(spr);
 
   bool playerXInput = inp->right || inp->left;
   bool playerYInput = inp->up || inp->down;
@@ -1257,15 +1452,26 @@ void SolvePlayer()
     }
   }
 
+  // Finalise accelration
   Vec2 subAccel = {subAccelX, subAccelY};
-  ApplyGravity(spr, &subAccel);
-
-  // apply acceleration to the velo
   AddVec(&spr->subVelo, &subAccel);
 
+  // We'll split the movement + collision ejection
+  // into x & y components.
+  // without this we might e.g. land inside the ground
+  // then the x ejection routine would zip you off to the side
+  // or vice versa
+  // We could also pre-predict if we're about to hit something
+  // based on (pos + velo) and clamp accordingly, but this
+  // can introduce challenges when adding new features
+  // if not designed with this in mind.
+
   //
-  // Dampen
+  // X/Horizontal damp, clamp, move, eject
   //
+
+  // Damp X Velo
+
   if (movingRight && !inp->right)
   {
     // clamp it so we don't go into the negative
@@ -1287,6 +1493,35 @@ void SolvePlayer()
   {
     subDampX = 0;
   }
+
+  // Clamp X Velo
+
+  if (spr->subVelo.x > maxSubSpeedX)
+  {
+    spr->subVelo.x = maxSubSpeedX;
+  }
+  else if (spr->subVelo.x < -maxSubSpeedX)
+  {
+    spr->subVelo.x = -maxSubSpeedX;
+  }
+
+  // Sanity check
+  if (Abs(spr->subVelo.x) > (TILE_SIZE_SUB))
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite's x velo exceeds a full tile size!");
+  }
+
+  // Apply X velo to X movement
+  AddVecInts(&spr->subPos, spr->subVelo.x, 0);
+
+  // Eject from any X Collisions
+  TryMove(spr, true);
+
+  //
+  // Y/Horizontal damp, clamp, move, eject
+  //
+
+  // Damp Y Velo
 
   if (NO_GRAV)
   {
@@ -1316,21 +1551,7 @@ void SolvePlayer()
     }
   } // no-grav
 
-  Vec2 subDamp = {subDampX, subDampY};
-  AddVec(&spr->subVelo, &subDamp);
-
-  //
-  // Clamp
-  //
-
-  if (spr->subVelo.x > maxSubSpeedX)
-  {
-    spr->subVelo.x = maxSubSpeedX;
-  }
-  else if (spr->subVelo.x < -maxSubSpeedX)
-  {
-    spr->subVelo.x = -maxSubSpeedX;
-  }
+  // Clamp Y Velo
 
   if (spr->subVelo.y > maxSubSpeedY)
   {
@@ -1341,22 +1562,33 @@ void SolvePlayer()
     spr->subVelo.y = -maxSubSpeedY;
   }
 
-  // some sanity checks?
-  if (Abs(spr->subVelo.x) > (TILE_SIZE_SUB))
-  {
-    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite's x velo exceeds a full tile size!");
-  }
+  // Add Velo to movement
+  AddVecInts(&spr->subPos, 0, spr->subVelo.y);
+
+  Vec2 subDamp = {subDampX, subDampY};
+  AddVec(&spr->subVelo, &subDamp);
+
+  // Sanity check
   if (Abs(spr->subVelo.y) > (TILE_SIZE_SUB))
   {
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite's y velo exceeds a full tile size!");
   }
 
-  // Add velo to pos
-  // AddVec(&spr->subPos, &spr->subVelo);
-
-  // Start with H movement
+  // Eject from any Y collisions
   TryMove(spr, true);
-  TryMove(spr, false);
+  int vBonk = TryMove(spr, false);
+
+  spr->isGrounded = CheckGrounded(spr);
+
+  CheckLanded(spr);
+
+  // head or feet bonked
+  // prevent jump boost
+  if (spr->isGrounded && vBonk != 0)
+  {
+    StopJumpBoost(spr, "bonk");
+  }
+  
 }
 
 void DrawPlayer()
@@ -1391,7 +1623,7 @@ void DrawPlayer()
   img = player.spr.img;
 
   vmupro_drawflags_t flags = (spr->facingRight * VMUPRO_DRAWFLAGS_FLIP_H) | (goingUp * VMUPRO_DRAWFLAGS_FLIP_V);
-  uint16_t mask = *(uint16_t*)&img->data[0];
+  uint16_t mask = *(uint16_t *)&img->data[0];
   vmupro_blit_buffer_transparent(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height, mask, flags);
 }
 
@@ -1443,13 +1675,14 @@ void app_main(void)
     {
       printf("PlayerX world:%d sub: %d \n", GetWorldPos(&player.spr).x, GetSubPos(&player.spr).x);
       printf("PlayerY world:%d sub: %d \n", GetWorldPos(&player.spr).y, GetSubPos(&player.spr).y);
+      printf("Player grounded? %d\n", (int)player.spr.isGrounded);
     }
 
     if (vmupro_btn_pressed(Btn_B))
     {
-      player.spr.anchorV = (player.spr.anchorV + 1) % (3);
-      // player.spr.anchorH = (player.spr.anchorH + 1) % (3);
-      OnSpriteMoved(&player.spr);
+      // player.spr.anchorV = (player.spr.anchorV + 1) % (3);
+      //  player.spr.anchorH = (player.spr.anchorH + 1) % (3);
+      // OnSpriteMoved(&player.spr);
     }
 
     frameCounter++;
