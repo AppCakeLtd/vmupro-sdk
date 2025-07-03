@@ -65,7 +65,7 @@ typedef struct
 {
   uint32_t widthInTiles;
   uint32_t heightInTiles;
-  uint32_t blockData[];
+  uint8_t blockData[];
 } LevelData;
 
 LevelData *currentLevel = NULL;
