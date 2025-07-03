@@ -57,7 +57,7 @@ const int SUBDAMPING_AIR = 4;
 
 // max frames for which the up force is applied
 const int MAX_JUMP_BOOST_FRAMES = 16;
-const int SUB_JUMPFORCE = 16;
+const int SUB_JUMPFORCE = 22;
 const int SUB_GRAVITY = 6;
 const int MAX_SUBFALLSPEED = 40;
 
@@ -467,7 +467,7 @@ void LoadLevel(int levelNum)
 {
 
   levelBG = (LevelData *)level_1_layer_0_data;
-  levelCols = (LevelData*)level_1_layer_1_data;
+  levelCols = (LevelData *)level_1_layer_1_data;
   ResetSprite(&player.spr);
 }
 
@@ -478,7 +478,7 @@ void LoadLevel(int levelNum)
 uint32_t GetBlockIDAtColRow(int blockCol, int blockRow, int layer)
 {
 
-  LevelData * level = layer == 0? levelBG : levelCols;
+  LevelData *level = layer == 0 ? levelBG : levelCols;
 
   if (level == NULL)
     return BLOCK_NULL;
@@ -519,7 +519,7 @@ void UpdatePlayerInputs()
 void DrawLevelBlock(int x, int y, int layer)
 {
 
-  LevelData * level = layer == 0? levelBG : levelCols;
+  LevelData *level = layer == 0 ? levelBG : levelCols;
 
   if (level == NULL)
     return;
@@ -540,8 +540,17 @@ void DrawLevelBlock(int x, int y, int layer)
   const Img *sheet = &img_tilemap_raw;
   vmupro_drawflags_t flags = VMUPRO_DRAWFLAGS_NORMAL;
   vmupro_color_t transColor = VMUPRO_COLOR_BLACK;
-  //vmupro_blit_tile(sheet->data, pixTargX - camX, pixTargY - camY, pixSrcX, pixSrcY, TILE_SIZE_PX, TILE_SIZE_PX, sheet->width);
-  vmupro_blit_tile_advanced(sheet->data, pixTargX - camX, pixTargY - camY, pixSrcX, pixSrcY, TILE_SIZE_PX, TILE_SIZE_PX, sheet->width, transColor, flags );
+  // vmupro_blit_tile(sheet->data, pixTargX - camX, pixTargY - camY, pixSrcX, pixSrcY, TILE_SIZE_PX, TILE_SIZE_PX, sheet->width);
+
+  // bit of a hack, but hey, everything at or below row 18 in the tilemap is transparent
+  if (pixSrcY >= 18 * TILE_SIZE_PX)
+  {
+    vmupro_blit_tile_advanced(sheet->data, pixTargX - camX, pixTargY - camY, pixSrcX, pixSrcY, TILE_SIZE_PX, TILE_SIZE_PX, sheet->width, transColor, flags);
+  }
+  else
+  {
+    vmupro_blit_tile(sheet->data, pixTargX - camX, pixTargY - camY, pixSrcX, pixSrcY, TILE_SIZE_PX, TILE_SIZE_PX, sheet->width);
+  }
 }
 
 // center the camera on the player
