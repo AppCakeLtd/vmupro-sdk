@@ -1272,7 +1272,7 @@ void StopJumpBoost(Sprite *spr, const char *src)
 {
   if (spr->jumpFrameNum < MAX_JUMP_BOOST_FRAMES)
   {
-    printf("__DBG__ jump boost canceled, src=%s\n", src);
+    printf("__DBG__ jump boost canceled, src='%s'\n", src);
     spr->jumpFrameNum = MAX_JUMP_BOOST_FRAMES;
   }
 }
@@ -1302,7 +1302,7 @@ void TryContinueJump(Sprite *spr)
   {
     // user has released jump, prevent further re-presses
     // until we land
-    StopJumpBoost(spr, "fc");
+    StopJumpBoost(spr, "ReachedFrameMax");
   }
 }
 
@@ -1610,7 +1610,7 @@ void SolvePlayer()
   // prevent jump boost
   if (spr->isGrounded && vBonk != 0)
   {
-    StopJumpBoost(spr, "bonk");
+    StopJumpBoost(spr, "LandedOrHeadBonk");
   }
 }
 
