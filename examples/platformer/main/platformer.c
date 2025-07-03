@@ -5,6 +5,7 @@
 #include "vmupro_sdk.h"
 #include "images/images.h"
 #include "images/level_1_layer_0.h"
+#include "images/level_1_layer_1.h"
 
 const char *TAG = "[Platformer]";
 
@@ -14,6 +15,9 @@ const bool DEBUG_SPRITEBOX = false;
 const bool DEBUG_HITPOINTS = true;
 const bool DEBUG_NO_X = false;
 const bool DEBUG_NO_Y = false;
+
+#define LAYER_BG 0
+#define LAYER_COLS 1
 
 // shift fixed point maths to/from world/subpixel coords
 #define SHIFT 4
@@ -53,8 +57,8 @@ const int SUBDAMPING_AIR = 4;
 
 // max frames for which the up force is applied
 const int MAX_JUMP_BOOST_FRAMES = 16;
-const int SUB_JUMPFORCE = 12;
-const int SUB_GRAVITY = 4;
+const int SUB_JUMPFORCE = 16;
+const int SUB_GRAVITY = 6;
 const int MAX_SUBFALLSPEED = 40;
 
 int camX = 0;
@@ -68,7 +72,8 @@ typedef struct
   uint8_t blockData[];
 } LevelData;
 
-LevelData *currentLevel = NULL;
+LevelData *levelBG = NULL;
+LevelData *levelCols = NULL;
 
 typedef struct
 {
@@ -461,7 +466,8 @@ void ResetSprite(Sprite *spr)
 void LoadLevel(int levelNum)
 {
 
-  currentLevel = (LevelData *)level_1_layer_0_data;
+  levelBG = (LevelData *)level_1_layer_0_data;
+  levelCols = (LevelData*)level_1_layer_1_data;
   ResetSprite(&player.spr);
 }
 
@@ -469,10 +475,12 @@ void LoadLevel(int levelNum)
 // note: the .map file uses 0x00 for blank spots
 // so we'll always sub 1 to get a 0-indexed
 // value into our spritesheet/atlas
-uint32_t GetBlockIDAtColRow(int blockCol, int blockRow)
+uint32_t GetBlockIDAtColRow(int blockCol, int blockRow, int layer)
 {
 
-  if (currentLevel == NULL)
+  LevelData * level = layer == 0? levelBG : levelCols;
+
+  if (level == NULL)
     return BLOCK_NULL;
 
   // bounds check the input values
@@ -481,14 +489,14 @@ uint32_t GetBlockIDAtColRow(int blockCol, int blockRow)
     return BLOCK_NULL;
   }
 
-  if (blockCol >= currentLevel->widthInTiles || blockRow >= currentLevel->heightInTiles)
+  if (blockCol >= level->widthInTiles || blockRow >= level->heightInTiles)
   {
     return BLOCK_NULL;
   }
 
-  uint32_t offset = (blockRow * currentLevel->widthInTiles) + blockCol;
+  uint32_t offset = (blockRow * level->widthInTiles) + blockCol;
 
-  uint32_t block = currentLevel->blockData[offset];
+  uint32_t block = level->blockData[offset];
   return block - 1;
 }
 
@@ -508,13 +516,15 @@ void UpdatePlayerInputs()
   inp->run = vmupro_btn_held(Btn_A);
 }
 
-void DrawLevelBlock(int x, int y)
+void DrawLevelBlock(int x, int y, int layer)
 {
 
-  if (currentLevel == NULL)
+  LevelData * level = layer == 0? levelBG : levelCols;
+
+  if (level == NULL)
     return;
 
-  uint32_t blockId = GetBlockIDAtColRow(x, y);
+  uint32_t blockId = GetBlockIDAtColRow(x, y, layer);
 
   if (blockId == BLOCK_NULL)
   {
@@ -583,7 +593,7 @@ void DrawBackground()
   vmupro_blit_scrolling_background(img->data, img->width, img->height, bgScrollX, bgScrollY, SCREEN_WIDTH, SCREEN_HEIGHT);
 }
 
-void DrawGroundtiles()
+void DrawGroundtiles(int layer)
 {
 
   // work out the x/y range based on camera pos
@@ -605,7 +615,7 @@ void DrawGroundtiles()
     for (int x = 0; x < 17; x++)
     {
       int realXTile = x + leftTileIndex;
-      DrawLevelBlock(realXTile, realYTile);
+      DrawLevelBlock(realXTile, realYTile, layer);
     }
   }
 }
@@ -963,7 +973,7 @@ HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *subOffsetOrNull, const char
     // just the literal tile indexes into the x/y grid
     Vec2 tileRowAndCol = GetTileRowAndColFromSubPos(&rVal.subCheckPos[i]);
 
-    int blockId = GetBlockIDAtColRow(tileRowAndCol.x, tileRowAndCol.y);
+    int blockId = GetBlockIDAtColRow(tileRowAndCol.x, tileRowAndCol.y, LAYER_COLS);
     if (blockId != BLOCK_NULL)
     {
 
@@ -1670,7 +1680,8 @@ void app_main(void)
     SolveCamera();
 
     DrawBackground();
-    DrawGroundtiles();
+    DrawGroundtiles(LAYER_BG);
+    DrawGroundtiles(LAYER_COLS);
 
     UpdatePlayerInputs();
     SolvePlayer();
