@@ -53,8 +53,8 @@ const int SUBDAMPING_AIR = 4;
 
 // max frames for which the up force is applied
 const int MAX_JUMP_BOOST_FRAMES = 16;
-const int SUB_JUMPFORCE = 12 * 2;
-const int SUB_GRAVITY = 2;
+const int SUB_JUMPFORCE = 12;
+const int SUB_GRAVITY = 4;
 const int MAX_SUBFALLSPEED = 40;
 
 int camX = 0;
@@ -1642,10 +1642,10 @@ void DrawPlayer()
     OnSpriteMoved(&player.spr);
   }
 
-  // update the img pointer
+  // update the img pointer, in case it's changed due to anims
   img = player.spr.img;
 
-  vmupro_drawflags_t flags = (spr->facingRight * VMUPRO_DRAWFLAGS_FLIP_H) | (goingUp * VMUPRO_DRAWFLAGS_FLIP_V);
+  vmupro_drawflags_t flags = (!spr->facingRight * VMUPRO_DRAWFLAGS_FLIP_H) | (goingUp * VMUPRO_DRAWFLAGS_FLIP_V);
   uint16_t mask = *(uint16_t *)&img->data[0];
   vmupro_blit_buffer_transparent(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height, mask, flags);
 }
