@@ -632,8 +632,8 @@ void DrawBackground()
 
   Img *img = &img_bg_1_raw;
 
-  int bgScrollX = (camX * 5) / 4;
-  int bgScrollY = (camY * 5) / 4;
+  int bgScrollX = (camX * 4) / 5;
+  int bgScrollY = (camY * 4) / 5;
 
   vmupro_blit_scrolling_background(img->data, img->width, img->height, bgScrollX, bgScrollY, SCREEN_WIDTH, SCREEN_HEIGHT);
 }
