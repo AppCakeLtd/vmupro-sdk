@@ -431,15 +431,18 @@ void SetMoveMode(Sprite *spr, MoveMode inMode)
   vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Move mode %d", frameCounter, (int)inMode);
 }
 
-Vec2 GetPlayerWorldStartPos(){
+Vec2 GetPlayerWorldStartPos()
+{
   Vec2 rVal = {80, MAP_HEIGHT_PIXELS - (TILE_SIZE_PX * 4)};
   return rVal;
 }
 
-bool CheckFellOffMap(){
+bool CheckFellOffMap()
+{
 
-  Vec2 topleftPoint = GetPointOnSprite(&player.spr, false, player.spr.anchorH, player.spr.anchorV );
-  if ( topleftPoint.y > MAP_HEIGHT_PIXELS + TILE_SIZE_PX ){
+  Vec2 topleftPoint = GetPointOnSprite(&player.spr, false, player.spr.anchorH, player.spr.anchorV);
+  if (topleftPoint.y > MAP_HEIGHT_PIXELS + TILE_SIZE_PX)
+  {
     printf("__TEST__ player fell off map\n");
     Vec2 worldStartPos = GetPlayerWorldStartPos();
     SetWorldPos(&player.spr, &worldStartPos);
@@ -898,25 +901,63 @@ Vec2 GetTileSubPosFromRowAndCol(Vec2 *rowAndcol)
   return returnVal;
 }
 
-bool IsBlockID2Sided(int blockId){
+bool IsBlockID2Sided(int blockId)
+{
+
+  if (blockId >= 48 && blockId <= 50)
+    return true;
+  if (blockId >= 59 && blockId <= 60)
+    return true;
+  if (blockId >= 72 && blockId <= 74)
+    return true;
+  if (blockId >= 83 && blockId <= 84)
+    return true;
+  if (blockId >= 144)
+    return true;
+
   return false;
 }
 
-bool Ignore2SidedBlock(int blockId, int layer, Sprite *spr)
+bool Ignore2SidedBlock(int blockId, int layer, Sprite *spr, Vec2 *tileSubPos)
 {
 
-  if ( !IsBlockID2Sided(blockId) ) return false;
+  // if it's not 2-sideable, just early exit
+  if (!IsBlockID2Sided(blockId))
+    return false;
 
-  // it's 2 sided, we can ignore it unless
-  // the player is moving down
   bool movingDown = spr->subVelo.y > 0;
+  bool movingUp = spr->subVelo.y < 0;
+  bool movingHorz = spr->subVelo.x != 0;
+  bool movingVert = spr->subVelo.y != 0;
 
-  if (!movingDown) return false;
+  // Opt 1:
+  // We've moving horizointally through one
+  // e.g. we're on the ground, and it's around head height
+  // we pass through it as long as it's *above* our feet
+  // so the ground is unaffected
+  // tldr; walking through it horizontally
 
-  return true;
+  Vec2 subFootPos = GetPointOnSprite(spr, true, ANCHOR_HMID, ANCHOR_VBOTTOM);
+  bool higher = tileSubPos->y < subFootPos.y;
+
+  if (movingHorz && !movingVert && higher)
+  {
+    //printf("__TEST__ mr %d vs %d\n", subFootPos.y, tileSubPos->y);
+    return true;
+  }
+
+  // Opt2:
+  // We're just jumping through it
+
+  if (movingUp)
+  {    
+    return true;
+  }
+
+  // if (movingDown) return false;
+
+  return false;
 }
-
-
 
 // subOffsetOrNull adds an offset to where we check for collisions
 // e.g. when moving right we check currentPos.x + velo.x
@@ -1028,21 +1069,22 @@ HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *subOffsetOrNull, const char
     if (blockId != BLOCK_NULL)
     {
 
-      bool ignore = Ignore2SidedBlock( blockId, LAYER_COLS, spr);
+      // essentially we're rounding down and then back up
+      Vec2 tileSubPos = GetTileSubPosFromRowAndCol(&tileRowAndCol);
 
-      if (ignore ) {
+      bool ignore = Ignore2SidedBlock(blockId, LAYER_COLS, spr, &tileSubPos);
+
+      if (ignore)
+      {
         printf("__TEST__ ignoring 2 sided block\n");
-        continue;;
+        continue;
+        ;
       }
-
 
       rVal.hitSomething = true;
 
       rVal.blockID[i] = blockId;
       rVal.lastHitIndex = i;
-
-      // essentially we're rounding down and then back up
-      Vec2 tileSubPos = GetTileSubPosFromRowAndCol(&tileRowAndCol);
 
       // default to the hit point being wherever we cheked on the sprite
       // we'll tweak the x/y in a sec, depending on where we hit the block
