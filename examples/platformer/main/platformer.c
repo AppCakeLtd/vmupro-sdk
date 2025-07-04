@@ -13,7 +13,7 @@ const char *TAG = "[Platformer]";
 const bool NO_GRAV = false;
 const bool DEBUG_SPRITEBOX = false;
 const bool DEBUG_HITPOINTS = true;
-const bool DEBUG_NO_X = true;
+const bool DEBUG_NO_X = false;
 const bool DEBUG_NO_Y = false;
 
 #define LAYER_BG 0
@@ -976,7 +976,7 @@ bool Ignore2SidedBlock(int blockId, int layer, Sprite *spr, Vec2 *tileSubPos)
 // e.g. when moving right we check currentPos.x + velo.x
 // for where we'll be, rather than where we are
 // Used for for collision and for ground checks
-void NewHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull, const char *src)
+void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull, const char *src)
 {
 
   rVal->whereWasCollision = dir;
@@ -1145,7 +1145,7 @@ void PrintHitInfo(HitInfo *info)
 }
 
 // Perform the ejection part after collecting hit info
-void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
+void GetEjectionInfo(Sprite *spr, HitInfo *info, bool horz)
 {
 
   // simple early exit
@@ -1289,7 +1289,7 @@ void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
 // returns the sign of the movement direction
 // e.g. -1 for jump, 1 for ground
 // e.g. -1 for left, 1 for right
-int TryMove(HitInfo *info, Sprite *spr, bool horz)
+int GetHitInfoAndEjectionInfo(HitInfo *info, Sprite *spr, bool horz)
 {
 
   memset(info, 0, sizeof(HitInfo));
@@ -1335,14 +1335,14 @@ int TryMove(HitInfo *info, Sprite *spr, bool horz)
     }
   }
 
-  NewHitInfo(info, spr, dir, &subCheckOffset, "TryMove");
+  GetHitInfo(info, spr, dir, &subCheckOffset, "TryMove");
 
   if (info->hitSomething)
   {
     // PrintHitInfo(&info);
   }
 
-  EjectHitInfo(spr, info, horz);
+  GetEjectionInfo(spr, info, horz);
 
   if (info->hitSomething)
   {
@@ -1359,7 +1359,7 @@ bool CheckGrounded(Sprite *spr)
   Vec2 subGroundCheckOffset = {0, 1};
   HitInfo nhi;
   memset(&nhi, 0, sizeof(HitInfo));
-  NewHitInfo(&nhi, spr, DIR_DOWN, &subGroundCheckOffset, "groundcheck");
+  GetHitInfo(&nhi, spr, DIR_DOWN, &subGroundCheckOffset, "groundcheck");
 
   return nhi.hitSomething;
 }
@@ -1657,7 +1657,7 @@ void SolvePlayer()
     AddSubPos2(spr, spr->subVelo.x, 0);
 
     // Eject from any X Collisions
-    TryMove(&xHitInfo, spr, true);
+    GetHitInfoAndEjectionInfo(&xHitInfo, spr, true);
 
   } // DEBUG_NO_X
 
@@ -1723,7 +1723,7 @@ void SolvePlayer()
     AddSubPos2(spr, 0, spr->subVelo.y);
 
     // Eject from any Y collisions
-    vBonk = TryMove(&yHitInfo, spr, false);
+    vBonk = GetHitInfoAndEjectionInfo(&yHitInfo, spr, false);
 
   } // DEBUG_NO_Y
 
@@ -1740,54 +1740,57 @@ void SolvePlayer()
   // snap to x and y
   if (xHitInfo.hitSomething && !yHitInfo.hitSomething)
   {
-    printf("hit on x only\n");
+    printf("__TEST__ Frame %d hit on X only\n", frameCounter);
     SetSubPosX(spr, xHitInfo.snapPoint.x);
     spr->subVelo.x = 0;
   }
   else if (!xHitInfo.hitSomething && yHitInfo.hitSomething)
   {
-    printf("hit on y only\n");
+    printf("__TEST__ Frame %d hit on Y only\n", frameCounter);
     SetSubPosY(spr, yHitInfo.snapPoint.y);
     spr->subVelo.y = 0;
   }
   else if (xHitInfo.hitSomething && yHitInfo.hitSomething)
   {
-    printf("hit on both axes\n");
 
     int xDist = Abs(xHitInfo.snapPoint.x - spr->subPos.x);
     int yDist = Abs(yHitInfo.snapPoint.y - spr->subPos.y);
+    printf("__TEST__ Frame %d hit on X and Y dists=%d,%d\n", frameCounter, xDist, yDist);
+
     if (xDist < yDist)
     {
-      printf("snapping to x\n");
+      printf("....Snapping to X pos: %d\n", xHitInfo.snapPoint.x);
       SetSubPosX(spr, xHitInfo.snapPoint.x);
       spr->subVelo.x = 0;
 
       // re-run the Y hit
-      TryMove(&yHitInfo, spr, false);
+      GetHitInfoAndEjectionInfo(&yHitInfo, spr, false);
       if (yHitInfo.hitSomething)
       {
+        printf("....Still got a Y collision to resolve: %d\n", yHitInfo.snapPoint.y);
         SetSubPosY(spr, yHitInfo.snapPoint.y);
-        spr->subVelo.y = 0;
-        printf("...followup Y\n");
+        spr->subVelo.y = 0;        
       }
       else
       {
-        printf("...no Y followup required\n");
+        printf("....No y collision to resolve\n");
       }
     }
     else
     {
-      printf("snapping to y\n");
-      SetSubPosX(spr, yHitInfo.snapPoint.y);
+      printf("....Snapping to Y pos: %d\n", yHitInfo.snapPoint.y);
+      SetSubPosY(spr, yHitInfo.snapPoint.y);
       spr->subVelo.y = 0;
 
       // re-run the X hit
-      TryMove(&xHitInfo, spr, false);
+      GetHitInfoAndEjectionInfo(&xHitInfo, spr, false);
       if (xHitInfo.hitSomething)
       {
+        printf("....Still got a X collision to resolve: %d\n", xHitInfo.snapPoint.x);
         SetSubPosX(spr, xHitInfo.snapPoint.x);
-        spr->subVelo.x = 0;
-        printf("...followup X\n");
+        spr->subVelo.x = 0;        
+      } else {
+        printf("....No X collision to resolve\n");
       }
     }
   }
