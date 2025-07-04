@@ -57,7 +57,7 @@ const int SUBDAMPING_AIR = 4;
 
 // max frames for which the up force is applied
 const int MAX_JUMP_BOOST_FRAMES = 16;
-const int SUB_JUMPFORCE = 40;
+const int SUB_JUMPFORCE = 280;
 const int SUB_GRAVITY = 16;
 const int MAX_SUBFALLSPEED = 40;
 
@@ -1317,7 +1317,7 @@ void TryContinueJump(Sprite *spr)
   {
     // add jump velo
     spr->subVelo.y -= SUB_JUMPFORCE;
-    printf("__DBG__ Frame %d Applying jump on frame %d\n", frameCounter, spr->jumpFrameNum);
+    printf("__DBG__ Frame %d Applying jump on frame %d - velo %d\n", frameCounter, spr->jumpFrameNum, spr->subVelo.y);
     spr->jumpFrameNum++;
   }
   else
@@ -1594,9 +1594,12 @@ void SolvePlayer()
       {
         subDampY = 0;
       }
+
+      AddVecInts(&spr->subVelo, 0, subDampY);
+
     } // no-grav
 
-    AddVecInts(&spr->subVelo, 0, subDampY);
+    
 
     // Clamp Y Velo
 
