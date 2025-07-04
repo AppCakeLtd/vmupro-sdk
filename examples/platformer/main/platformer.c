@@ -57,9 +57,10 @@ const int SUBDAMPING_AIR = 4;
 
 // max frames for which the up force is applied
 const int MAX_JUMP_BOOST_FRAMES = 16;
-const int SUB_JUMPFORCE = 280;
-const int SUB_GRAVITY = 16;
-const int MAX_SUBFALLSPEED = 40;
+const int SUB_JUMPFORCE = 14;
+const int SUB_GRAVITY = 9;
+// max of like 256 since that's bigger than a tile
+const int MAX_SUBFALLSPEED = 120;
 
 int camX = 0;
 int camY = 0;
