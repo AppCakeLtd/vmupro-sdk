@@ -57,8 +57,8 @@ const int SUBDAMPING_AIR = 4;
 
 // max frames for which the up force is applied
 const int MAX_JUMP_BOOST_FRAMES = 16;
-const int SUB_JUMPFORCE = 22;
-const int SUB_GRAVITY = 6;
+const int SUB_JUMPFORCE = 40;
+const int SUB_GRAVITY = 16;
 const int MAX_SUBFALLSPEED = 40;
 
 int camX = 0;
