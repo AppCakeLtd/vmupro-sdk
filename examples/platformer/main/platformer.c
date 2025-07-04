@@ -1759,7 +1759,7 @@ void SolvePlayer()
 
     if (xDist < yDist)
     {
-      printf("....Snapping to X pos: %d\n", xHitInfo.snapPoint.x);
+      printf("....Snapped on Y to: %d/%d , %d/%d\n", spr->subPos.x, spr->subPos.x >> SHIFT, spr->subPos.x, spr->subPos.x >> SHIFT);
       SetSubPosX(spr, xHitInfo.snapPoint.x);
       spr->subVelo.x = 0;
 
@@ -1769,7 +1769,7 @@ void SolvePlayer()
       {
         printf("....Still got a Y collision to resolve: %d\n", yHitInfo.snapPoint.y);
         SetSubPosY(spr, yHitInfo.snapPoint.y);
-        spr->subVelo.y = 0;        
+        spr->subVelo.y = 0;
       }
       else
       {
@@ -1778,18 +1778,20 @@ void SolvePlayer()
     }
     else
     {
-      printf("....Snapping to Y pos: %d\n", yHitInfo.snapPoint.y);
       SetSubPosY(spr, yHitInfo.snapPoint.y);
+      printf("....Snapped on Y to: %d/%d , %d/%d\n", spr->subPos.x, spr->subPos.x >> SHIFT, spr->subPos.x, spr->subPos.x >> SHIFT);
       spr->subVelo.y = 0;
 
       // re-run the X hit
-      GetHitInfoAndEjectionInfo(&xHitInfo, spr, false);
+      GetHitInfoAndEjectionInfo(&xHitInfo, spr, true);
       if (xHitInfo.hitSomething)
       {
         printf("....Still got a X collision to resolve: %d\n", xHitInfo.snapPoint.x);
         SetSubPosX(spr, xHitInfo.snapPoint.x);
-        spr->subVelo.x = 0;        
-      } else {
+        spr->subVelo.x = 0;
+      }
+      else
+      {
         printf("....No X collision to resolve\n");
       }
     }
