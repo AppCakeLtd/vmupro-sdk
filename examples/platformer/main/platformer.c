@@ -237,6 +237,7 @@ Mob testMob;
 //
 //__TEST__ This can be scrubbed when things are moved to headers
 bool CheckGrounded(Sprite *spr);
+Vec2 GetPointOnSprite(Sprite *spr, bool hitBox, Anchor_H anchorH, Anchor_V anchorV);
 
 // in screen spsace
 void DrawSpriteBoundingBox(Sprite *inSprite, uint16_t inCol)
@@ -430,6 +431,23 @@ void SetMoveMode(Sprite *spr, MoveMode inMode)
   vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Move mode %d", frameCounter, (int)inMode);
 }
 
+Vec2 GetPlayerWorldStartPos(){
+  Vec2 rVal = {80, MAP_HEIGHT_PIXELS - (TILE_SIZE_PX * 4)};
+  return rVal;
+}
+
+bool CheckFellOffMap(){
+
+  Vec2 topleftPoint = GetPointOnSprite(&player.spr, false, player.spr.anchorH, player.spr.anchorV );
+  if ( topleftPoint.y > MAP_HEIGHT_PIXELS + TILE_SIZE_PX ){
+    printf("__TEST__ player fell off map\n");
+    Vec2 worldStartPos = GetPlayerWorldStartPos();
+    SetWorldPos(&player.spr, &worldStartPos);
+    return true;
+  }
+  return false;
+}
+
 void ResetSprite(Sprite *spr)
 {
 
@@ -454,7 +472,7 @@ void ResetSprite(Sprite *spr)
   spr->jumpFrameNum = 0;
 
   // temporary config stuff
-  Vec2 worldStartPos = {80, MAP_HEIGHT_PIXELS - (TILE_SIZE_PX * 4)};
+  Vec2 worldStartPos = GetPlayerWorldStartPos();
   SetWorldPos(spr, &worldStartPos);
   spr->isPlayer = true;
   spr->anchorH = ANCHOR_VTOP;
@@ -880,6 +898,26 @@ Vec2 GetTileSubPosFromRowAndCol(Vec2 *rowAndcol)
   return returnVal;
 }
 
+bool IsBlockID2Sided(int blockId){
+  return false;
+}
+
+bool Ignore2SidedBlock(int blockId, int layer, Sprite *spr)
+{
+
+  if ( !IsBlockID2Sided(blockId) ) return false;
+
+  // it's 2 sided, we can ignore it unless
+  // the player is moving down
+  bool movingDown = spr->subVelo.y > 0;
+
+  if (!movingDown) return false;
+
+  return true;
+}
+
+
+
 // subOffsetOrNull adds an offset to where we check for collisions
 // e.g. when moving right we check currentPos.x + velo.x
 // for where we'll be, rather than where we are
@@ -989,6 +1027,14 @@ HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *subOffsetOrNull, const char
     int blockId = GetBlockIDAtColRow(tileRowAndCol.x, tileRowAndCol.y, LAYER_COLS);
     if (blockId != BLOCK_NULL)
     {
+
+      bool ignore = Ignore2SidedBlock( blockId, LAYER_COLS, spr);
+
+      if (ignore ) {
+        printf("__TEST__ ignoring 2 sided block\n");
+        continue;;
+      }
+
 
       rVal.hitSomething = true;
 
@@ -1600,8 +1646,6 @@ void SolvePlayer()
 
     } // no-grav
 
-    
-
     // Clamp Y Velo
 
     if (spr->subVelo.y > maxSubSpeedY)
@@ -1631,6 +1675,7 @@ void SolvePlayer()
   spr->isGrounded = CheckGrounded(spr);
 
   CheckLanded(spr);
+  CheckFellOffMap();
 
   // head or feet bonked
   // prevent jump boost
