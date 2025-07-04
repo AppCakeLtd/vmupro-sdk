@@ -1033,6 +1033,35 @@ void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull
   {
     rVal->subCheckPos[i] = GetPointOnSprite(spr, true, rVal->anchorH[i], rVal->anchorV[i]);
 
+    // if we're moving horz, our check points are normally, at top, middle, bottom:
+    //  ____   ___here
+    // |    |
+    // |    |  <--here
+    // |    |
+    // |____|  ___here
+    //
+    // which can make it awkward to clip onto blocks while jumping
+    // we can raise the bottom one and lower the top one a bit though
+    //  ____
+    // |    |  <--here
+    // |    |  <--here
+    // |    |  <--here
+    // |____|
+    // to get onto small 'bumps' more easily
+    // or run over small gaps
+
+    if (dir == DIR_LEFT || dir == DIR_RIGHT)
+    {
+      if (rVal->anchorV[i] == ANCHOR_VTOP)
+      {
+        rVal->subCheckPos[i].y += (4 << SHIFT); // 4 pix
+      }
+      if (rVal->anchorV[i] == ANCHOR_VBOTTOM)
+      {
+        rVal->subCheckPos[i].y -= (4 << SHIFT);
+      }
+    }
+
     int dbgSprXPos = spr->subPos.x;
     int dbgSprYPos = spr->subPos.y;
     int dbgCheckXPos = rVal->subCheckPos[i].x;
