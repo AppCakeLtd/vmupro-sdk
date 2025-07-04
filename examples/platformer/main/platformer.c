@@ -13,7 +13,7 @@ const char *TAG = "[Platformer]";
 const bool NO_GRAV = false;
 const bool DEBUG_SPRITEBOX = false;
 const bool DEBUG_HITPOINTS = true;
-const bool DEBUG_NO_X = false;
+const bool DEBUG_NO_X = true;
 const bool DEBUG_NO_Y = false;
 
 #define LAYER_BG 0
@@ -370,11 +370,13 @@ void SetSubPos(Sprite *spr, Vec2 *newPos)
   OnSpriteMoved(spr);
 }
 
-void SetSubPosX(Sprite *spr, int newX ){
+void SetSubPosX(Sprite *spr, int newX)
+{
   spr->subPos.x = newX;
   OnSpriteMoved(spr);
 }
-void SetSubPosY(Sprite * spr, int newY){
+void SetSubPosY(Sprite *spr, int newY)
+{
   spr->subPos.y = newY;
   OnSpriteMoved(spr);
 }
@@ -1192,7 +1194,6 @@ void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
   if (whereWasCollision == DIR_LEFT)
   {
 
-
     int subX = info->subEjectionPoint[idx].x;
 
     if (spr->anchorH == ANCHOR_HLEFT)
@@ -1329,7 +1330,7 @@ int TryMove(HitInfo *info, Sprite *spr, bool horz)
       dir = DIR_UP;
     }
     else
-    {      
+    {
       return 0;
     }
   }
@@ -1603,55 +1604,55 @@ void SolvePlayer()
   // can introduce challenges when adding new features
   // if not designed with this in mind.
 
+  //
+  // X/Horizontal damp, clamp, move, eject
+  //
+
+  // Damp X Velo
+
+  if (movingRight && !inp->right)
+  {
+    // clamp it so we don't go into the negative
+    if (subDampX > spr->subVelo.x)
+    {
+      subDampX = spr->subVelo.x;
+    }
+    subDampX *= -1;
+  }
+  else if (movingLeft && !inp->left)
+  {
+    if (subDampX > -spr->subVelo.x)
+    {
+      subDampX = -spr->subVelo.x;
+    }
+    // it's already +ve so will be subbed from a neg
+  }
+  else
+  {
+    subDampX = 0;
+  }
+
+  AddVecInts(&spr->subVelo, subDampX, 0);
+
+  // Clamp X Velo
+
+  if (spr->subVelo.x > maxSubSpeedX)
+  {
+    spr->subVelo.x = maxSubSpeedX;
+  }
+  else if (spr->subVelo.x < -maxSubSpeedX)
+  {
+    spr->subVelo.x = -maxSubSpeedX;
+  }
+
+  // Sanity check
+  if (Abs(spr->subVelo.x) > (TILE_SIZE_SUB))
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite's x velo exceeds a full tile size!");
+  }
+
   if (!DEBUG_NO_X)
   {
-    //
-    // X/Horizontal damp, clamp, move, eject
-    //
-
-    // Damp X Velo
-
-    if (movingRight && !inp->right)
-    {
-      // clamp it so we don't go into the negative
-      if (subDampX > spr->subVelo.x)
-      {
-        subDampX = spr->subVelo.x;
-      }
-      subDampX *= -1;
-    }
-    else if (movingLeft && !inp->left)
-    {
-      if (subDampX > -spr->subVelo.x)
-      {
-        subDampX = -spr->subVelo.x;
-      }
-      // it's already +ve so will be subbed from a neg
-    }
-    else
-    {
-      subDampX = 0;
-    }
-
-    AddVecInts(&spr->subVelo, subDampX, 0);
-
-    // Clamp X Velo
-
-    if (spr->subVelo.x > maxSubSpeedX)
-    {
-      spr->subVelo.x = maxSubSpeedX;
-    }
-    else if (spr->subVelo.x < -maxSubSpeedX)
-    {
-      spr->subVelo.x = -maxSubSpeedX;
-    }
-
-    // Sanity check
-    if (Abs(spr->subVelo.x) > (TILE_SIZE_SUB))
-    {
-      vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite's x velo exceeds a full tile size!");
-    }
-
     // Apply X velo to X movement + update bounding boxes
     AddSubPos2(spr, spr->subVelo.x, 0);
 
@@ -1661,70 +1662,70 @@ void SolvePlayer()
   } // DEBUG_NO_X
 
   int vBonk = 0;
+
+  //
+  // Y/Horizontal damp, clamp, move, eject
+  //
+
+  // Damp Y Velo
+
+  if (NO_GRAV)
+  {
+
+    if (movingDown && !inp->down)
+    {
+
+      // clamp it to avoid going into the negative
+      if (subDampY > spr->subVelo.y)
+      {
+        subDampY = spr->subVelo.y;
+      }
+      subDampY *= -1;
+    }
+    else if (movingUp && !inp->up)
+    {
+
+      if (subDampY > -spr->subVelo.y)
+      {
+        subDampY = -spr->subVelo.y;
+      }
+      // already negative, so will be double negative
+    }
+    else
+    {
+      subDampY = 0;
+    }
+
+    AddVecInts(&spr->subVelo, 0, subDampY);
+
+  } // no-grav
+
+  // Clamp Y Velo
+
+  if (spr->subVelo.y > maxSubSpeedY)
+  {
+    spr->subVelo.y = maxSubSpeedY;
+  }
+  else if (spr->subVelo.y < -maxSubSpeedY)
+  {
+    spr->subVelo.y = -maxSubSpeedY;
+  }
+
+  // Sanity check
+  if (Abs(spr->subVelo.y) > (TILE_SIZE_SUB))
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite's y velo exceeds a full tile size!");
+  }
+
   if (!DEBUG_NO_Y)
   {
-    //
-    // Y/Horizontal damp, clamp, move, eject
-    //
-
-    // Damp Y Velo
-
-    if (NO_GRAV)
-    {
-
-      if (movingDown && !inp->down)
-      {
-
-        // clamp it to avoid going into the negative
-        if (subDampY > spr->subVelo.y)
-        {
-          subDampY = spr->subVelo.y;
-        }
-        subDampY *= -1;
-      }
-      else if (movingUp && !inp->up)
-      {
-
-        if (subDampY > -spr->subVelo.y)
-        {
-          subDampY = -spr->subVelo.y;
-        }
-        // already negative, so will be double negative
-      }
-      else
-      {
-        subDampY = 0;
-      }
-
-      AddVecInts(&spr->subVelo, 0, subDampY);
-
-    } // no-grav
-
-    // Clamp Y Velo
-
-    if (spr->subVelo.y > maxSubSpeedY)
-    {
-      spr->subVelo.y = maxSubSpeedY;
-    }
-    else if (spr->subVelo.y < -maxSubSpeedY)
-    {
-      spr->subVelo.y = -maxSubSpeedY;
-    }
-
-    // Sanity check
-    if (Abs(spr->subVelo.y) > (TILE_SIZE_SUB))
-    {
-      vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite's y velo exceeds a full tile size!");
-    }
-
     // Apply Y velo to Y movement + update bounding boxes
     AddSubPos2(spr, 0, spr->subVelo.y);
-    
-    // Eject from any Y collisions    
+
+    // Eject from any Y collisions
     vBonk = TryMove(&yHitInfo, spr, false);
 
   } // DEBUG_NO_Y
-
 
   // if we always eject from X first
   // then we can land slightly in the ground from a high jump
@@ -1763,15 +1764,16 @@ void SolvePlayer()
 
       // re-run the Y hit
       TryMove(&yHitInfo, spr, false);
-      if (yHitInfo.hitSomething ){
-        SetSubPosY(spr, yHitInfo.snapPoint.y );
+      if (yHitInfo.hitSomething)
+      {
+        SetSubPosY(spr, yHitInfo.snapPoint.y);
         spr->subVelo.y = 0;
-        printf("...followup Y\n");        
-      }else {
-        printf("...no Y followup required\n");        
+        printf("...followup Y\n");
       }
-      
-
+      else
+      {
+        printf("...no Y followup required\n");
+      }
     }
     else
     {
@@ -1781,18 +1783,18 @@ void SolvePlayer()
 
       // re-run the X hit
       TryMove(&xHitInfo, spr, false);
-      if (xHitInfo.hitSomething ){
-        SetSubPosX(spr, xHitInfo.snapPoint.x );
+      if (xHitInfo.hitSomething)
+      {
+        SetSubPosX(spr, xHitInfo.snapPoint.x);
         spr->subVelo.x = 0;
-        printf("...followup X\n");        
+        printf("...followup X\n");
       }
-
     }
   }
 
   spr->isGrounded = CheckGrounded(spr);
-  //printf("__TEST__ Frame %d is grounded %d yVel = %d\n", frameCounter, spr->isGrounded, spr->subVelo.y);
-  
+  // printf("__TEST__ Frame %d is grounded %d yVel = %d\n", frameCounter, spr->isGrounded, spr->subVelo.y);
+
   CheckLanded(spr);
   CheckFellOffMap();
 
