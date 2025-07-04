@@ -47,11 +47,11 @@ const bool DEBUG_NO_Y = false;
 const int MAX_SUBSPEED_WALK = 100;
 const int MAX_SUBSPEED_RUN = 200;
 
-const int SUBACCEL_WALK = 12;
+const int SUBACCEL_WALK = 8;
 const int SUBACCEL_RUN = 9;
 const int SUBACCEL_AIR = 6;
 
-const int SUBDAMPING_WALK = 8;
+const int SUBDAMPING_WALK = 6;
 const int SUBDAMPING_RUN = 6;
 const int SUBDAMPING_AIR = 4;
 
@@ -370,6 +370,15 @@ void SetSubPos(Sprite *spr, Vec2 *newPos)
   OnSpriteMoved(spr);
 }
 
+void SetSubPosX(Sprite *spr, int newX ){
+  spr->subPos.x = newX;
+  OnSpriteMoved(spr);
+}
+void SetSubPosY(Sprite * spr, int newY){
+  spr->subPos.y = newY;
+  OnSpriteMoved(spr);
+}
+
 void AddSubPos(Sprite *spr, Vec2 *delta)
 {
   AddVec(&spr->subPos, delta);
@@ -443,7 +452,7 @@ bool CheckFellOffMap()
   Vec2 topleftPoint = GetPointOnSprite(&player.spr, false, player.spr.anchorH, player.spr.anchorV);
   if (topleftPoint.y > MAP_HEIGHT_PIXELS + TILE_SIZE_PX)
   {
-    printf("__TEST__ player fell off map\n");
+    printf("__TEST__ Frame %d player fell off map at yPos %d\n", frameCounter, player.spr.subPos.y);
     Vec2 worldStartPos = GetPlayerWorldStartPos();
     SetWorldPos(&player.spr, &worldStartPos);
     return true;
@@ -869,6 +878,8 @@ typedef struct
   bool hitSomething;
   int lastHitIndex;
 
+  Vec2 snapPoint;
+
 } HitInfo;
 
 Vec2 GetTileRowAndColFromSubPos(Vec2 *subPos)
@@ -942,7 +953,7 @@ bool Ignore2SidedBlock(int blockId, int layer, Sprite *spr, Vec2 *tileSubPos)
 
   if (movingHorz && !movingVert && higher)
   {
-    //printf("__TEST__ mr %d vs %d\n", subFootPos.y, tileSubPos->y);
+    // printf("__TEST__ mr %d vs %d\n", subFootPos.y, tileSubPos->y);
     return true;
   }
 
@@ -950,7 +961,7 @@ bool Ignore2SidedBlock(int blockId, int layer, Sprite *spr, Vec2 *tileSubPos)
   // We're just jumping through it
 
   if (movingUp)
-  {    
+  {
     return true;
   }
 
@@ -963,14 +974,11 @@ bool Ignore2SidedBlock(int blockId, int layer, Sprite *spr, Vec2 *tileSubPos)
 // e.g. when moving right we check currentPos.x + velo.x
 // for where we'll be, rather than where we are
 // Used for for collision and for ground checks
-HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *subOffsetOrNull, const char *src)
+void NewHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull, const char *src)
 {
 
-  HitInfo rVal;
-  memset(&rVal, 0, sizeof(HitInfo));
-
-  rVal.whereWasCollision = dir;
-  rVal.lastHitIndex = -1;
+  rVal->whereWasCollision = dir;
+  rVal->lastHitIndex = -1;
 
   // get a list of points to check for
   // whatever direction we're moving
@@ -978,39 +986,39 @@ HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *subOffsetOrNull, const char
   {
   case DIR_UP:
     // top row
-    rVal.anchorH[0] = ANCHOR_HLEFT;
-    rVal.anchorH[1] = ANCHOR_HMID;
-    rVal.anchorH[2] = ANCHOR_HRIGHT;
-    rVal.anchorV[0] = ANCHOR_VTOP;
-    rVal.anchorV[1] = ANCHOR_VTOP;
-    rVal.anchorV[2] = ANCHOR_VTOP;
+    rVal->anchorH[0] = ANCHOR_HLEFT;
+    rVal->anchorH[1] = ANCHOR_HMID;
+    rVal->anchorH[2] = ANCHOR_HRIGHT;
+    rVal->anchorV[0] = ANCHOR_VTOP;
+    rVal->anchorV[1] = ANCHOR_VTOP;
+    rVal->anchorV[2] = ANCHOR_VTOP;
     break;
 
   case DIR_RIGHT:
-    rVal.anchorH[0] = ANCHOR_HRIGHT;
-    rVal.anchorH[1] = ANCHOR_HRIGHT;
-    rVal.anchorH[2] = ANCHOR_HRIGHT;
-    rVal.anchorV[0] = ANCHOR_VTOP;
-    rVal.anchorV[1] = ANCHOR_VMID;
-    rVal.anchorV[2] = ANCHOR_VBOTTOM;
+    rVal->anchorH[0] = ANCHOR_HRIGHT;
+    rVal->anchorH[1] = ANCHOR_HRIGHT;
+    rVal->anchorH[2] = ANCHOR_HRIGHT;
+    rVal->anchorV[0] = ANCHOR_VTOP;
+    rVal->anchorV[1] = ANCHOR_VMID;
+    rVal->anchorV[2] = ANCHOR_VBOTTOM;
     break;
 
   case DIR_DOWN:
-    rVal.anchorH[0] = ANCHOR_HLEFT;
-    rVal.anchorH[1] = ANCHOR_HMID;
-    rVal.anchorH[2] = ANCHOR_HRIGHT;
-    rVal.anchorV[0] = ANCHOR_VBOTTOM;
-    rVal.anchorV[1] = ANCHOR_VBOTTOM;
-    rVal.anchorV[2] = ANCHOR_VBOTTOM;
+    rVal->anchorH[0] = ANCHOR_HLEFT;
+    rVal->anchorH[1] = ANCHOR_HMID;
+    rVal->anchorH[2] = ANCHOR_HRIGHT;
+    rVal->anchorV[0] = ANCHOR_VBOTTOM;
+    rVal->anchorV[1] = ANCHOR_VBOTTOM;
+    rVal->anchorV[2] = ANCHOR_VBOTTOM;
     break;
 
   case DIR_LEFT:
-    rVal.anchorH[0] = ANCHOR_HLEFT;
-    rVal.anchorH[1] = ANCHOR_HLEFT;
-    rVal.anchorH[2] = ANCHOR_HLEFT;
-    rVal.anchorV[0] = ANCHOR_VTOP;
-    rVal.anchorV[1] = ANCHOR_VMID;
-    rVal.anchorV[2] = ANCHOR_VBOTTOM;
+    rVal->anchorH[0] = ANCHOR_HLEFT;
+    rVal->anchorH[1] = ANCHOR_HLEFT;
+    rVal->anchorH[2] = ANCHOR_HLEFT;
+    rVal->anchorV[0] = ANCHOR_VTOP;
+    rVal->anchorV[1] = ANCHOR_VMID;
+    rVal->anchorV[2] = ANCHOR_VBOTTOM;
     break;
 
   default:
@@ -1021,34 +1029,34 @@ HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *subOffsetOrNull, const char
   // convert the pivot points to actual world points
   for (int i = 0; i < 3; i++)
   {
-    rVal.subCheckPos[i] = GetPointOnSprite(spr, true, rVal.anchorH[i], rVal.anchorV[i]);
+    rVal->subCheckPos[i] = GetPointOnSprite(spr, true, rVal->anchorH[i], rVal->anchorV[i]);
 
     int dbgSprXPos = spr->subPos.x;
     int dbgSprYPos = spr->subPos.y;
-    int dbgCheckXPos = rVal.subCheckPos[i].x;
-    int dbgCheckYPos = rVal.subCheckPos[i].y;
+    int dbgCheckXPos = rVal->subCheckPos[i].x;
+    int dbgCheckYPos = rVal->subCheckPos[i].y;
     int dbgSubOffsetX = 0;
     int dbgSubOffsetY = 0;
 
     if (subOffsetOrNull != NULL)
     {
-      AddVec(&rVal.subCheckPos[i], subOffsetOrNull);
+      AddVec(&rVal->subCheckPos[i], subOffsetOrNull);
       dbgSubOffsetX = subOffsetOrNull->x;
       dbgSubOffsetY = subOffsetOrNull->y;
     }
 
     if (false)
     {
-      printf("__DBG__ Frame %d HitInfo '%s' GetPointOnSprite Anchors %d %d SubOffset %d %d\n", frameCounter, src, (int)rVal.anchorH[i], (int)rVal.anchorV[i], dbgSubOffsetX, dbgSubOffsetY);
+      printf("__DBG__ Frame %d HitInfo '%s' GetPointOnSprite Anchors %d %d SubOffset %d %d\n", frameCounter, src, (int)rVal->anchorH[i], (int)rVal->anchorV[i], dbgSubOffsetX, dbgSubOffsetY);
       printf("....Player    Pos   x=%d/%d y=%d/%d\n", dbgSprXPos, dbgSprXPos >> SHIFT, dbgSprYPos, dbgSprYPos >> SHIFT);
       printf("....CheckPos (pre)  x=%d/%d y=%d/%d\n", dbgCheckXPos, dbgCheckXPos >> SHIFT, dbgCheckYPos, dbgCheckYPos >> SHIFT);
-      printf("....CheckPos (post) x=%d/%d y=%d/%d\n", rVal.subCheckPos[i].x, rVal.subCheckPos[i].x >> SHIFT, rVal.subCheckPos[i].y, rVal.subCheckPos[i].y >> SHIFT);
+      printf("....CheckPos (post) x=%d/%d y=%d/%d\n", rVal->subCheckPos[i].x, rVal->subCheckPos[i].x >> SHIFT, rVal->subCheckPos[i].y, rVal->subCheckPos[i].y >> SHIFT);
     }
 
     if (DEBUG_HITPOINTS)
     {
       // let's debug to screen
-      Vec2 screenPos = Sub2Screen(&rVal.subCheckPos[i]);
+      Vec2 screenPos = Sub2Screen(&rVal->subCheckPos[i]);
       uint16_t col = VMUPRO_COLOR_WHITE;
       vmupro_draw_rect(screenPos.x - 2, screenPos.y - 2, screenPos.x + 4, screenPos.y + 4, col);
     }
@@ -1056,14 +1064,14 @@ HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *subOffsetOrNull, const char
 
   // and clear the collision return vals
 
-  rVal.hitSomething = false;
+  rVal->hitSomething = false;
 
   // finally run some tile collision checks:
   for (int i = 0; i < 3; i++)
   {
 
     // just the literal tile indexes into the x/y grid
-    Vec2 tileRowAndCol = GetTileRowAndColFromSubPos(&rVal.subCheckPos[i]);
+    Vec2 tileRowAndCol = GetTileRowAndColFromSubPos(&rVal->subCheckPos[i]);
 
     int blockId = GetBlockIDAtColRow(tileRowAndCol.x, tileRowAndCol.y, LAYER_COLS);
     if (blockId != BLOCK_NULL)
@@ -1081,48 +1089,46 @@ HitInfo NewHitInfo(Sprite *spr, Direction dir, Vec2 *subOffsetOrNull, const char
         ;
       }
 
-      rVal.hitSomething = true;
+      rVal->hitSomething = true;
 
-      rVal.blockID[i] = blockId;
-      rVal.lastHitIndex = i;
+      rVal->blockID[i] = blockId;
+      rVal->lastHitIndex = i;
 
       // default to the hit point being wherever we cheked on the sprite
       // we'll tweak the x/y in a sec, depending on where we hit the block
-      rVal.subEjectionPoint[i].x = rVal.subCheckPos[i].x;
-      rVal.subEjectionPoint[i].y = rVal.subCheckPos[i].y;
+      rVal->subEjectionPoint[i].x = rVal->subCheckPos[i].x;
+      rVal->subEjectionPoint[i].y = rVal->subCheckPos[i].y;
 
       if (dir == DIR_RIGHT)
       {
         // collided on the sprite's right
         // so the hit point is the block's X pos
-        rVal.subEjectionPoint[i].x = tileSubPos.x;
+        rVal->subEjectionPoint[i].x = tileSubPos.x;
       }
       else if (dir == DIR_LEFT)
       {
         // collided on the sprite's left
         // so the hit point is the block's x+width
-        rVal.subEjectionPoint[i].x = tileSubPos.x + TILE_SIZE_SUB;
+        rVal->subEjectionPoint[i].x = tileSubPos.x + TILE_SIZE_SUB;
       }
       else if (dir == DIR_DOWN)
       {
         // collided on the sprite's bottom
         // so the hitpoint is the block's top
-        rVal.subEjectionPoint[i].y = tileSubPos.y;
+        rVal->subEjectionPoint[i].y = tileSubPos.y;
       }
       else if (dir == DIR_UP)
       {
         // collided on the sprite's top
         // so the hitpoint is teh block's bottom
-        rVal.subEjectionPoint[i].y = tileSubPos.y + TILE_SIZE_SUB;
+        rVal->subEjectionPoint[i].y = tileSubPos.y + TILE_SIZE_SUB;
       }
     }
     else
     {
-      rVal.blockID[i] = BLOCK_NULL;
+      rVal->blockID[i] = BLOCK_NULL;
     }
   }
-
-  return rVal;
 }
 
 void PrintHitInfo(HitInfo *info)
@@ -1159,9 +1165,6 @@ void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
   if (whereWasCollision == DIR_RIGHT)
   {
 
-    // we hit something while moving right
-    spr->subVelo.x = 0;
-
     // e.g. the point on the block we just hit
     int subX = info->subEjectionPoint[idx].x;
 
@@ -1182,13 +1185,13 @@ void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
 
     int subY = spr->subPos.y;
     Vec2 sub = {subX, subY};
-    SetSubPos(spr, &sub);
+    // SetSubPos(spr, &sub);
+    info->snapPoint = sub;
   }
 
   if (whereWasCollision == DIR_LEFT)
   {
 
-    spr->subVelo.x = 0;
 
     int subX = info->subEjectionPoint[idx].x;
 
@@ -1207,13 +1210,12 @@ void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
 
     int subY = spr->subPos.y;
     Vec2 sub = {subX, subY};
-    SetSubPos(spr, &sub);
+    // SetSubPos(spr, &sub);
+    info->snapPoint = sub;
   }
 
   if (whereWasCollision == DIR_UP)
   {
-
-    spr->subVelo.y = 0;
 
     int subY = info->subEjectionPoint[idx].y;
 
@@ -1232,7 +1234,8 @@ void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
 
     int subX = spr->subPos.x;
     Vec2 sub = {subX, subY};
-    SetSubPos(spr, &sub);
+    // SetSubPos(spr, &sub);
+    info->snapPoint = sub;
   }
 
   if (whereWasCollision == DIR_DOWN)
@@ -1240,8 +1243,6 @@ void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
 
     int dbgBlockY = info->subEjectionPoint[idx].y;
     int dbgPlayerY = spr->subPos.y;
-
-    spr->subVelo.y = 0;
 
     int subY = info->subEjectionPoint[idx].y;
 
@@ -1260,24 +1261,26 @@ void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
 
     int subX = spr->subPos.x;
     Vec2 sub = {subX, subY};
-    SetSubPos(spr, &sub);
+    // SetSubPos(spr, &sub);
+    info->snapPoint = sub;
   }
 
   // debug block
-  if (false)
+  if (true)
   {
     printf("__DBG__ Frame %d eject from dir (urdl) %d\n", frameCounter, whereWasCollision);
     printf("....from blockpos x=%d/%d y=%d/%d\n", dbgBlockX, dbgBlockX >> SHIFT, dbgBlockY, dbgBlockY >> SHIFT);
     printf("....from plry pos x=%d/%d y=%d/%d\n", dbgPlayerX, dbgPlayerX >> SHIFT, dbgPlayerY, dbgPlayerY >> SHIFT);
-    Vec2 newPos = GetSubPos(spr);
+    Vec2 newPos = info->snapPoint;
     printf("....TO   plry pos x=%d/%d y=%d/%d\n", newPos.x, newPos.x >> SHIFT, newPos.y, newPos.y >> SHIFT);
+    printf("....(provisionally)\n");
 
-    // To double check your collision logics
-    if (whereWasCollision == DIR_DOWN)
-    {
-      bool groundedNow = CheckGrounded(spr);
-      printf("__DBG__ post ejection ground check = %d\n", (int)groundedNow);
-    }
+    // // To double check your collision logics
+    // if (whereWasCollision == DIR_DOWN)
+    // {
+    //   bool groundedNow = CheckGrounded(spr);
+    //   printf("__DBG__ post ejection ground check = %d\n", (int)groundedNow);
+    // }
   }
 }
 
@@ -1285,8 +1288,10 @@ void EjectHitInfo(Sprite *spr, HitInfo *info, bool horz)
 // returns the sign of the movement direction
 // e.g. -1 for jump, 1 for ground
 // e.g. -1 for left, 1 for right
-int TryMove(Sprite *spr, bool horz)
+int TryMove(HitInfo *info, Sprite *spr, bool horz)
 {
+
+  memset(info, 0, sizeof(HitInfo));
 
   bool movingRight = spr->subVelo.x > 0;
   bool movingLeft = spr->subVelo.x < 0;
@@ -1324,21 +1329,21 @@ int TryMove(Sprite *spr, bool horz)
       dir = DIR_UP;
     }
     else
-    {
+    {      
       return 0;
     }
   }
 
-  HitInfo info = NewHitInfo(spr, dir, &subCheckOffset, "TryMove");
+  NewHitInfo(info, spr, dir, &subCheckOffset, "TryMove");
 
-  if (info.hitSomething)
+  if (info->hitSomething)
   {
     // PrintHitInfo(&info);
   }
 
-  EjectHitInfo(spr, &info, horz);
+  EjectHitInfo(spr, info, horz);
 
-  if (info.hitSomething)
+  if (info->hitSomething)
   {
     // return sign of direction
     return (dir == DIR_RIGHT || dir == DIR_DOWN) ? 1 : -1;
@@ -1351,7 +1356,9 @@ bool CheckGrounded(Sprite *spr)
 
   // the hitbox ends on the very last subpixel
   Vec2 subGroundCheckOffset = {0, 1};
-  HitInfo nhi = NewHitInfo(spr, DIR_DOWN, &subGroundCheckOffset, "groundcheck");
+  HitInfo nhi;
+  memset(&nhi, 0, sizeof(HitInfo));
+  NewHitInfo(&nhi, spr, DIR_DOWN, &subGroundCheckOffset, "groundcheck");
 
   return nhi.hitSomething;
 }
@@ -1581,6 +1588,11 @@ void SolvePlayer()
   Vec2 subAccel = {subAccelX, subAccelY};
   AddVec(&spr->subVelo, &subAccel);
 
+  HitInfo xHitInfo;
+  memset(&xHitInfo, 0, sizeof(HitInfo));
+  HitInfo yHitInfo;
+  memset(&yHitInfo, 0, sizeof(HitInfo));
+
   // We'll split the movement + collision ejection
   // into x & y components.
   // without this we might e.g. land inside the ground
@@ -1644,7 +1656,7 @@ void SolvePlayer()
     AddSubPos2(spr, spr->subVelo.x, 0);
 
     // Eject from any X Collisions
-    TryMove(spr, true);
+    TryMove(&xHitInfo, spr, true);
 
   } // DEBUG_NO_X
 
@@ -1707,15 +1719,80 @@ void SolvePlayer()
 
     // Apply Y velo to Y movement + update bounding boxes
     AddSubPos2(spr, 0, spr->subVelo.y);
-
-    // Eject from any Y collisions
-    TryMove(spr, true);
-    vBonk = TryMove(spr, false);
+    
+    // Eject from any Y collisions    
+    vBonk = TryMove(&yHitInfo, spr, false);
 
   } // DEBUG_NO_Y
 
-  spr->isGrounded = CheckGrounded(spr);
 
+  // if we always eject from X first
+  // then we can land slightly in the ground from a high jump
+  // then start ejecting left/right
+  // if we always do Y first, then we can jump against a wall
+  // and start ejecting up and down
+  // solution: if we're overlapping both at once
+  // then eject in the direction that gives us the shortest exit
+  // remember: only update x or y where appropriate
+  // else you could push against a wall and smush against it indefinitely.
+
+  // snap to x and y
+  if (xHitInfo.hitSomething && !yHitInfo.hitSomething)
+  {
+    printf("hit on x only\n");
+    SetSubPosX(spr, xHitInfo.snapPoint.x);
+    spr->subVelo.x = 0;
+  }
+  else if (!xHitInfo.hitSomething && yHitInfo.hitSomething)
+  {
+    printf("hit on y only\n");
+    SetSubPosY(spr, yHitInfo.snapPoint.y);
+    spr->subVelo.y = 0;
+  }
+  else if (xHitInfo.hitSomething && yHitInfo.hitSomething)
+  {
+    printf("hit on both axes\n");
+
+    int xDist = Abs(xHitInfo.snapPoint.x - spr->subPos.x);
+    int yDist = Abs(yHitInfo.snapPoint.y - spr->subPos.y);
+    if (xDist < yDist)
+    {
+      printf("snapping to x\n");
+      SetSubPosX(spr, xHitInfo.snapPoint.x);
+      spr->subVelo.x = 0;
+
+      // re-run the Y hit
+      TryMove(&yHitInfo, spr, false);
+      if (yHitInfo.hitSomething ){
+        SetSubPosY(spr, yHitInfo.snapPoint.y );
+        spr->subVelo.y = 0;
+        printf("...followup Y\n");        
+      }else {
+        printf("...no Y followup required\n");        
+      }
+      
+
+    }
+    else
+    {
+      printf("snapping to y\n");
+      SetSubPosX(spr, yHitInfo.snapPoint.y);
+      spr->subVelo.y = 0;
+
+      // re-run the X hit
+      TryMove(&xHitInfo, spr, false);
+      if (xHitInfo.hitSomething ){
+        SetSubPosX(spr, xHitInfo.snapPoint.x );
+        spr->subVelo.x = 0;
+        printf("...followup X\n");        
+      }
+
+    }
+  }
+
+  spr->isGrounded = CheckGrounded(spr);
+  //printf("__TEST__ Frame %d is grounded %d yVel = %d\n", frameCounter, spr->isGrounded, spr->subVelo.y);
+  
   CheckLanded(spr);
   CheckFellOffMap();
 
