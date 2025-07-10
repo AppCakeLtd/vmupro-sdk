@@ -4,6 +4,7 @@
 #include <string.h>
 #include "vmupro_sdk.h"
 #include "images/images.h"
+#include "anims.h"
 #include "images/level_1_layer_0.h"
 #include "images/level_1_layer_1.h"
 
@@ -144,11 +145,8 @@ typedef struct
   // the actual hitbox in subpixel space
   BBox subHitBox;
 
-  // the actual image data
-  const Img *img;
-  // Player's pos will be the feet pos for example
-  // the sprite will be offset from this by -(width/2)
-  // these values are subpixel / fixed point
+  // The actual fixed-point position of the sprite
+  // could be middle-bottom (feet) or top-left (head)
   Vec2 subPos;
   // calculated at the end of the frame
   // since we may do multiple tweaks per frame
@@ -171,7 +169,150 @@ typedef struct
 
   Inputs input;
   MoveMode moveMode;
+
+  AnimGroup *anims;
+  AnimFrames *activeFrameSet;
+  // updated per frame, to measure elapsed frames
+  int lastGameframe;
+  // reset on anim changes
+  int animIndex;
+  bool animReversing;
+  AnimTypes animID;
+
 } Sprite;
+
+void SetAnim(Sprite *spr, AnimTypes inType)
+{
+
+  spr->lastGameframe = frameCounter;
+
+  switch (inType)
+  {
+  case ANIMTYPE_IDLE:
+    spr->activeFrameSet = &spr->anims->idleFrames;
+    printf("__TEST__ idle\n");
+    break;
+  case ANIMTYPE_WALK:
+    spr->activeFrameSet = &spr->anims->walkFrames;
+    break;
+  default:
+    // we'll patch this in a sec
+    spr->activeFrameSet = NULL;
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Unhandled animation index %d\n", (int)inType);
+    break;
+  }
+
+  // Nothing found, switch to default/idle, which everything should have
+  if (spr->activeFrameSet == NULL)
+  {
+    vmupro_log(VMUPRO_LOG_INFO, TAG, "Sprite has no anim for type %d\n", (int)inType);
+    spr->activeFrameSet = &spr->anims->idleFrames;
+  }
+
+  spr->animIndex = 0;
+  spr->lastGameframe = frameCounter;
+  spr->animID = ANIMTYPE_IDLE;
+  spr->animReversing = false;
+
+  // just in case
+  if (spr->activeFrameSet->numImages == 0)
+  {
+    vmupro_log(VMUPRO_LOG_INFO, TAG, "Sprite was assigned an empty frame set\n");
+  }
+}
+
+bool ValidateAnim(Sprite *spr)
+{
+
+  // is it valid?
+  if (spr->activeFrameSet == NULL)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite has null frameset!\n");
+    return false;
+  }
+
+  // is it within bounds?
+  if (spr->animIndex < 0 || spr->animIndex >= spr->activeFrameSet->numImages)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite's frame index is outside the bounds 0-%d!\n", spr->activeFrameSet->numImages);
+    spr->animIndex = 0;
+  }
+
+  return true;
+}
+
+const Img *GetActiveImage(Sprite *spr)
+{
+
+  if (!ValidateAnim(spr))
+  {
+    return &img_player_idle_0_raw;
+  }
+
+  const Img *returnVal = spr->activeFrameSet->images[spr->animIndex];
+  return returnVal;
+}
+
+void UpdateAnimation(Sprite *spr)
+{
+
+  if (!ValidateAnim(spr))
+  {
+    return;
+  }
+
+  AnimFrames *frameSet = spr->activeFrameSet;
+  AnimMode mode = frameSet->mode;
+  int animSpeed = frameSet->frameSpeed;
+  bool framesPassed = (frameCounter >= spr->lastGameframe + animSpeed);
+
+  if (!framesPassed)
+    return;
+
+  if (mode == ANIMMODE_LOOP)
+  {
+
+    spr->animIndex++;
+    if (spr->animIndex >= frameSet->numImages)
+    {
+      spr->animIndex = 0;
+    }
+  }
+  else if (mode == ANIMMODE_ONESHOT)
+  {
+
+    // check if it's within range
+    if (spr->animIndex < frameSet->numImages - 1)
+    {
+      // advance to the end, then stay there
+      spr->animIndex++;
+    }
+  }
+  else if (mode == ANIMMODE_PINGPONG)
+  {
+
+    // pre-check states to avoid playing a frame twice
+    if (!spr->animReversing && spr->animIndex >= frameSet->numImages - 1)
+    {
+      spr->animReversing = true;
+    }
+    if (spr->animReversing && spr->animIndex <= 0)
+    {
+      spr->animReversing = false;
+    }
+
+    if (!spr->animReversing)
+    {
+      spr->animIndex++;
+    }
+    else
+    {
+      spr->animIndex--;
+    }
+  }
+
+  spr->lastGameframe = frameCounter;
+}
 
 Vec2 Sub2World(Vec2 *inVec)
 {
@@ -261,9 +402,9 @@ void OnSpriteMoved(Sprite *spr)
     return;
   }
 
-  const Img *img = spr->img;
+  const Img *img = GetActiveImage(spr);
 
-  if (spr->img == NULL)
+  if (img == NULL)
   {
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Set the sprite img before attempting to update the bboxs");
     return;
@@ -467,8 +608,6 @@ void ResetSprite(Sprite *spr)
 
   memset(spr, 0, sizeof(Sprite));
 
-  spr->img = &img_player_idle_raw;
-
   // update other struct vals
   spr->facingRight = true;
   spr->wasRunningLastTimeWasOnGround = false;
@@ -491,6 +630,13 @@ void ResetSprite(Sprite *spr)
   spr->isPlayer = true;
   spr->anchorH = ANCHOR_VTOP;
   spr->anchorV = ANCHOR_HLEFT;
+
+  spr->anims = &animgroup_player;
+  spr->activeFrameSet = &spr->anims->idleFrames;
+  spr->animIndex = 0;
+  spr->animReversing = false;
+  spr->lastGameframe = frameCounter;
+  spr->animID = ANIMTYPE_IDLE;
 
   // update the hitbox, bounding box, etc
   OnSpriteMoved(spr);
@@ -632,8 +778,8 @@ void DrawBackground()
 
   Img *img = &img_bg_1_raw;
 
-  int bgScrollX = (camX * 5) / 4;
-  int bgScrollY = (camY * 5) / 4;
+  int bgScrollX = (camX * 4) / 5;
+  int bgScrollY = (camY * 4) / 5;
 
   vmupro_blit_scrolling_background(img->data, img->width, img->height, bgScrollX, bgScrollY, SCREEN_WIDTH, SCREEN_HEIGHT);
 }
@@ -1852,24 +1998,22 @@ void DrawPlayer()
   Vec2 worldBoxPos = spr->worldBBox.vecs.pos;
   Vec2 screenBoxPos = World2Screen(&worldBoxPos);
 
-  const Img *img = player.spr.img;
-
   bool goingUp = player.spr.subVelo.y < 0;
+
+  UpdateAnimation(spr);
 
   // __TEST__ temporary thing
   if (goingUp)
   {
-    spr->img = &img_player_fall_raw;
     OnSpriteMoved(&player.spr);
   }
   else
   {
-    spr->img = &img_player_idle_raw;
     OnSpriteMoved(&player.spr);
   }
 
   // update the img pointer, in case it's changed due to anims
-  img = player.spr.img;
+  const Img *img = GetActiveImage(spr);
 
   vmupro_drawflags_t flags = (!spr->facingRight * VMUPRO_DRAWFLAGS_FLIP_H) | (goingUp * VMUPRO_DRAWFLAGS_FLIP_V);
   uint16_t mask = *(uint16_t *)&img->data[0];
@@ -1936,6 +2080,7 @@ void app_main(void)
     }
 
     frameCounter++;
+    Anims_Player.lastFrame = frameCounter;
   }
 
   // Terminate the renderer
