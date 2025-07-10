@@ -191,8 +191,6 @@ void SetAnim(Sprite *spr, AnimTypes inType)
 
   vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Anim ID %d", frameCounter, (int)inType);
 
-  spr->lastGameframe = frameCounter;
-
   switch (inType)
   {
   case ANIMTYPE_IDLE:
@@ -224,7 +222,7 @@ void SetAnim(Sprite *spr, AnimTypes inType)
 
   spr->animIndex = 0;
   spr->lastGameframe = frameCounter;
-  spr->animID = ANIMTYPE_IDLE;
+  spr->animID = inType;
   spr->animReversing = false;
 
   // just in case
@@ -2025,8 +2023,7 @@ void DrawPlayer()
   bool goingUp = player.spr.subVelo.y < 0;
 
   bool isMoving = SpriteIsMoving(spr);
-  AnimTypes lastState = GetAnim(spr);
-
+  
   // everything else
   if (!isMoving)
   {
@@ -2057,21 +2054,12 @@ void DrawPlayer()
   }
 
   UpdateAnimation(spr);
-
-  // __TEST__ temporary thing
-  if (goingUp)
-  {
-    OnSpriteMoved(&player.spr);
-  }
-  else
-  {
-    OnSpriteMoved(&player.spr);
-  }
+  OnSpriteMoved(&player.spr);
 
   // update the img pointer, in case it's changed due to anims
   const Img *img = GetActiveImage(spr);
 
-  vmupro_drawflags_t flags = (!spr->facingRight * VMUPRO_DRAWFLAGS_FLIP_H) | (goingUp * VMUPRO_DRAWFLAGS_FLIP_V);
+  vmupro_drawflags_t flags = (!spr->facingRight * VMUPRO_DRAWFLAGS_FLIP_H);
   uint16_t mask = *(uint16_t *)&img->data[0];
   vmupro_blit_buffer_transparent(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height, mask, flags);
 }
