@@ -184,6 +184,13 @@ typedef struct
 void SetAnim(Sprite *spr, AnimTypes inType)
 {
 
+  if (spr->animID == inType)
+  {
+    return;
+  }
+
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Anim ID %d", frameCounter, (int)inType);
+
   spr->lastGameframe = frameCounter;
 
   switch (inType)
@@ -194,6 +201,12 @@ void SetAnim(Sprite *spr, AnimTypes inType)
     break;
   case ANIMTYPE_WALK:
     spr->activeFrameSet = &spr->anims->walkFrames;
+    break;
+  case ANIMTYPE_JUMP:
+    spr->activeFrameSet = &spr->anims->jumpFrames;
+    break;
+  case ANIMTYPE_FALL:
+    spr->activeFrameSet = &spr->anims->fallFrames;
     break;
   default:
     // we'll patch this in a sec
@@ -219,6 +232,11 @@ void SetAnim(Sprite *spr, AnimTypes inType)
   {
     vmupro_log(VMUPRO_LOG_INFO, TAG, "Sprite was assigned an empty frame set\n");
   }
+}
+
+AnimTypes GetAnim(Sprite *spr)
+{
+  return spr->animID;
 }
 
 bool ValidateAnim(Sprite *spr)
@@ -1986,6 +2004,12 @@ void SolvePlayer()
   }
 }
 
+bool SpriteIsMoving(Sprite *spr)
+{
+
+  return (spr->subVelo.x != 0) && (spr->subVelo.y != 0);
+}
+
 void DrawPlayer()
 {
 
@@ -1999,6 +2023,38 @@ void DrawPlayer()
   Vec2 screenBoxPos = World2Screen(&worldBoxPos);
 
   bool goingUp = player.spr.subVelo.y < 0;
+
+  bool isMoving = SpriteIsMoving(spr);
+  AnimTypes lastState = GetAnim(spr);
+
+  // everything else
+  if (!isMoving)
+  {
+    SetAnim(spr, ANIMTYPE_IDLE);
+  }
+  else
+  {
+
+    if (spr->moveMode == MM_WALK)
+    {
+      SetAnim(spr, ANIMTYPE_WALK);
+    }
+    else if (spr->moveMode == MM_JUMP)
+    {
+      if (goingUp)
+      {
+        SetAnim(spr, ANIMTYPE_JUMP);
+      }
+      else
+      {
+        SetAnim(spr, ANIMTYPE_FALL);
+      }
+    }
+    else if (spr->moveMode == MM_FALL)
+    {
+      SetAnim(spr, ANIMTYPE_FALL);
+    }
+  }
 
   UpdateAnimation(spr);
 
