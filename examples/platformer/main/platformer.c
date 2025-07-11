@@ -14,7 +14,7 @@ const char *TAG = "[Platformer]";
 const bool NO_GRAV = false;
 const bool DEBUG_SPRITEBOX = false;
 const bool DEBUG_HITPOINTS = false;
-const bool DEBUG_SCROLL_ZONE = true;
+const bool DEBUG_SCROLL_ZONE = false;
 const bool DEBUG_NO_X = false;
 const bool DEBUG_NO_Y = false;
 
@@ -75,6 +75,7 @@ int frameCounter = 0;
 #define SCROLLZONE_MAXOFFSET 40
 #define SCROLLZONE_SPEED 3
 int scrollZoneWorldX = 50;
+int scrollzoneOffsetX = 0;
 
 typedef struct
 {
@@ -779,8 +780,6 @@ void DrawCamScrollZone()
   DrawBBoxWorld(&scrollBox, VMUPRO_COLOR_WHITE);
 }
 
-int edgeOffset = 0;
-
 // center the camera on the player
 void SolveCamera()
 {
@@ -807,20 +806,20 @@ void SolveCamera()
   if (onRightEdge)
   {
     scrollZoneWorldX = playerWorldPos.x - SCROLLZONE_WIDTH;
-    if (edgeOffset > -SCROLLZONE_MAXOFFSET)
-      edgeOffset -= SCROLLZONE_SPEED;
+    if (scrollzoneOffsetX > -SCROLLZONE_MAXOFFSET)
+      scrollzoneOffsetX -= SCROLLZONE_SPEED;
   }
 
   if (onLeftEdge)
   {
     scrollZoneWorldX = playerWorldPos.x;
-    if (edgeOffset < SCROLLZONE_MAXOFFSET)
-      edgeOffset += SCROLLZONE_SPEED;
+    if (scrollzoneOffsetX < SCROLLZONE_MAXOFFSET)
+      scrollzoneOffsetX += SCROLLZONE_SPEED;
   }
 
   snapWorldPos.x = scrollZoneWorldX + (SCROLLZONE_WIDTH / 2);
   snapWorldPos.x -= (SCREEN_WIDTH / 2);
-  snapWorldPos.x -= edgeOffset;
+  snapWorldPos.x -= scrollzoneOffsetX;
 
   //
   // Bounds Check
