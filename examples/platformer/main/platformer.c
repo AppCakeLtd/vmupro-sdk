@@ -2027,7 +2027,7 @@ void DrawPlayer()
   // everything else
   if (!isMoving)
   {
-    SetAnim(spr, ANIMTYPE_IDLE);
+    SetAnim(spr, ANIMTYPE_WALK);
   }
   else
   {

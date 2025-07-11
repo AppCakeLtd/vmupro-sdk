@@ -70,7 +70,15 @@ const Img *imgs_player_idle[] = {
 };
 
 const Img *imgs_player_walk[] = {
-    &img_player_walk_0_raw, &img_player_walk_1_raw};
+    &img_player_walk_0_raw, 
+    &img_player_walk_1_raw,
+    &img_player_walk_2_raw,
+    &img_player_walk_3_raw,
+    &img_player_walk_4_raw,
+    &img_player_walk_5_raw,
+    &img_player_walk_6_raw,
+    &img_player_walk_7_raw,
+};
 
 const Img *imgs_player_jump[] = {
     &img_player_jump_0_raw, &img_player_jump_1_raw};
@@ -94,7 +102,7 @@ AnimGroup animgroup_player = {
         .frameSpeed = 20,
         .numImages = ARRAYSIZE(imgs_player_idle),
         .images = imgs_player_idle},
-    .walkFrames = {.frameSpeed = 10, .numImages = ARRAYSIZE(imgs_player_walk), .images = imgs_player_walk},
+    .walkFrames = {.frameSpeed = 4, .numImages = ARRAYSIZE(imgs_player_walk), .images = imgs_player_walk},
     .jumpFrames = {.frameSpeed = 7, .numImages = ARRAYSIZE(imgs_player_jump), .images = imgs_player_jump},
     .fallFrames = {.frameSpeed = 4, .numImages = ARRAYSIZE(imgs_player_fall), .images = imgs_player_fall},
 
