@@ -14,6 +14,7 @@ const char *TAG = "[Platformer]";
 const bool NO_GRAV = false;
 const bool DEBUG_SPRITEBOX = false;
 const bool DEBUG_HITPOINTS = false;
+const bool DEBUG_SCROLL_ZONE = true;
 const bool DEBUG_NO_X = false;
 const bool DEBUG_NO_Y = false;
 
@@ -66,6 +67,14 @@ const int MAX_SUBFALLSPEED = 120;
 int camX = 0;
 int camY = 0;
 int frameCounter = 0;
+
+// prevent rubber banding, move the camera within a scrolling
+// area which allows you to see further ahead/behind
+// based on position
+#define SCROLLZONE_WIDTH 28
+#define SCROLLZONE_MAXOFFSET 40
+#define SCROLLZONE_SPEED 3
+int scrollZoneWorldX = 50;
 
 typedef struct
 {
@@ -396,16 +405,31 @@ Mob testMob;
 bool CheckGrounded(Sprite *spr);
 Vec2 GetPointOnSprite(Sprite *spr, bool hitBox, Anchor_H anchorH, Anchor_V anchorV);
 
+void DrawBBoxScreen(BBox *box, uint16_t inCol)
+{
+
+  Vec2 screenPos = box->vecs.pos;
+  int x2 = screenPos.x + box->width;
+  int y2 = screenPos.y + box->height;
+  vmupro_draw_rect(screenPos.x, screenPos.y, x2, y2, inCol);
+}
+
+void DrawBBoxWorld(BBox *box, uint16_t inCol)
+{
+
+  Vec2 worldPos = box->vecs.pos;
+  Vec2 screenPos = World2Screen(&worldPos);
+  int x2 = screenPos.x + box->width;
+  int y2 = screenPos.y + box->height;
+  vmupro_draw_rect(screenPos.x, screenPos.y, x2, y2, inCol);
+}
+
 // in screen spsace
 void DrawSpriteBoundingBox(Sprite *inSprite, uint16_t inCol)
 {
 
   BBox *box = &inSprite->worldBBox;
-  Vec2 worldPos = inSprite->worldBBox.vecs.pos;
-  Vec2 screenPos = World2Screen(&worldPos);
-  int x2 = screenPos.x + box->width;
-  int y2 = screenPos.y + box->height;
-  vmupro_draw_rect(screenPos.x, screenPos.y, x2, y2, inCol);
+  DrawBBoxWorld(box, inCol);
 }
 
 // Updates the bounding box when the pos or img changes
@@ -748,15 +772,62 @@ void DrawLevelBlock(int x, int y, int layer)
   }
 }
 
+void DrawCamScrollZone()
+{
+  // c++ wouldn't make me do this :(
+  BBox scrollBox = {{{scrollZoneWorldX, camY, SCROLLZONE_WIDTH - 1, SCREEN_HEIGHT - 1}}};
+  DrawBBoxWorld(&scrollBox, VMUPRO_COLOR_WHITE);
+}
+
+int edgeOffset = 0;
+
 // center the camera on the player
 void SolveCamera()
 {
 
   Sprite *spr = &player.spr;
-  Vec2 playerWorldPos = GetWorldPos(spr);
+  Vec2 playerWorldPos = GetPointOnSprite(spr, false, ANCHOR_HMID, ANCHOR_VMID);
+
+  //
+  // Make a box that moves right when the player touches the right edge
+  // and moves left when you touch the left edge
+  // i.e. it doesn't move if you're walking about inside it
+  // but the left or right edge will always follow the player
+  //
+  // while we're on the left or right edge, we'll add a little
+  // offset (up to a max) so the cam can show a little extra
+  // to the left or right as we move
+  //
+
+  Vec2 snapWorldPos = playerWorldPos;
+
+  bool onRightEdge = playerWorldPos.x > scrollZoneWorldX + SCROLLZONE_WIDTH;
+  bool onLeftEdge = playerWorldPos.x < scrollZoneWorldX;
+
+  if (onRightEdge)
+  {
+    scrollZoneWorldX = playerWorldPos.x - SCROLLZONE_WIDTH;
+    if (edgeOffset > -SCROLLZONE_MAXOFFSET)
+      edgeOffset -= SCROLLZONE_SPEED;
+  }
+
+  if (onLeftEdge)
+  {
+    scrollZoneWorldX = playerWorldPos.x;
+    if (edgeOffset < SCROLLZONE_MAXOFFSET)
+      edgeOffset += SCROLLZONE_SPEED;
+  }
+
+  snapWorldPos.x = scrollZoneWorldX + (SCROLLZONE_WIDTH / 2);
+  snapWorldPos.x -= (SCREEN_WIDTH / 2);
+  snapWorldPos.x -= edgeOffset;
+
+  //
+  // Bounds Check
+  //
 
   // check if cam's going off left of the level
-  int camLeft = playerWorldPos.x - (SCREEN_WIDTH / 2);
+  int camLeft = snapWorldPos.x; // - (SCREEN_WIDTH / 2);
   if (camLeft < 0)
     camLeft = 0;
 
@@ -770,8 +841,7 @@ void SolveCamera()
 
   // check if cam's going off the top of the level
   // player's about 3/4 of the way down the screen
-  int playerYOffset = (SCREEN_WIDTH * 4) / 3;
-  int camTop = playerWorldPos.y - (SCREEN_WIDTH / 2);
+  int camTop = snapWorldPos.y - (SCREEN_WIDTH / 2);
   if (camTop < 0)
   {
     camTop = 0;
@@ -1605,7 +1675,7 @@ void TryContinueJump(Sprite *spr)
   {
     // add jump velo
     spr->subVelo.y -= SUB_JUMPFORCE;
-    //printf("__DBG__ Frame %d Applying jump on frame %d - velo %d\n", frameCounter, spr->jumpFrameNum, spr->subVelo.y);
+    // printf("__DBG__ Frame %d Applying jump on frame %d - velo %d\n", frameCounter, spr->jumpFrameNum, spr->subVelo.y);
     spr->jumpFrameNum++;
   }
   else
@@ -2004,7 +2074,7 @@ void SolvePlayer()
 
 bool SpriteIsMoving(Sprite *spr)
 {
-  
+
   return (spr->subVelo.x != 0) || (spr->subVelo.y != 0);
 }
 
@@ -2094,6 +2164,10 @@ void app_main(void)
     if (DEBUG_SPRITEBOX)
     {
       DrawSpriteBoundingBox(&player.spr, VMUPRO_COLOR_WHITE);
+    }
+    if (DEBUG_SCROLL_ZONE)
+    {
+      DrawCamScrollZone();
     }
 
     vmupro_push_double_buffer_frame();
