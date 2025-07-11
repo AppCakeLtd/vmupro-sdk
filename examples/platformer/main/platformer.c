@@ -13,7 +13,7 @@ const char *TAG = "[Platformer]";
 // float in air for collision testing
 const bool NO_GRAV = false;
 const bool DEBUG_SPRITEBOX = false;
-const bool DEBUG_HITPOINTS = true;
+const bool DEBUG_HITPOINTS = false;
 const bool DEBUG_NO_X = false;
 const bool DEBUG_NO_Y = false;
 
@@ -1605,7 +1605,7 @@ void TryContinueJump(Sprite *spr)
   {
     // add jump velo
     spr->subVelo.y -= SUB_JUMPFORCE;
-    printf("__DBG__ Frame %d Applying jump on frame %d - velo %d\n", frameCounter, spr->jumpFrameNum, spr->subVelo.y);
+    //printf("__DBG__ Frame %d Applying jump on frame %d - velo %d\n", frameCounter, spr->jumpFrameNum, spr->subVelo.y);
     spr->jumpFrameNum++;
   }
   else
@@ -2004,8 +2004,8 @@ void SolvePlayer()
 
 bool SpriteIsMoving(Sprite *spr)
 {
-
-  return (spr->subVelo.x != 0) && (spr->subVelo.y != 0);
+  
+  return (spr->subVelo.x != 0) || (spr->subVelo.y != 0);
 }
 
 void DrawPlayer()
@@ -2023,7 +2023,7 @@ void DrawPlayer()
   bool goingUp = player.spr.subVelo.y < 0;
 
   bool isMoving = SpriteIsMoving(spr);
-  
+
   // everything else
   if (!isMoving)
   {
@@ -2031,7 +2031,6 @@ void DrawPlayer()
   }
   else
   {
-
     if (spr->moveMode == MM_WALK)
     {
       SetAnim(spr, ANIMTYPE_WALK);
