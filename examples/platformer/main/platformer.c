@@ -1719,7 +1719,7 @@ void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull
       if (!inside)
         continue;
 
-      printf("__TEST__ Sprite %s is inside %s\n", spr->name, otherSprite->name);
+      // printf("Sprite %s is inside %s\n", spr->name, otherSprite->name);
 
       // mask it so we know we hit something
       rVal->hitMask |= otherSolid;
@@ -1736,25 +1736,25 @@ void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull
       {
         // collided on the src sprite's right
         // so the hit point is the other sprite's X pos
-        rVal->blockSubEjectPoint[i].x = otherSprite->subHitBox.x;
+        rVal->spriteSubEjectPoint[i].x = otherSprite->subHitBox.x;
       }
       else if (dir == DIR_LEFT)
       {
         // collided on the src sprite's left
         // so the hit point is the other sprite's x+width
-        rVal->blockSubEjectPoint[i].x = otherSprite->subHitBox.x + otherSprite->subHitBox.width;
+        rVal->spriteSubEjectPoint[i].x = otherSprite->subHitBox.x + otherSprite->subHitBox.width;
       }
       else if (dir == DIR_DOWN)
       {
         // collided on the src sprite's bottom
         // so the hitpoint is the other sprite's top
-        rVal->blockSubEjectPoint[i].y = otherSprite->subHitBox.y;
+        rVal->spriteSubEjectPoint[i].y = otherSprite->subHitBox.y;
       }
       else if (dir == DIR_UP)
       {
         // collided on the src sprite's top
         // so the hitpoint is the other sprite's bottom
-        rVal->blockSubEjectPoint[i].y = otherSprite->subHitBox.y + otherSprite->subHitBox.height;
+        rVal->spriteSubEjectPoint[i].y = otherSprite->subHitBox.y + otherSprite->subHitBox.height;
       }
 
       // let's not check all the other sprites
@@ -1808,9 +1808,11 @@ void GetEjectionInfo(Sprite *spr, HitInfo *info, bool horz)
     return;
   }
 
+  // TODO: now used for both blocks and sprites
   int dbgBlockX = ejectPoint.x;
-  int dbgPlayerX = spr->subPos.x;
   int dbgBlockY = ejectPoint.y;
+
+  int dbgPlayerX = spr->subPos.x;  
   int dbgPlayerY = spr->subPos.y;
 
   if (whereWasCollision == DIR_RIGHT)
@@ -1835,8 +1837,7 @@ void GetEjectionInfo(Sprite *spr, HitInfo *info, bool horz)
     }
 
     int subY = spr->subPos.y;
-    Vec2 sub = {subX, subY};
-    // SetSubPos(spr, &sub);
+    Vec2 sub = {subX, subY};    
     info->snapPoint = sub;
   }
 
