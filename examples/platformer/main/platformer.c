@@ -244,7 +244,10 @@ typedef struct
   Vec2 lastSubVelo;
 
   bool isGrounded;
+  bool isOnWall;
+
   bool onGroundLastFrame;
+  bool onWallLastFrame;
   int jumpFrameNum;
 
   // config options
@@ -272,6 +275,15 @@ typedef struct
 #define MAX_SPRITES 20
 int numSprites = 0;
 Sprite *sprites[MAX_SPRITES];
+
+
+typedef enum
+{
+  DIR_UP,
+  DIR_RIGHT,
+  DIR_DOWN,
+  DIR_LEFT,
+} Direction;
 
 void SetAnim(Sprite *spr, AnimTypes inType)
 {
@@ -475,7 +487,7 @@ Sprite *player = NULL;
 //__TEST__ This can be scrubbed when things are moved to headers
 bool CheckGrounded(Sprite *spr);
 Vec2 GetPointOnSprite(Sprite *spr, bool hitBox, Anchor_H anchorH, Anchor_V anchorV);
-bool CheckForGroundAhead(Sprite *spr);
+bool CheckSpriteCollision(Sprite *spr, Direction dir, Vec2 * offset, const char * src);
 
 void DrawBBoxScreen(BBox *box, uint16_t inCol)
 {
@@ -734,7 +746,9 @@ void ResetSprite(Sprite *spr)
   SetMoveMode(spr, MM_FALL);
 
   spr->isGrounded = false;
+  spr->isOnWall = false;
   spr->onGroundLastFrame = false;
+  spr->onWallLastFrame = false;
   spr->jumpFrameNum = 0;
 
   // temporary config stuff
@@ -814,7 +828,7 @@ void LoadLevel(int levelNum)
   if (!DEBUG_ONLY_PLAYER)
   {
     Vec2 testPos = GetPlayerWorldPos();
-    testPos.x += TILE_SIZE_PX * 8;
+    testPos.x += TILE_SIZE_PX * 10;
     testPos.y -= TILE_SIZE_PX * 4;
     CreateSprite(STYPE_TESTMOB, testPos, "testmob1");
   }
@@ -851,11 +865,31 @@ uint32_t GetBlockIDAtColRow(int blockCol, int blockRow, int layer)
 
 void UpdatePatrollInputs(Sprite * spr){
 
-  bool groundAhead = CheckForGroundAhead(spr);
+  // might lose ground and bonk on the same frame
+  // don't want to trigger both
+  bool originallyFacingRight = spr->facingRight;
 
-  if (!groundAhead ){
-    spr->facingRight = !spr->facingRight;
+  // 1: check if we're going to run out of ground
+
+  // offset a bit based on where we're going
+  // a tile should do, since it gives time
+  // to dampen and change direction smoothly  
+  Vec2 subOffset = {originallyFacingRight ? TILE_SIZE_SUB : -TILE_SIZE_SUB, 1};  
+  bool groundAhead = CheckSpriteCollision(spr, DIR_DOWN,  &subOffset, "patrol_ground");
+
+
+  // 2: check if we'd bonk into something
+
+  Direction dir = spr->facingRight ? DIR_RIGHT : DIR_LEFT;
+  Vec2 wallSubOffset = { dir == DIR_RIGHT ? TILE_SIZE_SUB /2 :  -TILE_SIZE_SUB /2, 0 };
+  bool bonk = CheckSpriteCollision(spr, dir, &wallSubOffset, "patrol_wall");
+  
+  // Turn around
+  if (bonk || !groundAhead ){
+    spr->facingRight = !originallyFacingRight;
   }
+
+  // Apply the new values
 
   spr->input.right = spr->facingRight;
   spr->input.left = !spr->facingRight;
@@ -1079,6 +1113,7 @@ void EndFrameSprite(Sprite *inSpr)
   inSpr->lastSubPos = inSpr->subPos;
   inSpr->lastSubVelo = inSpr->subVelo;
   inSpr->onGroundLastFrame = inSpr->isGrounded;
+  inSpr->onWallLastFrame = inSpr->isOnWall;
 }
 
 void EndFrameAllSprites()
@@ -1262,13 +1297,7 @@ Vec2 GetPointOnSprite(Sprite *spr, bool hitBox, Anchor_H anchorH, Anchor_V ancho
   return returnVal;
 }
 
-typedef enum
-{
-  DIR_UP,
-  DIR_RIGHT,
-  DIR_DOWN,
-  DIR_LEFT,
-} Direction;
+
 
 typedef struct
 {
@@ -1802,39 +1831,33 @@ int GetHitInfoAndEjectionInfo(HitInfo *info, Sprite *spr, bool horz)
   return 0;
 }
 
+
+// since the hitbox ends on the very last subpixel
+// suggest using {0,1} for a local ground check.
+bool CheckSpriteCollision(Sprite *spr, Direction dir, Vec2 * offset, const char * src){
+
+  HitInfo nhi;
+  memset(&nhi, 0, sizeof(HitInfo));
+  GetHitInfo(&nhi, spr, dir, offset, src);
+
+  return nhi.hitSomething;
+}
+
+
 bool CheckGrounded(Sprite *spr)
 {
-
-  // the hitbox ends on the very last subpixel
-  Vec2 subGroundCheckOffset = {0, 1};
+  // hitbox ends on the very last subpixel
+  // so adding one takes you into the next tile
+  Vec2 offset = {0,1};
   HitInfo nhi;
   memset(&nhi, 0, sizeof(HitInfo));
-  GetHitInfo(&nhi, spr, DIR_DOWN, &subGroundCheckOffset, "groundcheck");
-
+  GetHitInfo(&nhi, spr, DIR_DOWN, &offset, "checkgrounded");
   return nhi.hitSomething;
+
+
 }
 
-// Patrol behaviour:
-// is there some ground a little bit ahead in whichever 
-// direction we're travelling
-bool CheckForGroundAhead(Sprite *spr){
 
-  // the hitbox ends on the very last subpixel
-  // so add 1 (or more I guess) to the y pos
-  Vec2 subGroundCheckOffset = {0, 1};
-
-  // then offset a bit based on where we're going
-  // a tile should do, since it gives time
-  // to dampen and change direction smoothly
-  int offset = TILE_SIZE_SUB;
-  subGroundCheckOffset.x += (spr->facingRight) ? offset : -offset;
-
-  HitInfo nhi;
-  memset(&nhi, 0, sizeof(HitInfo));
-  GetHitInfo(&nhi, spr, DIR_DOWN, &subGroundCheckOffset, "groundcheck");
-
-  return nhi.hitSomething;
-}
 
 
 // the first part of the jump, triggering it
@@ -2133,17 +2156,21 @@ void SolveMovement(Sprite *spr)
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite's x velo exceeds a full tile size!");
   }
 
+  // did we hit anything on h or v this frame?
+  // -1, 0, 1
+  int vBonk = 0;
+  int hBonk = 0;
+
   if (!DEBUG_NO_X)
   {
     // Apply X velo to X movement + update bounding boxes
     AddSubPos2(spr, spr->subVelo.x, 0);
 
     // Eject from any X Collisions
-    GetHitInfoAndEjectionInfo(&xHitInfo, spr, true);
+    hBonk = GetHitInfoAndEjectionInfo(&xHitInfo, spr, true);
 
   } // DEBUG_NO_X
-
-  int vBonk = 0;
+ 
 
   //
   // Y/Horizontal damp, clamp, move, eject
@@ -2246,7 +2273,7 @@ void SolveMovement(Sprite *spr)
       spr->subVelo.x = 0;
 
       // re-run the Y hit
-      GetHitInfoAndEjectionInfo(&yHitInfo, spr, false);
+      vBonk = GetHitInfoAndEjectionInfo(&yHitInfo, spr, false);
       if (yHitInfo.hitSomething)
       {
         printf("....Still got a Y collision to resolve: %d\n", yHitInfo.snapPoint.y);
@@ -2265,7 +2292,7 @@ void SolveMovement(Sprite *spr)
       spr->subVelo.y = 0;
 
       // re-run the X hit
-      GetHitInfoAndEjectionInfo(&xHitInfo, spr, true);
+      hBonk = GetHitInfoAndEjectionInfo(&xHitInfo, spr, true);
       if (xHitInfo.hitSomething)
       {
         printf("....Still got a X collision to resolve: %d\n", xHitInfo.snapPoint.x);
@@ -2281,6 +2308,7 @@ void SolveMovement(Sprite *spr)
 
   spr->isGrounded = CheckGrounded(spr);
   // printf("Frame %d is grounded %d yVel = %d\n", frameCounter, spr->isGrounded, spr->subVelo.y);
+  spr->isOnWall = (vBonk != 0);
 
   CheckLanded(spr);
   CheckFallen(spr);
