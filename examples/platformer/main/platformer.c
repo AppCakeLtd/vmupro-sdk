@@ -2100,10 +2100,14 @@ bool SpriteIsMoving(Sprite *spr)
   return (spr->subVelo.x != 0) || (spr->subVelo.y != 0);
 }
 
-void DrawPlayer()
+void DrawSprite(Sprite *spr)
 {
 
-  Sprite *spr = player;
+  if (spr == NULL)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Null sprite passed to DrawSprite");
+    return;
+  }
 
   Vec2 worldOrigin = GetWorldPos(spr);
   Vec2 screenOrigin = World2Screen(&worldOrigin);
@@ -2112,7 +2116,7 @@ void DrawPlayer()
   Vec2 worldBoxPos = spr->worldBBox.vecs.pos;
   Vec2 screenBoxPos = World2Screen(&worldBoxPos);
 
-  bool goingUp = player->subVelo.y < 0;
+  bool goingUp = spr->subVelo.y < 0;
 
   bool isMoving = SpriteIsMoving(spr);
 
@@ -2145,7 +2149,7 @@ void DrawPlayer()
   }
 
   UpdateAnimation(spr);
-  OnSpriteMoved(player);
+  OnSpriteMoved(spr);
 
   // update the img pointer, in case it's changed due to anims
   const Img *img = GetActiveImage(spr);
@@ -2153,6 +2157,16 @@ void DrawPlayer()
   vmupro_drawflags_t flags = (!spr->facingRight * VMUPRO_DRAWFLAGS_FLIP_H);
   uint16_t mask = *(uint16_t *)&img->data[0];
   vmupro_blit_buffer_transparent(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height, mask, flags);
+}
+
+void DrawSprites()
+{
+
+  for (int i = 0; i < numSprites; i++)
+  {
+    Sprite * spr = sprites[i];
+    DrawSprite(spr);
+  }
 }
 
 void app_main(void)
@@ -2181,7 +2195,7 @@ void app_main(void)
     UpdatePlayerInputs();
     SolvePlayer();
 
-    DrawPlayer();
+    DrawSprites();
 
     if (DEBUG_SPRITEBOX)
     {
