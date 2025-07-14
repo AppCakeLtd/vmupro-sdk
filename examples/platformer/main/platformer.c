@@ -1781,10 +1781,15 @@ void CheckLanded(Sprite *spr)
 // - check ground state
 // - check landing, etc
 
-void SolvePlayer()
+void SolveMovement(Sprite *spr)
 {
 
-  Sprite *spr = player;
+  if (spr == NULL)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Null sprite passed to SolveMovement");
+    return;
+  }
+
   Inputs *inp = &spr->input;
 
   // set up all of our state values
@@ -1808,8 +1813,8 @@ void SolvePlayer()
   TryJump(spr);
   TryContinueJump(spr);
 
-  bool playerXInput = inp->right || inp->left;
-  bool playerYInput = inp->up || inp->down;
+  bool spriteXInput = inp->right || inp->left;
+  bool spriteYInput = inp->up || inp->down;
   bool movingRight = spr->subVelo.x > 0;
   bool movingLeft = spr->subVelo.x < 0;
   bool movingUp = spr->subVelo.y < 0;
@@ -1829,7 +1834,7 @@ void SolvePlayer()
   {
     subDampY = 1;
 
-    if (!playerYInput)
+    if (!spriteYInput)
     {
       subAccelY = 0;
     }
@@ -1851,7 +1856,7 @@ void SolvePlayer()
   if (turning)
     subAccelX = (subAccelX * 4) / 3;
 
-  if (!playerXInput)
+  if (!spriteXInput)
   {
     subAccelX = 0;
   }
@@ -2094,6 +2099,16 @@ void SolvePlayer()
   }
 }
 
+void MoveAllSprites()
+{
+
+  for (int i = 0; i < numSprites; i++)
+  {
+    Sprite *spr = sprites[i];
+    SolveMovement(spr);
+  }
+}
+
 bool SpriteIsMoving(Sprite *spr)
 {
 
@@ -2159,12 +2174,12 @@ void DrawSprite(Sprite *spr)
   vmupro_blit_buffer_transparent(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height, mask, flags);
 }
 
-void DrawSprites()
+void DrawAllSprites()
 {
 
   for (int i = 0; i < numSprites; i++)
   {
-    Sprite * spr = sprites[i];
+    Sprite *spr = sprites[i];
     DrawSprite(spr);
   }
 }
@@ -2193,9 +2208,9 @@ void app_main(void)
     DrawGroundtiles(LAYER_COLS);
 
     UpdatePlayerInputs();
-    SolvePlayer();
+    MoveAllSprites();
 
-    DrawSprites();
+    DrawAllSprites();
 
     if (DEBUG_SPRITEBOX)
     {
