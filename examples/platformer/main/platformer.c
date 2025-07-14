@@ -134,6 +134,13 @@ typedef enum
   STYPE_TESTMOB
 } SpriteType;
 
+typedef enum{
+  SOLID_NONE,
+  SOLID_ONESIDED,
+  SOLID_SOLID,
+  SOLID_PLATFORM
+} Solidity;
+
 // profile of spite behaviour
 // such as runspeed, can it walk
 // off edges, etc
@@ -166,6 +173,8 @@ typedef struct
   // bigger than a tile in subpixels
   int max_subfallspeed;
 
+  Solidity solid;
+
 } SpriteProfile;
 
 void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
@@ -196,6 +205,8 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
   p->sub_jumpforce = 14;
   p->sub_gravity = 9;
   p->max_subfallspeed = 120;
+  
+  p->solid = SOLID_SOLID;
 
   if (inType == STYPE_PLAYER)
   {
@@ -206,6 +217,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->max_subspeed_walk = 10;
     p->subaccel_walk = 1;
     p->subdamping_walk = 0;
+    p->solid = SOLID_PLATFORM;
   }
   else
   {
@@ -223,7 +235,7 @@ typedef struct
   SpriteProfile profile;
   char name[10];
   Vec2 subSpawnPos;
-
+  
   // Runtime stuff
   // calculated via ResetSprite()
 
@@ -487,7 +499,7 @@ Sprite *player = NULL;
 //__TEST__ This can be scrubbed when things are moved to headers
 bool CheckGrounded(Sprite *spr);
 Vec2 GetPointOnSprite(Sprite *spr, bool hitBox, Anchor_H anchorH, Anchor_V anchorV);
-bool CheckSpriteCollision(Sprite *spr, Direction dir, Vec2 * offset, const char * src);
+bool CheckSpriteCollision(Sprite *spr, Direction dir, Vec2 * subOffset, const char * src);
 
 void DrawBBoxScreen(BBox *box, uint16_t inCol)
 {
@@ -1428,6 +1440,16 @@ bool Ignore2SidedBlock(int blockId, int layer, Sprite *spr, Vec2 *tileSubPos)
   return false;
 }
 
+bool SubPointInSprite(Vec2 * subPoint, Sprite * otherSprite){
+
+  if ( subPoint->x < otherSprite->subHitBox.x ) return false;
+  if ( subPoint->x > otherSprite->subHitBox.x + otherSprite->subHitBox.width ) return false;
+  if ( subPoint->y < otherSprite->subHitBox.y ) return false;
+  if ( subPoint->y > otherSprite->subHitBox.y + otherSprite->subHitBox.height ) return false;
+  return true;
+
+}
+
 // subOffsetOrNull adds an offset to where we check for collisions
 // e.g. when moving right we check currentPos.x + velo.x
 // for where we'll be, rather than where we are
@@ -1610,11 +1632,34 @@ void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull
         rVal->subEjectionPoint[i].y = tileSubPos.y + TILE_SIZE_SUB;
       }
     }
-    else
-    {
+    
+    // didn't hit a block
+    if ( blockId == BLOCK_NULL ){
+
       rVal->blockID[i] = BLOCK_NULL;
-    }
-  }
+      // let's run some sprite->sprite checks
+
+      for( int i = 0; i < numSprites; i++ ){
+        Sprite * otherSprite = sprites[i];
+
+        if ( otherSprite == NULL) continue;
+
+        // let's not collide with ourself
+        if ( otherSprite == spr ) continue;
+
+        // ignore nonsolid stuff
+        if ( otherSprite->profile.solid == SOLID_NONE ) continue;
+        
+        bool inside = SubPointInSprite( &rVal->subCheckPos[i], otherSprite );
+
+        if( inside ) printf(" Sprite %s is inside %s\n", spr->name, otherSprite->name );
+
+      }
+
+
+    } // blockID != null
+
+  } // for i to 3
 }
 
 void PrintHitInfo(HitInfo *info)
@@ -1837,13 +1882,18 @@ int GetHitInfoAndEjectionInfo(HitInfo *info, Sprite *spr, bool horz)
 }
 
 
-// since the hitbox ends on the very last subpixel
-// suggest using {0,1} for a local ground check.
-bool CheckSpriteCollision(Sprite *spr, Direction dir, Vec2 * offset, const char * src){
+
+// Check for any collisions on the given sprite using 3 points
+// e.g. for UP it'd be top left, top middle, top right
+// for right it'd be top right, middle right, bottom right
+// Apply an offset to check for stuff ahead, behind, above, below, etc
+// Note: for a ground check, add 1 to y, since the hitbox ends on the last
+//       subpixel before the next ground tile
+bool CheckSpriteCollision(Sprite *spr, Direction dir, Vec2 * subOffset, const char * src){
 
   HitInfo nhi;
   memset(&nhi, 0, sizeof(HitInfo));
-  GetHitInfo(&nhi, spr, dir, offset, src);
+  GetHitInfo(&nhi, spr, dir, subOffset, src);
 
   return nhi.hitSomething;
 }
@@ -1859,11 +1909,7 @@ bool CheckGrounded(Sprite *spr)
   GetHitInfo(&nhi, spr, DIR_DOWN, &offset, "checkgrounded");
   return nhi.hitSomething;
 
-
 }
-
-
-
 
 // the first part of the jump, triggering it
 void TryJump(Sprite *spr)
@@ -2332,6 +2378,8 @@ void MoveAllSprites()
 
   for (int i = 0; i < numSprites; i++)
   {
+    // skip it to test collisions __TEST__
+    if ( i > 0 ) return;
     Sprite *spr = sprites[i];
     SolveMovement(spr);
   }
