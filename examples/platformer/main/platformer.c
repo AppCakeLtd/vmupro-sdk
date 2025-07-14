@@ -168,7 +168,7 @@ typedef struct
 
 } SpriteProfile;
 
-void CreateSpriteProfile(SpriteProfile *inProfile, SpriteType inType)
+void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
 {
 
   if (inProfile == NULL)
@@ -198,9 +198,11 @@ void CreateSpriteProfile(SpriteProfile *inProfile, SpriteType inType)
   p->max_subfallspeed = 120;
 
   if (inType == STYPE_PLAYER)
-  { 
+  {
     //
-  } else if ( inType == STYPE_TESTMOB ){
+  }
+  else if (inType == STYPE_TESTMOB)
+  {
     p->max_subspeed_walk = 10;
     p->subaccel_walk = 1;
     p->subdamping_walk = 0;
@@ -213,6 +215,17 @@ void CreateSpriteProfile(SpriteProfile *inProfile, SpriteType inType)
 
 typedef struct
 {
+
+  // Config options
+  // from which the rest of the struct is calculated
+
+  SpriteType sType;
+  SpriteProfile profile;
+  char name[10];
+
+  // Runtime stuff
+  // calculated via ResetSprite()
+
   // typically the image's bbox
   // in world coords
   BBox worldBBox;
@@ -252,9 +265,6 @@ typedef struct
   int animIndex;
   bool animReversing;
   AnimTypes animID;
-
-  SpriteType sType;
-  SpriteProfile profile;
 
 } Sprite;
 
@@ -323,14 +333,14 @@ bool ValidateAnim(Sprite *spr)
   // is it valid?
   if (spr->activeFrameSet == NULL)
   {
-    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite has null frameset!\n");
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite %s has null frameset!", spr->name);
     return false;
   }
 
   // is it within bounds?
   if (spr->animIndex < 0 || spr->animIndex >= spr->activeFrameSet->numImages)
   {
-    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite's frame index is outside the bounds 0-%d!\n", spr->activeFrameSet->numImages);
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite %s's frame index is outside the bounds 0-%d!", spr->name, spr->activeFrameSet->numImages);
     spr->animIndex = 0;
   }
 
@@ -727,7 +737,8 @@ void ResetSprite(Sprite *spr)
 
   // temporary config stuff
   Vec2 worldStartPos = GetPlayerWorldStartPos();
-  SetWorldPos(spr, &worldStartPos);
+  Vec2 subStartPos = World2Sub(&worldStartPos);  
+  spr->subPos = subStartPos;
   spr->isPlayer = true;
   spr->anchorH = ANCHOR_VTOP;
   spr->anchorV = ANCHOR_HLEFT;
@@ -740,13 +751,13 @@ void ResetSprite(Sprite *spr)
   spr->animID = ANIMTYPE_IDLE;
 
   // Reset/create the movement profile
-  CreateSpriteProfile(&spr->profile, spr->sType);
+  CreateProfile(&spr->profile, spr->sType);
 
   // update the hitbox, bounding box, etc
   OnSpriteMoved(spr);
 }
 
-Sprite *CreateSprite(SpriteType inType, Vec2 worldPos)
+Sprite *CreateSprite(SpriteType inType, Vec2 worldPos, const char *inName)
 {
 
   if (numSprites == MAX_SPRITES)
@@ -759,6 +770,15 @@ Sprite *CreateSprite(SpriteType inType, Vec2 worldPos)
   memset(returnVal, 0, sizeof(Sprite));
 
   returnVal->sType = inType;
+
+  int inNameLen = strlen(inName);
+  const int maxLen = sizeof(returnVal->name) - 1;
+  if (inNameLen > maxLen)
+  {
+    inNameLen = maxLen;
+  }
+  memset(returnVal->name, 0, sizeof(returnVal->name));
+  memcpy(returnVal->name, inName, inNameLen);
 
   ResetSprite(returnVal);
 
@@ -774,13 +794,14 @@ void LoadLevel(int levelNum)
   levelBG = (LevelData *)level_1_layer_0_data;
   levelCols = (LevelData *)level_1_layer_1_data;
 
-  player = CreateSprite(STYPE_PLAYER, GetPlayerWorldStartPos());
+  player = CreateSprite(STYPE_PLAYER, GetPlayerWorldStartPos(), "player");
 
   if (!DEBUG_ONLY_PLAYER)
   {
     Vec2 testPos = GetPlayerWorldPos();
-    testPos.x += 64;
-    CreateSprite(STYPE_TESTMOB, testPos);
+    testPos.x += TILE_SIZE_PX * 6;
+    testPos.y -= TILE_SIZE_PX * 4;
+    CreateSprite(STYPE_TESTMOB, testPos, "testmob1");
   }
 }
 
@@ -1313,7 +1334,6 @@ bool Ignore2SidedBlock(int blockId, int layer, Sprite *spr, Vec2 *tileSubPos)
   if (!IsBlockID2Sided(blockId))
     return false;
 
-  bool movingDown = spr->subVelo.y > 0;
   bool movingUp = spr->subVelo.y < 0;
   bool movingHorz = spr->subVelo.x != 0;
   bool movingVert = spr->subVelo.y != 0;
@@ -1644,8 +1664,8 @@ void GetEjectionInfo(Sprite *spr, HitInfo *info, bool horz)
   if (whereWasCollision == DIR_DOWN)
   {
 
-    int dbgBlockY = info->subEjectionPoint[idx].y;
-    int dbgPlayerY = spr->subPos.y;
+    //int dbgBlockY = info->subEjectionPoint[idx].y;
+    //int dbgPlayerY = spr->subPos.y;
 
     int subY = info->subEjectionPoint[idx].y;
 
