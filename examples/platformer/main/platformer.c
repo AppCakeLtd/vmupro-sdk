@@ -139,9 +139,9 @@ typedef enum
 typedef enum
 {
   SOLIDMASK_NONE,
-  SOLIDMASK_TILE, // don't set mobs to this, lol
-  SOLIDMASK_SOLID,// normal mob
-  SOLIDMASK_ONESIDED,  
+  SOLIDMASK_TILE,  // don't set mobs to this, lol
+  SOLIDMASK_SOLID, // normal mob
+  SOLIDMASK_ONESIDED,
   SOLIDMASK_PLATFORM
 } Solidity;
 
@@ -1338,6 +1338,10 @@ Vec2 GetPointOnSprite(Sprite *spr, bool hitBox, Anchor_H anchorH, Anchor_V ancho
   return returnVal;
 }
 
+// The struct's a little big, unwieldy, and underoptimised
+// but i wanted to make something flexible with plenty
+// of hit information should you need it
+// it's not a bad place to target for performance improvements.
 typedef struct
 {
 
@@ -1352,6 +1356,12 @@ typedef struct
   Anchor_H anchorH[3];
   Anchor_V anchorV[3];
 
+  //
+  // Block hit info
+  //
+
+  int lastBlockHitIndex; // 0-2
+
   // the point(s) we're checking for collision
   // e.g. for moving down we'd use 3:
   // bottom left, bottom middle, bottom right
@@ -1363,15 +1373,28 @@ typedef struct
   // -1 for nothing
   int blockID[3];
 
+  //
+  // Sprite hit info:
+  //
+
+  int lastSpriteHitIndex; // 0-2
+
   // the ejection edge for the block we hit
   // e.g. if we're moving right, it'll be
   // - the x coord of the block's left edge
   // - the y coord of the hitbox point we're checking
-  Vec2 subEjectionPoint[3];
+  Vec2 blockSubEjectPoint[3];
 
-  Solidity hitSomethingX;
-  int lastHitIndex;
+  // other sprites we might have hit
+  Sprite *otherSprites[3];
+  Vec2 spriteSubEjectPoint[3];
+  Solidity spriteSolidity[3];
 
+  //
+  // Shared hit info (blocks/sprites)
+  //
+
+  Solidity hitMask;
   Vec2 snapPoint;
 
 } HitInfo;
@@ -1484,7 +1507,8 @@ void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull
 {
 
   rVal->whereWasCollision = dir;
-  rVal->lastHitIndex = -1;
+  rVal->lastBlockHitIndex = -1;
+  rVal->lastSpriteHitIndex = -1;
 
   // get a list of points to check for
   // whatever direction we're moving
@@ -1599,15 +1623,17 @@ void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull
 
   // and clear the collision return vals
 
-  rVal->hitSomethingX = SOLIDMASK_NONE;
+  rVal->hitMask = SOLIDMASK_NONE;
 
   // finally run some tile collision checks:
   for (int i = 0; i < 3; i++)
   {
 
+    // pre-set the null val
+    rVal->blockID[i] = BLOCK_NULL;
+
     // just the literal tile indexes into the x/y grid
     Vec2 tileRowAndCol = GetTileRowAndColFromSubPos(&rVal->subCheckPos[i]);
-
     int blockId = GetBlockIDAtColRow(tileRowAndCol.x, tileRowAndCol.y, LAYER_COLS);
     if (blockId != BLOCK_NULL)
     {
@@ -1623,51 +1649,49 @@ void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull
         continue;
       }
 
-      rVal->hitSomethingX |= SOLIDMASK_TILE;
+      rVal->hitMask |= SOLIDMASK_TILE;
 
       rVal->blockID[i] = blockId;
-      rVal->lastHitIndex = i;
+      rVal->lastBlockHitIndex = i;
 
       // default to the hit point being wherever we cheked on the sprite
       // we'll tweak the x/y in a sec, depending on where we hit the block
-      rVal->subEjectionPoint[i].x = rVal->subCheckPos[i].x;
-      rVal->subEjectionPoint[i].y = rVal->subCheckPos[i].y;
+      // rVal->blockSubEjectPoint[i].x = rVal->subCheckPos[i].x;
+      // rVal->blockSubEjectPoint[i].y = rVal->subCheckPos[i].y;
+      rVal->blockSubEjectPoint[i] = rVal->subCheckPos[i];
 
       if (dir == DIR_RIGHT)
       {
         // collided on the sprite's right
         // so the hit point is the block's X pos
-        rVal->subEjectionPoint[i].x = tileSubPos.x;
+        rVal->blockSubEjectPoint[i].x = tileSubPos.x;
       }
       else if (dir == DIR_LEFT)
       {
         // collided on the sprite's left
         // so the hit point is the block's x+width
-        rVal->subEjectionPoint[i].x = tileSubPos.x + TILE_SIZE_SUB;
+        rVal->blockSubEjectPoint[i].x = tileSubPos.x + TILE_SIZE_SUB;
       }
       else if (dir == DIR_DOWN)
       {
         // collided on the sprite's bottom
         // so the hitpoint is the block's top
-        rVal->subEjectionPoint[i].y = tileSubPos.y;
+        rVal->blockSubEjectPoint[i].y = tileSubPos.y;
       }
       else if (dir == DIR_UP)
       {
         // collided on the sprite's top
         // so the hitpoint is teh block's bottom
-        rVal->subEjectionPoint[i].y = tileSubPos.y + TILE_SIZE_SUB;
+        rVal->blockSubEjectPoint[i].y = tileSubPos.y + TILE_SIZE_SUB;
       }
-    }
-    else
-    {
-      rVal->blockID[i] = BLOCK_NULL;
-      // let's run some sprite->sprite checks
-    } // blockID != null
-
+    } // block id != null
   } // for i to 3 (blocks)
 
+  //
+  // Check sprite/sprite collisions
   // separate loop to simplify logic
   // (early continues, etc)
+  //
 
   for (int i = 0; i < 3; i++)
   {
@@ -1692,25 +1716,63 @@ void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull
 
       bool inside = SubPointInHitbox(&rVal->subCheckPos[i], otherSprite);
 
-      if (!inside) continue;;
-      printf(" Sprite %s is inside %s\n", spr->name, otherSprite->name);
+      if (!inside)
+        continue;
+
+      printf("__TEST__ Sprite %s is inside %s\n", spr->name, otherSprite->name);
 
       // mask it so we know we hit something
-      rVal->hitSomethingX |= otherSolid;
+      rVal->hitMask |= otherSolid;
+      rVal->lastSpriteHitIndex = i;
 
-    }
+      rVal->otherSprites[i] = otherSprite;
+      rVal->spriteSolidity[i] = otherSolid;
+
+      rVal->spriteSubEjectPoint[i] = rVal->subCheckPos[i];
+
+      // Note: remember to use the hitbox and not the pos
+      // since the hitbox might be offset in some weird way or another
+      if (dir == DIR_RIGHT)
+      {
+        // collided on the src sprite's right
+        // so the hit point is the other sprite's X pos
+        rVal->blockSubEjectPoint[i].x = otherSprite->subHitBox.x;
+      }
+      else if (dir == DIR_LEFT)
+      {
+        // collided on the src sprite's left
+        // so the hit point is the other sprite's x+width
+        rVal->blockSubEjectPoint[i].x = otherSprite->subHitBox.x + otherSprite->subHitBox.width;
+      }
+      else if (dir == DIR_DOWN)
+      {
+        // collided on the src sprite's bottom
+        // so the hitpoint is the other sprite's top
+        rVal->blockSubEjectPoint[i].y = otherSprite->subHitBox.y;
+      }
+      else if (dir == DIR_UP)
+      {
+        // collided on the src sprite's top
+        // so the hitpoint is the other sprite's bottom
+        rVal->blockSubEjectPoint[i].y = otherSprite->subHitBox.y + otherSprite->subHitBox.height;
+      }
+
+      // let's not check all the other sprites
+      break;
+
+    } // for each sprite
   } // for i to 3 (sprites)
 }
 
 void PrintHitInfo(HitInfo *info)
 {
 
-  printf("HitInfo dir %d hit = 0x%lx\n", info->whereWasCollision, (uint32_t)info->hitSomethingX);
+  printf("HitInfo dir %d hit = 0x%lx\n", info->whereWasCollision, (uint32_t)info->hitMask);
   printf("   ids = %d, %d, %d\n", info->blockID[0], info->blockID[1], info->blockID[2]);
   printf("   chX = %d, %d, %d\n", info->subCheckPos[0].x, info->subCheckPos[1].x, info->subCheckPos[2].x);
   printf("   chY = %d, %d, %d\n", info->subCheckPos[0].y, info->subCheckPos[1].y, info->subCheckPos[2].y);
-  printf("   ejX = %d, %d, %d\n", info->subEjectionPoint[0].x, info->subEjectionPoint[1].x, info->subEjectionPoint[2].x);
-  printf("   ejY = %d, %d, %d\n", info->subEjectionPoint[0].y, info->subEjectionPoint[1].y, info->subEjectionPoint[2].y);
+  printf("   ejX = %d, %d, %d\n", info->blockSubEjectPoint[0].x, info->blockSubEjectPoint[1].x, info->blockSubEjectPoint[2].x);
+  printf("   ejY = %d, %d, %d\n", info->blockSubEjectPoint[0].y, info->blockSubEjectPoint[1].y, info->blockSubEjectPoint[2].y);
 }
 
 // Perform the ejection part after collecting hit info
@@ -1718,26 +1780,44 @@ void GetEjectionInfo(Sprite *spr, HitInfo *info, bool horz)
 {
 
   // simple early exit
-  if (!info->hitSomethingX)
+  if (!info->hitMask)
   {
     return;
   }
 
   // the direction we hit something at
   Direction whereWasCollision = info->whereWasCollision;
-  // and which of the 3 points generated a collision
-  int idx = info->lastHitIndex;
+  Vec2 ejectPoint = ZeroVec();
 
-  int dbgBlockX = info->subEjectionPoint[idx].x;
+  if (info->lastSpriteHitIndex > -1)
+  {
+    // doing a sprite/sprite ejection
+    int idx = info->lastSpriteHitIndex;
+    ejectPoint = info->spriteSubEjectPoint[idx];
+  }
+  else if (info->lastBlockHitIndex > -1)
+  {    
+    // doing a sprite/block ejection
+    int idx = info->lastBlockHitIndex;
+    ejectPoint = info->blockSubEjectPoint[idx];
+  }
+  else
+  {
+    // We'd kinda expect one of these to have happened to set the hit mask
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "GetEjectionInfo has no valid block or sprite hits!");
+    return;
+  }
+
+  int dbgBlockX = ejectPoint.x;
   int dbgPlayerX = spr->subPos.x;
-  int dbgBlockY = info->subEjectionPoint[idx].y;
+  int dbgBlockY = ejectPoint.y;
   int dbgPlayerY = spr->subPos.y;
 
   if (whereWasCollision == DIR_RIGHT)
   {
 
     // e.g. the point on the block we just hit
-    int subX = info->subEjectionPoint[idx].x;
+    int subX = ejectPoint.x;
 
     // hitbox might be anchored left/right/middle
     // account for this
@@ -1763,7 +1843,7 @@ void GetEjectionInfo(Sprite *spr, HitInfo *info, bool horz)
   if (whereWasCollision == DIR_LEFT)
   {
 
-    int subX = info->subEjectionPoint[idx].x;
+    int subX = ejectPoint.x;
 
     if (spr->anchorH == ANCHOR_HLEFT)
     {
@@ -1779,15 +1859,14 @@ void GetEjectionInfo(Sprite *spr, HitInfo *info, bool horz)
     }
 
     int subY = spr->subPos.y;
-    Vec2 sub = {subX, subY};
-    // SetSubPos(spr, &sub);
+    Vec2 sub = {subX, subY};    
     info->snapPoint = sub;
   }
 
   if (whereWasCollision == DIR_UP)
   {
 
-    int subY = info->subEjectionPoint[idx].y;
+    int subY = ejectPoint.y;
 
     if (spr->anchorV == ANCHOR_VTOP)
     {
@@ -1804,17 +1883,13 @@ void GetEjectionInfo(Sprite *spr, HitInfo *info, bool horz)
 
     int subX = spr->subPos.x;
     Vec2 sub = {subX, subY};
-    // SetSubPos(spr, &sub);
     info->snapPoint = sub;
   }
 
   if (whereWasCollision == DIR_DOWN)
   {
 
-    // int dbgBlockY = info->subEjectionPoint[idx].y;
-    // int dbgPlayerY = spr->subPos.y;
-
-    int subY = info->subEjectionPoint[idx].y;
+    int subY = ejectPoint.y;
 
     if (spr->anchorV == ANCHOR_VTOP)
     {
@@ -1831,7 +1906,6 @@ void GetEjectionInfo(Sprite *spr, HitInfo *info, bool horz)
 
     int subX = spr->subPos.x;
     Vec2 sub = {subX, subY};
-    // SetSubPos(spr, &sub);
     info->snapPoint = sub;
   }
 
@@ -1845,12 +1919,15 @@ void GetEjectionInfo(Sprite *spr, HitInfo *info, bool horz)
     printf("....TO   plry pos x=%d/%d y=%d/%d\n", newPos.x, newPos.x >> SHIFT, newPos.y, newPos.y >> SHIFT);
     printf("....(provisionally)\n");
 
-    // // To double check your collision logics
-    // if (whereWasCollision == DIR_DOWN)
-    // {
-    //   bool groundedNow = CheckGrounded(spr);
-    //   printf("__DBG__ post ejection ground check = %d\n", (int)groundedNow);
-    // }
+    // To double check your collision logics
+    if (whereWasCollision == DIR_DOWN)
+    {
+      bool groundedNow = CheckGrounded(spr);
+      if (!groundedNow)
+      {
+        vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite %s ejected from a down type collision, but still not grounded!", spr->name);
+      }
+    }
   }
 }
 
@@ -1906,14 +1983,14 @@ int GetHitInfoAndEjectionInfo(HitInfo *info, Sprite *spr, bool horz)
 
   GetHitInfo(info, spr, dir, &subCheckOffset, "TryMove");
 
-  if (info->hitSomethingX)
+  if (info->hitMask)
   {
     // PrintHitInfo(&info);
   }
 
   GetEjectionInfo(spr, info, horz);
 
-  if (info->hitSomethingX)
+  if (info->hitMask)
   {
     // return sign of direction
     return (dir == DIR_RIGHT || dir == DIR_DOWN) ? 1 : -1;
@@ -1934,7 +2011,7 @@ Solidity CheckSpriteCollision(Sprite *spr, Direction dir, Vec2 *subOffset, const
   memset(&nhi, 0, sizeof(HitInfo));
   GetHitInfo(&nhi, spr, dir, subOffset, src);
 
-  return nhi.hitSomethingX;
+  return nhi.hitMask;
 }
 
 Solidity CheckGrounded(Sprite *spr)
@@ -1945,7 +2022,7 @@ Solidity CheckGrounded(Sprite *spr)
   HitInfo nhi;
   memset(&nhi, 0, sizeof(HitInfo));
   GetHitInfo(&nhi, spr, DIR_DOWN, &offset, "checkgrounded");
-  return nhi.hitSomethingX;
+  return nhi.hitMask;
 }
 
 // the first part of the jump, triggering it
@@ -2334,19 +2411,19 @@ void SolveMovement(Sprite *spr)
   // else you could push against a wall and smush against it indefinitely.
 
   // snap to x and y
-  if (xHitInfo.hitSomethingX && !yHitInfo.hitSomethingX)
+  if (xHitInfo.hitMask && !yHitInfo.hitMask)
   {
     // printf("Frame %d hit on X only\n", frameCounter);
     SetSubPosX(spr, xHitInfo.snapPoint.x);
     spr->subVelo.x = 0;
   }
-  else if (!xHitInfo.hitSomethingX && yHitInfo.hitSomethingX)
+  else if (!xHitInfo.hitMask && yHitInfo.hitMask)
   {
     printf("Frame %d hit on Y only\n", frameCounter);
     SetSubPosY(spr, yHitInfo.snapPoint.y);
     spr->subVelo.y = 0;
   }
-  else if (xHitInfo.hitSomethingX && yHitInfo.hitSomethingX)
+  else if (xHitInfo.hitMask && yHitInfo.hitMask)
   {
 
     int xDist = Abs(xHitInfo.snapPoint.x - spr->subPos.x);
@@ -2361,7 +2438,7 @@ void SolveMovement(Sprite *spr)
 
       // re-run the Y hit
       vBonk = GetHitInfoAndEjectionInfo(&yHitInfo, spr, false);
-      if (yHitInfo.hitSomethingX)
+      if (yHitInfo.hitMask)
       {
         printf("....Still got a Y collision to resolve: %d\n", yHitInfo.snapPoint.y);
         SetSubPosY(spr, yHitInfo.snapPoint.y);
@@ -2380,7 +2457,7 @@ void SolveMovement(Sprite *spr)
 
       // re-run the X hit
       hBonk = GetHitInfoAndEjectionInfo(&xHitInfo, spr, true);
-      if (xHitInfo.hitSomethingX)
+      if (xHitInfo.hitMask)
       {
         printf("....Still got a X collision to resolve: %d\n", xHitInfo.snapPoint.x);
         SetSubPosX(spr, xHitInfo.snapPoint.x);
