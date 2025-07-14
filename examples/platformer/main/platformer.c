@@ -45,28 +45,6 @@ const bool DEBUG_ONLY_PLAYER = true;
 
 #define BLOCK_NULL 0xFFFFFFFF
 
-/*
-// maximum speed (in subpixels) while walking or running
-// per frame.
-const int MAX_SUBSPEED_WALK = 100;
-const int MAX_SUBSPEED_RUN = 200;
-
-const int SUBACCEL_WALK = 8;
-const int SUBACCEL_RUN = 9;
-const int SUBACCEL_AIR = 6;
-
-const int SUBDAMPING_WALK = 6;
-const int SUBDAMPING_RUN = 6;
-const int SUBDAMPING_AIR = 4;
-
-// max frames for which the up force is applied
-const int MAX_JUMP_BOOST_FRAMES = 16;
-const int SUB_JUMPFORCE = 14;
-const int SUB_GRAVITY = 9;
-// max of like 256 since that's bigger than a tile
-const int MAX_SUBFALLSPEED = 120;
-*/
-
 int camX = 0;
 int camY = 0;
 int frameCounter = 0;
@@ -1039,12 +1017,20 @@ void DrawGroundtiles(int layer)
 // do it at the end of the frame in case
 // the pos is updated multiple times in a frame
 // (collision, etc)
-void EndOfFrame(Sprite *inSpr)
+void EndFrameSprite(Sprite *inSpr)
 {
   inSpr->lastSubPos = inSpr->subPos;
   inSpr->lastSubVelo = inSpr->subVelo;
   inSpr->onGroundLastFrame = inSpr->isGrounded;
-  // inSpr->lastSubAccel = inSpr->subAccel;
+}
+
+void EndFrameAllSprites()
+{
+  for (int i = 0; i < numSprites; i++)
+  {
+    Sprite *spr = sprites[i];
+    EndFrameSprite(spr);
+  }
 }
 
 int GetXSubAccel(Sprite *spr)
@@ -1052,7 +1038,7 @@ int GetXSubAccel(Sprite *spr)
 
   MoveMode mMode = spr->moveMode;
   SpriteProfile *prof = &spr->profile;
-  
+
   switch (mMode)
   {
   default:
@@ -2340,6 +2326,7 @@ void app_main(void)
     InputAllSprites();
     MoveAllSprites();
     DrawAllSprites();
+    EndFrameAllSprites();
 
     if (DEBUG_SPRITEBOX)
     {
@@ -2351,8 +2338,6 @@ void app_main(void)
     }
 
     vmupro_push_double_buffer_frame();
-
-    EndOfFrame(player);
 
     vmupro_sleep_ms(10);
 
