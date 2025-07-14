@@ -13,11 +13,13 @@ const char *TAG = "[Platformer]";
 // float in air for collision testing
 const bool NO_GRAV = false;
 const bool DEBUG_SPRITEBOX = false;
-const bool DEBUG_HITPOINTS = false;
+const bool DEBUG_HITBOX = true;
+const bool DEBUG_HITPOINTS = true;
 const bool DEBUG_SCROLL_ZONE = false;
 const bool DEBUG_NO_X = false;
 const bool DEBUG_NO_Y = false;
-const bool DEBUG_ONLY_PLAYER = false;
+const bool DEBUG_ONLY_SPAWN_PLAYER = false;
+const bool DEBUG_ONLY_MOVE_PLAYER = true;
 
 #define LAYER_BG 0
 #define LAYER_COLS 1
@@ -134,11 +136,13 @@ typedef enum
   STYPE_TESTMOB
 } SpriteType;
 
-typedef enum{
-  SOLID_NONE,
-  SOLID_ONESIDED,
-  SOLID_SOLID,
-  SOLID_PLATFORM
+typedef enum
+{
+  SOLIDMASK_NONE,
+  SOLIDMASK_TILE, // don't set mobs to this, lol
+  SOLIDMASK_SOLID,// normal mob
+  SOLIDMASK_ONESIDED,  
+  SOLIDMASK_PLATFORM
 } Solidity;
 
 // profile of spite behaviour
@@ -205,8 +209,8 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
   p->sub_jumpforce = 14;
   p->sub_gravity = 9;
   p->max_subfallspeed = 120;
-  
-  p->solid = SOLID_SOLID;
+
+  p->solid = SOLIDMASK_SOLID;
 
   if (inType == STYPE_PLAYER)
   {
@@ -217,7 +221,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->max_subspeed_walk = 10;
     p->subaccel_walk = 1;
     p->subdamping_walk = 0;
-    p->solid = SOLID_PLATFORM;
+    p->solid = SOLIDMASK_PLATFORM;
   }
   else
   {
@@ -235,7 +239,7 @@ typedef struct
   SpriteProfile profile;
   char name[10];
   Vec2 subSpawnPos;
-  
+
   // Runtime stuff
   // calculated via ResetSprite()
 
@@ -287,7 +291,6 @@ typedef struct
 #define MAX_SPRITES 20
 int numSprites = 0;
 Sprite *sprites[MAX_SPRITES];
-
 
 typedef enum
 {
@@ -497,9 +500,9 @@ Sprite *player = NULL;
 // Protos
 //
 //__TEST__ This can be scrubbed when things are moved to headers
-bool CheckGrounded(Sprite *spr);
+Solidity CheckGrounded(Sprite *spr);
 Vec2 GetPointOnSprite(Sprite *spr, bool hitBox, Anchor_H anchorH, Anchor_V anchorV);
-bool CheckSpriteCollision(Sprite *spr, Direction dir, Vec2 * subOffset, const char * src);
+Solidity CheckSpriteCollision(Sprite *spr, Direction dir, Vec2 *subOffset, const char *src);
 
 void DrawBBoxScreen(BBox *box, uint16_t inCol)
 {
@@ -520,12 +523,33 @@ void DrawBBoxWorld(BBox *box, uint16_t inCol)
   vmupro_draw_rect(screenPos.x, screenPos.y, x2, y2, inCol);
 }
 
+void DrawBBoxSub(BBox *box, uint16_t inCol)
+{
+
+  Vec2 subPos = box->vecs.pos;
+  Vec2 worldPos = Sub2World(&subPos);
+  Vec2 screenPos = World2Screen(&worldPos);
+
+  Vec2 subSize = box->vecs.size;
+  Vec2 worldSize = Sub2World(&subSize);
+
+  int x2 = screenPos.x + worldSize.x;
+  int y2 = screenPos.y + worldSize.y;
+  vmupro_draw_rect(screenPos.x, screenPos.y, x2, y2, inCol);
+}
+
 // in screen spsace
 void DrawSpriteBoundingBox(Sprite *inSprite, uint16_t inCol)
 {
 
   BBox *box = &inSprite->worldBBox;
   DrawBBoxWorld(box, inCol);
+}
+
+void DrawSpriteHitBox(Sprite *inSprite, uint16_t inCol)
+{
+  BBox *hitbox = &inSprite->subHitBox;
+  DrawBBoxSub(hitbox, inCol);
 }
 
 // Updates the bounding box when the pos or img changes
@@ -837,7 +861,7 @@ void LoadLevel(int levelNum)
 
   player = CreateSprite(STYPE_PLAYER, GetPlayerWorldStartPos(), "player");
 
-  if (!DEBUG_ONLY_PLAYER)
+  if (!DEBUG_ONLY_SPAWN_PLAYER)
   {
     Vec2 testPos = GetPlayerWorldPos();
     testPos.x += TILE_SIZE_PX * 10;
@@ -880,7 +904,8 @@ uint32_t GetBlockIDAtColRow(int blockCol, int blockRow, int layer)
   return block - 1;
 }
 
-void UpdatePatrollInputs(Sprite * spr){
+void UpdatePatrollInputs(Sprite *spr)
+{
 
   // might lose ground and bonk on the same frame
   // don't want to trigger both
@@ -890,19 +915,19 @@ void UpdatePatrollInputs(Sprite * spr){
 
   // offset a bit based on where we're going
   // a tile should do, since it gives time
-  // to dampen and change direction smoothly  
-  Vec2 subOffset = {originallyFacingRight ? TILE_SIZE_SUB : -TILE_SIZE_SUB, 1};  
-  bool groundAhead = CheckSpriteCollision(spr, DIR_DOWN,  &subOffset, "patrol_ground");
-
+  // to dampen and change direction smoothly
+  Vec2 subOffset = {originallyFacingRight ? TILE_SIZE_SUB : -TILE_SIZE_SUB, 1};
+  bool groundAhead = CheckSpriteCollision(spr, DIR_DOWN, &subOffset, "patrol_ground") != SOLIDMASK_NONE;
 
   // 2: check if we'd bonk into something
 
   Direction dir = spr->facingRight ? DIR_RIGHT : DIR_LEFT;
-  Vec2 wallSubOffset = { dir == DIR_RIGHT ? TILE_SIZE_SUB /2 :  -TILE_SIZE_SUB /2, 0 };
-  bool bonk = CheckSpriteCollision(spr, dir, &wallSubOffset, "patrol_wall");
-  
+  Vec2 wallSubOffset = {dir == DIR_RIGHT ? TILE_SIZE_SUB / 2 : -TILE_SIZE_SUB / 2, 0};
+  bool bonk = CheckSpriteCollision(spr, dir, &wallSubOffset, "patrol_wall") != SOLIDMASK_NONE;
+
   // Turn around
-  if (bonk || !groundAhead ){
+  if (bonk || !groundAhead)
+  {
     spr->facingRight = !originallyFacingRight;
   }
 
@@ -910,9 +935,7 @@ void UpdatePatrollInputs(Sprite * spr){
 
   spr->input.right = spr->facingRight;
   spr->input.left = !spr->facingRight;
-
 }
-
 
 void UpdateSpriteInputs(Sprite *spr)
 {
@@ -940,9 +963,8 @@ void UpdateSpriteInputs(Sprite *spr)
   }
   else if (spr->sType == STYPE_TESTMOB)
   {
-    
+
     UpdatePatrollInputs(spr);
-    
   }
   else
   {
@@ -956,6 +978,8 @@ void InputAllSprites()
 
   for (int i = 0; i < numSprites; i++)
   {
+    if (i > 0 && DEBUG_ONLY_MOVE_PLAYER)
+      continue;
     Sprite *spr = sprites[i];
     UpdateSpriteInputs(spr);
   }
@@ -1314,8 +1338,6 @@ Vec2 GetPointOnSprite(Sprite *spr, bool hitBox, Anchor_H anchorH, Anchor_V ancho
   return returnVal;
 }
 
-
-
 typedef struct
 {
 
@@ -1347,7 +1369,7 @@ typedef struct
   // - the y coord of the hitbox point we're checking
   Vec2 subEjectionPoint[3];
 
-  bool hitSomething;
+  Solidity hitSomethingX;
   int lastHitIndex;
 
   Vec2 snapPoint;
@@ -1440,14 +1462,18 @@ bool Ignore2SidedBlock(int blockId, int layer, Sprite *spr, Vec2 *tileSubPos)
   return false;
 }
 
-bool SubPointInSprite(Vec2 * subPoint, Sprite * otherSprite){
+bool SubPointInHitbox(Vec2 *subPoint, Sprite *otherSprite)
+{
 
-  if ( subPoint->x < otherSprite->subHitBox.x ) return false;
-  if ( subPoint->x > otherSprite->subHitBox.x + otherSprite->subHitBox.width ) return false;
-  if ( subPoint->y < otherSprite->subHitBox.y ) return false;
-  if ( subPoint->y > otherSprite->subHitBox.y + otherSprite->subHitBox.height ) return false;
+  if (subPoint->x < otherSprite->subHitBox.x)
+    return false;
+  if (subPoint->x > otherSprite->subHitBox.x + otherSprite->subHitBox.width)
+    return false;
+  if (subPoint->y < otherSprite->subHitBox.y)
+    return false;
+  if (subPoint->y > otherSprite->subHitBox.y + otherSprite->subHitBox.height)
+    return false;
   return true;
-
 }
 
 // subOffsetOrNull adds an offset to where we check for collisions
@@ -1573,7 +1599,7 @@ void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull
 
   // and clear the collision return vals
 
-  rVal->hitSomething = false;
+  rVal->hitSomethingX = SOLIDMASK_NONE;
 
   // finally run some tile collision checks:
   for (int i = 0; i < 3; i++)
@@ -1597,7 +1623,7 @@ void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull
         continue;
       }
 
-      rVal->hitSomething = true;
+      rVal->hitSomethingX |= SOLIDMASK_TILE;
 
       rVal->blockID[i] = blockId;
       rVal->lastHitIndex = i;
@@ -1632,40 +1658,54 @@ void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull
         rVal->subEjectionPoint[i].y = tileSubPos.y + TILE_SIZE_SUB;
       }
     }
-    
-    // didn't hit a block
-    if ( blockId == BLOCK_NULL ){
-
+    else
+    {
       rVal->blockID[i] = BLOCK_NULL;
       // let's run some sprite->sprite checks
-
-      for( int i = 0; i < numSprites; i++ ){
-        Sprite * otherSprite = sprites[i];
-
-        if ( otherSprite == NULL) continue;
-
-        // let's not collide with ourself
-        if ( otherSprite == spr ) continue;
-
-        // ignore nonsolid stuff
-        if ( otherSprite->profile.solid == SOLID_NONE ) continue;
-        
-        bool inside = SubPointInSprite( &rVal->subCheckPos[i], otherSprite );
-
-        if( inside ) printf(" Sprite %s is inside %s\n", spr->name, otherSprite->name );
-
-      }
-
-
     } // blockID != null
 
-  } // for i to 3
+  } // for i to 3 (blocks)
+
+  // separate loop to simplify logic
+  // (early continues, etc)
+
+  for (int i = 0; i < 3; i++)
+  {
+    // Then check against other sprites
+    // (do both, 'cause once might be closer than the other
+    for (int j = 0; j < numSprites; j++)
+    {
+      Sprite *otherSprite = sprites[j];
+
+      if (otherSprite == NULL)
+        continue;
+
+      // let's not collide with ourself
+      if (otherSprite == spr)
+        continue;
+
+      Solidity otherSolid = otherSprite->profile.solid;
+
+      // ignore nonsolid stuff
+      if (otherSolid == SOLIDMASK_NONE)
+        continue;
+
+      bool inside = SubPointInHitbox(&rVal->subCheckPos[i], otherSprite);
+
+      if (!inside) continue;;
+      printf(" Sprite %s is inside %s\n", spr->name, otherSprite->name);
+
+      // mask it so we know we hit something
+      rVal->hitSomethingX |= otherSolid;
+
+    }
+  } // for i to 3 (sprites)
 }
 
 void PrintHitInfo(HitInfo *info)
 {
 
-  printf("HitInfo dir %d hit = %d\n", info->whereWasCollision, (int)info->hitSomething);
+  printf("HitInfo dir %d hit = 0x%lx\n", info->whereWasCollision, (uint32_t)info->hitSomethingX);
   printf("   ids = %d, %d, %d\n", info->blockID[0], info->blockID[1], info->blockID[2]);
   printf("   chX = %d, %d, %d\n", info->subCheckPos[0].x, info->subCheckPos[1].x, info->subCheckPos[2].x);
   printf("   chY = %d, %d, %d\n", info->subCheckPos[0].y, info->subCheckPos[1].y, info->subCheckPos[2].y);
@@ -1678,7 +1718,7 @@ void GetEjectionInfo(Sprite *spr, HitInfo *info, bool horz)
 {
 
   // simple early exit
-  if (!info->hitSomething)
+  if (!info->hitSomethingX)
   {
     return;
   }
@@ -1866,14 +1906,14 @@ int GetHitInfoAndEjectionInfo(HitInfo *info, Sprite *spr, bool horz)
 
   GetHitInfo(info, spr, dir, &subCheckOffset, "TryMove");
 
-  if (info->hitSomething)
+  if (info->hitSomethingX)
   {
     // PrintHitInfo(&info);
   }
 
   GetEjectionInfo(spr, info, horz);
 
-  if (info->hitSomething)
+  if (info->hitSomethingX)
   {
     // return sign of direction
     return (dir == DIR_RIGHT || dir == DIR_DOWN) ? 1 : -1;
@@ -1881,34 +1921,31 @@ int GetHitInfoAndEjectionInfo(HitInfo *info, Sprite *spr, bool horz)
   return 0;
 }
 
-
-
 // Check for any collisions on the given sprite using 3 points
 // e.g. for UP it'd be top left, top middle, top right
 // for right it'd be top right, middle right, bottom right
 // Apply an offset to check for stuff ahead, behind, above, below, etc
 // Note: for a ground check, add 1 to y, since the hitbox ends on the last
 //       subpixel before the next ground tile
-bool CheckSpriteCollision(Sprite *spr, Direction dir, Vec2 * subOffset, const char * src){
+Solidity CheckSpriteCollision(Sprite *spr, Direction dir, Vec2 *subOffset, const char *src)
+{
 
   HitInfo nhi;
   memset(&nhi, 0, sizeof(HitInfo));
   GetHitInfo(&nhi, spr, dir, subOffset, src);
 
-  return nhi.hitSomething;
+  return nhi.hitSomethingX;
 }
 
-
-bool CheckGrounded(Sprite *spr)
+Solidity CheckGrounded(Sprite *spr)
 {
   // hitbox ends on the very last subpixel
   // so adding one takes you into the next tile
-  Vec2 offset = {0,1};
+  Vec2 offset = {0, 1};
   HitInfo nhi;
   memset(&nhi, 0, sizeof(HitInfo));
   GetHitInfo(&nhi, spr, DIR_DOWN, &offset, "checkgrounded");
-  return nhi.hitSomething;
-
+  return nhi.hitSomethingX;
 }
 
 // the first part of the jump, triggering it
@@ -2221,7 +2258,6 @@ void SolveMovement(Sprite *spr)
     hBonk = GetHitInfoAndEjectionInfo(&xHitInfo, spr, true);
 
   } // DEBUG_NO_X
- 
 
   //
   // Y/Horizontal damp, clamp, move, eject
@@ -2298,19 +2334,19 @@ void SolveMovement(Sprite *spr)
   // else you could push against a wall and smush against it indefinitely.
 
   // snap to x and y
-  if (xHitInfo.hitSomething && !yHitInfo.hitSomething)
+  if (xHitInfo.hitSomethingX && !yHitInfo.hitSomethingX)
   {
     // printf("Frame %d hit on X only\n", frameCounter);
     SetSubPosX(spr, xHitInfo.snapPoint.x);
     spr->subVelo.x = 0;
   }
-  else if (!xHitInfo.hitSomething && yHitInfo.hitSomething)
+  else if (!xHitInfo.hitSomethingX && yHitInfo.hitSomethingX)
   {
     printf("Frame %d hit on Y only\n", frameCounter);
     SetSubPosY(spr, yHitInfo.snapPoint.y);
     spr->subVelo.y = 0;
   }
-  else if (xHitInfo.hitSomething && yHitInfo.hitSomething)
+  else if (xHitInfo.hitSomethingX && yHitInfo.hitSomethingX)
   {
 
     int xDist = Abs(xHitInfo.snapPoint.x - spr->subPos.x);
@@ -2325,7 +2361,7 @@ void SolveMovement(Sprite *spr)
 
       // re-run the Y hit
       vBonk = GetHitInfoAndEjectionInfo(&yHitInfo, spr, false);
-      if (yHitInfo.hitSomething)
+      if (yHitInfo.hitSomethingX)
       {
         printf("....Still got a Y collision to resolve: %d\n", yHitInfo.snapPoint.y);
         SetSubPosY(spr, yHitInfo.snapPoint.y);
@@ -2344,7 +2380,7 @@ void SolveMovement(Sprite *spr)
 
       // re-run the X hit
       hBonk = GetHitInfoAndEjectionInfo(&xHitInfo, spr, true);
-      if (xHitInfo.hitSomething)
+      if (xHitInfo.hitSomethingX)
       {
         printf("....Still got a X collision to resolve: %d\n", xHitInfo.snapPoint.x);
         SetSubPosX(spr, xHitInfo.snapPoint.x);
@@ -2357,7 +2393,7 @@ void SolveMovement(Sprite *spr)
     }
   }
 
-  spr->isGrounded = CheckGrounded(spr);
+  spr->isGrounded = CheckGrounded(spr) != SOLIDMASK_NONE;
   // printf("Frame %d is grounded %d yVel = %d\n", frameCounter, spr->isGrounded, spr->subVelo.y);
   spr->isOnWall = (vBonk != 0);
 
@@ -2379,7 +2415,8 @@ void MoveAllSprites()
   for (int i = 0; i < numSprites; i++)
   {
     // skip it to test collisions __TEST__
-    if ( i > 0 ) return;
+    if (i > 0 && DEBUG_ONLY_MOVE_PLAYER)
+      continue;
     Sprite *spr = sprites[i];
     SolveMovement(spr);
   }
@@ -2454,11 +2491,33 @@ void DrawSprite(Sprite *spr)
 
 void DrawAllSprites()
 {
-
   for (int i = 0; i < numSprites; i++)
   {
     Sprite *spr = sprites[i];
     DrawSprite(spr);
+  }
+}
+
+void DrawDebugAllSprites()
+{
+
+  for (int i = 0; i < numSprites; i++)
+  {
+    Sprite *spr = sprites[i];
+
+    if (DEBUG_SPRITEBOX)
+    {
+      DrawSpriteBoundingBox(spr, VMUPRO_COLOR_WHITE);
+    }
+    if (DEBUG_HITBOX)
+    {
+      DrawSpriteHitBox(spr, VMUPRO_COLOR_WHITE);
+    }
+  }
+
+  if (DEBUG_SCROLL_ZONE)
+  {
+    DrawCamScrollZone();
   }
 }
 
@@ -2490,14 +2549,7 @@ void app_main(void)
     DrawAllSprites();
     EndFrameAllSprites();
 
-    if (DEBUG_SPRITEBOX)
-    {
-      DrawSpriteBoundingBox(player, VMUPRO_COLOR_WHITE);
-    }
-    if (DEBUG_SCROLL_ZONE)
-    {
-      DrawCamScrollZone();
-    }
+    DrawDebugAllSprites();
 
     vmupro_push_double_buffer_frame();
 
