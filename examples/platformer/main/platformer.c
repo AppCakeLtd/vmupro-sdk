@@ -280,7 +280,7 @@ void SetAnim(Sprite *spr, AnimTypes inType)
     return;
   }
 
-  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Anim ID %d", frameCounter, (int)inType);
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s Anim ID %d", frameCounter, spr->name, (int)inType);
 
   switch (inType)
   {
@@ -737,7 +737,7 @@ void ResetSprite(Sprite *spr)
 
   // temporary config stuff
   Vec2 worldStartPos = GetPlayerWorldStartPos();
-  Vec2 subStartPos = World2Sub(&worldStartPos);  
+  Vec2 subStartPos = World2Sub(&worldStartPos);
   spr->subPos = subStartPos;
   spr->isPlayer = true;
   spr->anchorH = ANCHOR_VTOP;
@@ -1664,8 +1664,8 @@ void GetEjectionInfo(Sprite *spr, HitInfo *info, bool horz)
   if (whereWasCollision == DIR_DOWN)
   {
 
-    //int dbgBlockY = info->subEjectionPoint[idx].y;
-    //int dbgPlayerY = spr->subPos.y;
+    // int dbgBlockY = info->subEjectionPoint[idx].y;
+    // int dbgPlayerY = spr->subPos.y;
 
     int subY = info->subEjectionPoint[idx].y;
 
@@ -2278,9 +2278,11 @@ void DrawSprite(Sprite *spr)
   bool goingUp = spr->subVelo.y < 0;
 
   bool isMoving = SpriteIsMoving(spr);
+  bool isTryingToMove = spr->input.left | spr->input.right;
+  bool idle = !isMoving && !isTryingToMove;
 
   // everything else
-  if (!isMoving)
+  if (idle)
   {
     SetAnim(spr, ANIMTYPE_IDLE);
   }
