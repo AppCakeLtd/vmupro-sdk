@@ -27,7 +27,6 @@ typedef struct
     ImageArray images;
 } AnimFrames;
 
-// TODO: we'll fill these out later
 typedef enum
 {
     ANIMTYPE_IDLE,

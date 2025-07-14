@@ -147,6 +147,12 @@ typedef enum
   ANCHOR_VBOTTOM,
 } Anchor_V;
 
+typedef enum
+{
+  STYPE_PLAYER,
+  STYPE_TESTMOB
+} SpriteType;
+
 typedef struct
 {
   // typically the image's bbox
@@ -189,7 +195,13 @@ typedef struct
   bool animReversing;
   AnimTypes animID;
 
+  SpriteType sType;
+
 } Sprite;
+
+#define MAX_SPRITES 20
+int numSprites = 0;
+Sprite *sprites[MAX_SPRITES];
 
 void SetAnim(Sprite *spr, AnimTypes inType)
 {
@@ -205,7 +217,6 @@ void SetAnim(Sprite *spr, AnimTypes inType)
   {
   case ANIMTYPE_IDLE:
     spr->activeFrameSet = &spr->anims->idleFrames;
-    printf("__TEST__ idle\n");
     break;
   case ANIMTYPE_WALK:
     spr->activeFrameSet = &spr->anims->walkFrames;
@@ -386,18 +397,7 @@ Vec2 GetScreenPos(Sprite *inSprite)
   return Sub2Screen(&inSprite->subPos);
 }
 
-typedef struct
-{
-  Sprite spr;
-} Player;
-
-typedef struct
-{
-  Sprite pr;
-} Mob;
-
-Player player;
-Mob testMob;
+Sprite *player = NULL;
 
 //
 // Protos
@@ -542,7 +542,7 @@ Vec2 ZeroVec()
 // the player's position
 Vec2 GetPlayerWorldPos()
 {
-  Vec2 wPos = GetWorldPos(&player.spr);
+  Vec2 wPos = GetWorldPos(player);
   return wPos;
 }
 
@@ -633,12 +633,12 @@ Vec2 GetPlayerWorldStartPos()
 bool CheckFellOffMap()
 {
 
-  Vec2 topleftPoint = GetPointOnSprite(&player.spr, false, player.spr.anchorH, player.spr.anchorV);
+  Vec2 topleftPoint = GetPointOnSprite(player, false, player->anchorH, player->anchorV);
   if (topleftPoint.y > MAP_HEIGHT_PIXELS + TILE_SIZE_PX)
   {
-    printf("__TEST__ Frame %d player fell off map at yPos %d\n", frameCounter, player.spr.subPos.y);
+    vmupro_log(VMUPRO_LOG_WARN, TAG, "Frame %d player fell off map at yPos %d\n", frameCounter, player->subPos.y);
     Vec2 worldStartPos = GetPlayerWorldStartPos();
-    SetWorldPos(&player.spr, &worldStartPos);
+    SetWorldPos(player, &worldStartPos);
     return true;
   }
   return false;
@@ -683,12 +683,37 @@ void ResetSprite(Sprite *spr)
   OnSpriteMoved(spr);
 }
 
+Sprite *CreateSprite(SpriteType inType, Vec2 worldPos)
+{
+
+  if (numSprites == MAX_SPRITES)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Out of sprite slots");
+    return NULL;
+  }
+
+  Sprite *returnVal = malloc(sizeof(Sprite));
+  memset(returnVal, 0, sizeof(Sprite));
+
+  ResetSprite(returnVal);
+
+  sprites[numSprites] = returnVal;
+  numSprites++;
+
+  return returnVal;
+}
+
 void LoadLevel(int levelNum)
 {
 
   levelBG = (LevelData *)level_1_layer_0_data;
   levelCols = (LevelData *)level_1_layer_1_data;
-  ResetSprite(&player.spr);
+
+  player = CreateSprite(STYPE_PLAYER, GetPlayerWorldStartPos());
+
+  Vec2 testPos = GetPlayerWorldPos();
+  testPos.x += 64;
+  CreateSprite(STYPE_TESTMOB, testPos);
 }
 
 // returns atlas block 0-max
@@ -725,7 +750,7 @@ void UpdatePlayerInputs()
 
   vmupro_btn_read();
 
-  Sprite *spr = &player.spr;
+  Sprite *spr = player;
   Inputs *inp = &spr->input;
 
   inp->up = vmupro_btn_held(DPad_Up);
@@ -784,7 +809,7 @@ void DrawCamScrollZone()
 void SolveCamera()
 {
 
-  Sprite *spr = &player.spr;
+  Sprite *spr = player;
   Vec2 playerWorldPos = GetPointOnSprite(spr, false, ANCHOR_HMID, ANCHOR_VMID);
 
   //
@@ -1186,7 +1211,6 @@ bool Ignore2SidedBlock(int blockId, int layer, Sprite *spr, Vec2 *tileSubPos)
 
   if (movingHorz && !movingVert && higher)
   {
-    // printf("__TEST__ mr %d vs %d\n", subFootPos.y, tileSubPos->y);
     return true;
   }
 
@@ -1346,9 +1370,8 @@ void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull
 
       if (ignore)
       {
-        printf("__TEST__ ignoring 2 sided block\n");
+        // printf("ignoring 2 sided block\n");
         continue;
-        ;
       }
 
       rVal->hitSomething = true;
@@ -1761,7 +1784,7 @@ void CheckLanded(Sprite *spr)
 void SolvePlayer()
 {
 
-  Sprite *spr = &player.spr;
+  Sprite *spr = player;
   Inputs *inp = &spr->input;
 
   // set up all of our state values
@@ -2000,13 +2023,13 @@ void SolvePlayer()
   // snap to x and y
   if (xHitInfo.hitSomething && !yHitInfo.hitSomething)
   {
-    printf("__TEST__ Frame %d hit on X only\n", frameCounter);
+    // printf("Frame %d hit on X only\n", frameCounter);
     SetSubPosX(spr, xHitInfo.snapPoint.x);
     spr->subVelo.x = 0;
   }
   else if (!xHitInfo.hitSomething && yHitInfo.hitSomething)
   {
-    printf("__TEST__ Frame %d hit on Y only\n", frameCounter);
+    printf("Frame %d hit on Y only\n", frameCounter);
     SetSubPosY(spr, yHitInfo.snapPoint.y);
     spr->subVelo.y = 0;
   }
@@ -2015,7 +2038,7 @@ void SolvePlayer()
 
     int xDist = Abs(xHitInfo.snapPoint.x - spr->subPos.x);
     int yDist = Abs(yHitInfo.snapPoint.y - spr->subPos.y);
-    printf("__TEST__ Frame %d hit on X and Y dists=%d,%d\n", frameCounter, xDist, yDist);
+    printf("Frame %d hit on X and Y dists=%d,%d\n", frameCounter, xDist, yDist);
 
     if (xDist < yDist)
     {
@@ -2058,7 +2081,7 @@ void SolvePlayer()
   }
 
   spr->isGrounded = CheckGrounded(spr);
-  // printf("__TEST__ Frame %d is grounded %d yVel = %d\n", frameCounter, spr->isGrounded, spr->subVelo.y);
+  // printf("Frame %d is grounded %d yVel = %d\n", frameCounter, spr->isGrounded, spr->subVelo.y);
 
   CheckLanded(spr);
   CheckFellOffMap();
@@ -2080,7 +2103,7 @@ bool SpriteIsMoving(Sprite *spr)
 void DrawPlayer()
 {
 
-  Sprite *spr = &player.spr;
+  Sprite *spr = player;
 
   Vec2 worldOrigin = GetWorldPos(spr);
   Vec2 screenOrigin = World2Screen(&worldOrigin);
@@ -2089,7 +2112,7 @@ void DrawPlayer()
   Vec2 worldBoxPos = spr->worldBBox.vecs.pos;
   Vec2 screenBoxPos = World2Screen(&worldBoxPos);
 
-  bool goingUp = player.spr.subVelo.y < 0;
+  bool goingUp = player->subVelo.y < 0;
 
   bool isMoving = SpriteIsMoving(spr);
 
@@ -2122,7 +2145,7 @@ void DrawPlayer()
   }
 
   UpdateAnimation(spr);
-  OnSpriteMoved(&player.spr);
+  OnSpriteMoved(player);
 
   // update the img pointer, in case it's changed due to anims
   const Img *img = GetActiveImage(spr);
@@ -2162,7 +2185,7 @@ void app_main(void)
 
     if (DEBUG_SPRITEBOX)
     {
-      DrawSpriteBoundingBox(&player.spr, VMUPRO_COLOR_WHITE);
+      DrawSpriteBoundingBox(player, VMUPRO_COLOR_WHITE);
     }
     if (DEBUG_SCROLL_ZONE)
     {
@@ -2171,7 +2194,7 @@ void app_main(void)
 
     vmupro_push_double_buffer_frame();
 
-    EndOfFrame(&player.spr);
+    EndOfFrame(player);
 
     vmupro_sleep_ms(10);
 
@@ -2183,16 +2206,16 @@ void app_main(void)
     // test: cycle through sprite offsets
     if (vmupro_btn_pressed(Btn_A))
     {
-      printf("PlayerX world:%d sub: %d \n", GetWorldPos(&player.spr).x, GetSubPos(&player.spr).x);
-      printf("PlayerY world:%d sub: %d \n", GetWorldPos(&player.spr).y, GetSubPos(&player.spr).y);
-      printf("Player grounded? %d\n", (int)player.spr.isGrounded);
+      printf("PlayerX world:%d sub: %d \n", GetWorldPos(player).x, GetSubPos(player).x);
+      printf("PlayerY world:%d sub: %d \n", GetWorldPos(player).y, GetSubPos(player).y);
+      printf("Player grounded? %d\n", (int)player->isGrounded);
     }
 
     if (vmupro_btn_pressed(Btn_B))
     {
-      // player.spr.anchorV = (player.spr.anchorV + 1) % (3);
-      //  player.spr.anchorH = (player.spr.anchorH + 1) % (3);
-      // OnSpriteMoved(&player.spr);
+      // player->anchorV = (player->anchorV + 1) % (3);
+      //  player->anchorH = (player->anchorH + 1) % (3);
+      // OnSpriteMoved(player);
     }
 
     frameCounter++;
