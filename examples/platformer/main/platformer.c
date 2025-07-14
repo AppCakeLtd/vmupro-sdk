@@ -17,6 +17,7 @@ const bool DEBUG_HITPOINTS = false;
 const bool DEBUG_SCROLL_ZONE = false;
 const bool DEBUG_NO_X = false;
 const bool DEBUG_NO_Y = false;
+const bool DEBUG_ONLY_PLAYER = true;
 
 #define LAYER_BG 0
 #define LAYER_COLS 1
@@ -619,9 +620,13 @@ bool SpriteJumping(Sprite *spr)
 void SetMoveMode(Sprite *spr, MoveMode inMode)
 {
 
+  MoveMode oldMode = inMode;
   spr->moveMode = inMode;
 
-  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Move mode %d", frameCounter, (int)inMode);
+  if (oldMode != inMode)
+  {
+    vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Move mode %d", frameCounter, (int)inMode);
+  }
 }
 
 Vec2 GetPlayerWorldStartPos()
@@ -646,8 +651,6 @@ bool CheckFellOffMap()
 
 void ResetSprite(Sprite *spr)
 {
-
-  memset(spr, 0, sizeof(Sprite));
 
   // update other struct vals
   spr->facingRight = true;
@@ -695,6 +698,8 @@ Sprite *CreateSprite(SpriteType inType, Vec2 worldPos)
   Sprite *returnVal = malloc(sizeof(Sprite));
   memset(returnVal, 0, sizeof(Sprite));
 
+  returnVal->sType = inType;
+
   ResetSprite(returnVal);
 
   sprites[numSprites] = returnVal;
@@ -711,9 +716,12 @@ void LoadLevel(int levelNum)
 
   player = CreateSprite(STYPE_PLAYER, GetPlayerWorldStartPos());
 
-  Vec2 testPos = GetPlayerWorldPos();
-  testPos.x += 64;
-  CreateSprite(STYPE_TESTMOB, testPos);
+  if (!DEBUG_ONLY_PLAYER)
+  {
+    Vec2 testPos = GetPlayerWorldPos();
+    testPos.x += 64;
+    CreateSprite(STYPE_TESTMOB, testPos);
+  }
 }
 
 // returns atlas block 0-max
@@ -772,7 +780,7 @@ void UpdateSpriteInputs(Sprite *spr)
   {
     memset(&spr->input, 0, sizeof(Inputs));
 
-    bool pingPong = (frameCounter / 100) % 2 == 0;
+    bool pingPong = (frameCounter / 40) % 2 == 0;
     inp->right = pingPong;
     inp->left = !pingPong;
   }
@@ -1740,25 +1748,28 @@ void TryContinueJump(Sprite *spr)
   }
 }
 
-//__TEST__ Not yet applied
 // e.g. walking off an edge
 void CheckFallen(Sprite *spr)
 {
 
-  // we were walking/running
+  // we were walking/running on the ground
   // we were on the ground
   // we are no longer on the ground
+  // we aren't jumping
 
   if (!MoveModeOnGround(spr))
   {
     return;
   }
-  if (!spr->isGrounded)
+  if (!spr->onGroundLastFrame)
   {
     return;
   }
-  if (!spr->onGroundLastFrame)
+  if (spr->isGrounded)
   {
+    return;
+  }
+  if ( SpriteJumping(spr) ){
     return;
   }
 
@@ -2121,6 +2132,7 @@ void SolveMovement(Sprite *spr)
   // printf("Frame %d is grounded %d yVel = %d\n", frameCounter, spr->isGrounded, spr->subVelo.y);
 
   CheckLanded(spr);
+  CheckFallen(spr);
   CheckFellOffMap();
 
   // head or feet bonked
