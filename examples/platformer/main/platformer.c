@@ -17,7 +17,7 @@ const bool DEBUG_HITPOINTS = false;
 const bool DEBUG_SCROLL_ZONE = false;
 const bool DEBUG_NO_X = false;
 const bool DEBUG_NO_Y = false;
-const bool DEBUG_ONLY_PLAYER = true;
+const bool DEBUG_ONLY_PLAYER = false;
 
 #define LAYER_BG 0
 #define LAYER_COLS 1
@@ -178,24 +178,32 @@ void CreateSpriteProfile(SpriteProfile *inProfile, SpriteType inType)
 
   memset(inProfile, 0, sizeof(SpriteProfile));
 
+  // fill in player defaults
+  // then tweak anything we need from there
+  SpriteProfile *p = inProfile;
+  p->max_subspeed_walk = 80;
+  p->max_subspeed_run = 140;
+
+  p->subaccel_walk = 8;
+  p->subaccel_run = 9;
+  p->subaccel_air = 6;
+
+  p->subdamping_walk = 6;
+  p->subdamping_run = 6;
+  p->subdamping_air = 4;
+
+  p->max_jump_boost_frames = 16;
+  p->sub_jumpforce = 14;
+  p->sub_gravity = 9;
+  p->max_subfallspeed = 120;
+
   if (inType == STYPE_PLAYER)
-  {
-    SpriteProfile *p = inProfile;
-    p->max_subspeed_walk = 100;
-    p->max_subspeed_run = 200;
-
-    p->subaccel_walk = 8;
-    p->subaccel_run = 9;
-    p->subaccel_air = 6;
-
-    p->subdamping_walk = 6;
-    p->subdamping_run = 6;
-    p->subdamping_air = 4;
-
-    p->max_jump_boost_frames = 16;
-    p->sub_jumpforce = 14;
-    p->sub_gravity = 9;
-    p->max_subfallspeed = 120;
+  { 
+    //
+  } else if ( inType == STYPE_TESTMOB ){
+    p->max_subspeed_walk = 10;
+    p->subaccel_walk = 1;
+    p->subdamping_walk = 0;
   }
   else
   {
