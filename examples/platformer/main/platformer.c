@@ -475,6 +475,7 @@ Sprite *player = NULL;
 //__TEST__ This can be scrubbed when things are moved to headers
 bool CheckGrounded(Sprite *spr);
 Vec2 GetPointOnSprite(Sprite *spr, bool hitBox, Anchor_H anchorH, Anchor_V anchorV);
+bool CheckForGroundAhead(Sprite *spr);
 
 void DrawBBoxScreen(BBox *box, uint16_t inCol)
 {
@@ -792,6 +793,10 @@ Sprite *CreateSprite(SpriteType inType, Vec2 worldStartPos, const char *inName)
 
   ResetSprite(returnVal);
 
+  //
+  // Finally, assign it.
+  //
+
   sprites[numSprites] = returnVal;
   numSprites++;
 
@@ -844,6 +849,20 @@ uint32_t GetBlockIDAtColRow(int blockCol, int blockRow, int layer)
   return block - 1;
 }
 
+void UpdatePatrollInputs(Sprite * spr){
+
+  bool groundAhead = CheckForGroundAhead(spr);
+
+  if (!groundAhead ){
+    spr->facingRight = !spr->facingRight;
+  }
+
+  spr->input.right = spr->facingRight;
+  spr->input.left = !spr->facingRight;
+
+}
+
+
 void UpdateSpriteInputs(Sprite *spr)
 {
 
@@ -854,6 +873,7 @@ void UpdateSpriteInputs(Sprite *spr)
   }
 
   Inputs *inp = &spr->input;
+  memset(&spr->input, 0, sizeof(Inputs));
 
   if (spr->sType == STYPE_PLAYER)
   {
@@ -869,11 +889,9 @@ void UpdateSpriteInputs(Sprite *spr)
   }
   else if (spr->sType == STYPE_TESTMOB)
   {
-    memset(&spr->input, 0, sizeof(Inputs));
-
-    bool pingPong = (frameCounter / 40) % 2 == 0;
-    inp->right = pingPong;
-    inp->left = !pingPong;
+    
+    UpdatePatrollInputs(spr);
+    
   }
   else
   {
@@ -1795,6 +1813,29 @@ bool CheckGrounded(Sprite *spr)
 
   return nhi.hitSomething;
 }
+
+// Patrol behaviour:
+// is there some ground a little bit ahead in whichever 
+// direction we're travelling
+bool CheckForGroundAhead(Sprite *spr){
+
+  // the hitbox ends on the very last subpixel
+  // so add 1 (or more I guess) to the y pos
+  Vec2 subGroundCheckOffset = {0, 1};
+
+  // then offset a bit based on where we're going
+  // a tile should do, since it gives time
+  // to dampen and change direction smoothly
+  int offset = TILE_SIZE_SUB;
+  subGroundCheckOffset.x += (spr->facingRight) ? offset : -offset;
+
+  HitInfo nhi;
+  memset(&nhi, 0, sizeof(HitInfo));
+  GetHitInfo(&nhi, spr, DIR_DOWN, &subGroundCheckOffset, "groundcheck");
+
+  return nhi.hitSomething;
+}
+
 
 // the first part of the jump, triggering it
 void TryJump(Sprite *spr)
