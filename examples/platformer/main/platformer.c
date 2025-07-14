@@ -13,13 +13,13 @@ const char *TAG = "[Platformer]";
 // float in air for collision testing
 const bool NO_GRAV = false;
 const bool DEBUG_SPRITEBOX = false;
-const bool DEBUG_HITBOX = true;
-const bool DEBUG_HITPOINTS = true;
+const bool DEBUG_HITBOX = false;
+const bool DEBUG_HITPOINTS = false;
 const bool DEBUG_SCROLL_ZONE = false;
 const bool DEBUG_NO_X = false;
 const bool DEBUG_NO_Y = false;
 const bool DEBUG_ONLY_SPAWN_PLAYER = false;
-const bool DEBUG_ONLY_MOVE_PLAYER = true;
+const bool DEBUG_ONLY_MOVE_PLAYER = false;
 
 #define LAYER_BG 0
 #define LAYER_COLS 1
