@@ -831,6 +831,11 @@ void LoadLevel(int levelNum)
     testPos.x += TILE_SIZE_PX * 10;
     testPos.y -= TILE_SIZE_PX * 4;
     CreateSprite(STYPE_TESTMOB, testPos, "testmob1");
+
+    testPos = GetPlayerWorldPos();
+    testPos.x += TILE_SIZE_PX * 4;
+    testPos.y -= TILE_SIZE_PX * 1;
+    CreateSprite(STYPE_TESTMOB, testPos, "testmob2");
   }
 }
 
