@@ -745,20 +745,52 @@ uint32_t GetBlockIDAtColRow(int blockCol, int blockRow, int layer)
   return block - 1;
 }
 
-void UpdatePlayerInputs()
+void UpdateSpriteInputs(Sprite *spr)
 {
 
-  vmupro_btn_read();
+  if (spr == NULL)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Null sprite passed to UpdateSpriteInputs");
+    return;
+  }
 
-  Sprite *spr = player;
   Inputs *inp = &spr->input;
 
-  inp->up = vmupro_btn_held(DPad_Up);
-  inp->down = vmupro_btn_held(DPad_Down);
-  inp->left = vmupro_btn_held(DPad_Left);
-  inp->right = vmupro_btn_held(DPad_Right);
-  inp->jump = vmupro_btn_held(Btn_B);
-  inp->run = vmupro_btn_held(Btn_A);
+  if (spr->sType == STYPE_PLAYER)
+  {
+
+    vmupro_btn_read();
+
+    inp->up = vmupro_btn_held(DPad_Up);
+    inp->down = vmupro_btn_held(DPad_Down);
+    inp->left = vmupro_btn_held(DPad_Left);
+    inp->right = vmupro_btn_held(DPad_Right);
+    inp->jump = vmupro_btn_held(Btn_B);
+    inp->run = vmupro_btn_held(Btn_A);
+  }
+  else if (spr->sType == STYPE_TESTMOB)
+  {
+    memset(&spr->input, 0, sizeof(Inputs));
+
+    bool pingPong = (frameCounter / 100) % 2 == 0;
+    inp->right = pingPong;
+    inp->left = !pingPong;
+  }
+  else
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Unhandled sprite type in UpdateSpriteInputs");
+    return;
+  }
+}
+
+void InputAllSprites()
+{
+
+  for (int i = 0; i < numSprites; i++)
+  {
+    Sprite *spr = sprites[i];
+    UpdateSpriteInputs(spr);
+  }
 }
 
 void DrawLevelBlock(int x, int y, int layer)
@@ -2207,9 +2239,8 @@ void app_main(void)
     DrawGroundtiles(LAYER_BG);
     DrawGroundtiles(LAYER_COLS);
 
-    UpdatePlayerInputs();
+    InputAllSprites();
     MoveAllSprites();
-
     DrawAllSprites();
 
     if (DEBUG_SPRITEBOX)
