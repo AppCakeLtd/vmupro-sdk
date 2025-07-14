@@ -222,6 +222,7 @@ typedef struct
   SpriteType sType;
   SpriteProfile profile;
   char name[10];
+  Vec2 subSpawnPos;
 
   // Runtime stuff
   // calculated via ResetSprite()
@@ -736,9 +737,7 @@ void ResetSprite(Sprite *spr)
   spr->jumpFrameNum = 0;
 
   // temporary config stuff
-  Vec2 worldStartPos = GetPlayerWorldStartPos();
-  Vec2 subStartPos = World2Sub(&worldStartPos);
-  spr->subPos = subStartPos;
+  spr->subPos = spr->subSpawnPos;
   spr->isPlayer = true;
   spr->anchorH = ANCHOR_VTOP;
   spr->anchorV = ANCHOR_HLEFT;
@@ -757,7 +756,7 @@ void ResetSprite(Sprite *spr)
   OnSpriteMoved(spr);
 }
 
-Sprite *CreateSprite(SpriteType inType, Vec2 worldPos, const char *inName)
+Sprite *CreateSprite(SpriteType inType, Vec2 worldStartPos, const char *inName)
 {
 
   if (numSprites == MAX_SPRITES)
@@ -766,10 +765,17 @@ Sprite *CreateSprite(SpriteType inType, Vec2 worldPos, const char *inName)
     return NULL;
   }
 
+  //
+  // Initial config
+  //
+
   Sprite *returnVal = malloc(sizeof(Sprite));
   memset(returnVal, 0, sizeof(Sprite));
 
   returnVal->sType = inType;
+
+  Vec2 subSpawnPos = World2Sub(&worldStartPos);
+  returnVal->subSpawnPos = subSpawnPos;
 
   int inNameLen = strlen(inName);
   const int maxLen = sizeof(returnVal->name) - 1;
@@ -779,6 +785,10 @@ Sprite *CreateSprite(SpriteType inType, Vec2 worldPos, const char *inName)
   }
   memset(returnVal->name, 0, sizeof(returnVal->name));
   memcpy(returnVal->name, inName, inNameLen);
+
+  //
+  // Runtime stuff, which may be reset
+  //
 
   ResetSprite(returnVal);
 
@@ -799,7 +809,7 @@ void LoadLevel(int levelNum)
   if (!DEBUG_ONLY_PLAYER)
   {
     Vec2 testPos = GetPlayerWorldPos();
-    testPos.x += TILE_SIZE_PX * 6;
+    testPos.x += TILE_SIZE_PX * 8;
     testPos.y -= TILE_SIZE_PX * 4;
     CreateSprite(STYPE_TESTMOB, testPos, "testmob1");
   }
@@ -1876,7 +1886,7 @@ void CheckFallen(Sprite *spr)
   // we were on the ground, but are no longer
   // we're not jumping...
   // so we're falling
-  printf("__TEST__ walked off a ledge\n");
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s walked off edge", frameCounter, spr->name);
   SetMoveMode(spr, MM_FALL);
 }
 
