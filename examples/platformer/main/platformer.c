@@ -45,6 +45,7 @@ const bool DEBUG_ONLY_PLAYER = true;
 
 #define BLOCK_NULL 0xFFFFFFFF
 
+/*
 // maximum speed (in subpixels) while walking or running
 // per frame.
 const int MAX_SUBSPEED_WALK = 100;
@@ -64,6 +65,7 @@ const int SUB_JUMPFORCE = 14;
 const int SUB_GRAVITY = 9;
 // max of like 256 since that's bigger than a tile
 const int MAX_SUBFALLSPEED = 120;
+*/
 
 int camX = 0;
 int camY = 0;
@@ -154,6 +156,75 @@ typedef enum
   STYPE_TESTMOB
 } SpriteType;
 
+// profile of spite behaviour
+// such as runspeed, can it walk
+// off edges, etc
+// prefix "sub" means subpixels
+typedef struct
+{
+
+  // maximum speed (in subpixels) while
+  // walking or running (per frame)
+  int max_subspeed_walk;
+  int max_subspeed_run;
+
+  // accel values when walking, running, etc
+  // in subpixels
+  int subaccel_walk;
+  int subaccel_run;
+  int subaccel_air;
+
+  // movement damping values
+  int subdamping_walk;
+  int subdamping_run;
+  int subdamping_air;
+
+  // max frames for which the up force
+  // is applied
+  int max_jump_boost_frames;
+  int sub_jumpforce;
+  int sub_gravity;
+  // max of like 256 since that's
+  // bigger than a tile in subpixels
+  int max_subfallspeed;
+
+} SpriteProfile;
+
+void CreateSpriteProfile(SpriteProfile *inProfile, SpriteType inType)
+{
+
+  if (inProfile == NULL)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Null sprite passed to create sprite profile");
+  }
+
+  memset(inProfile, 0, sizeof(SpriteProfile));
+
+  if (inType == STYPE_PLAYER)
+  {
+    SpriteProfile *p = inProfile;
+    p->max_subspeed_walk = 100;
+    p->max_subspeed_run = 200;
+
+    p->subaccel_walk = 8;
+    p->subaccel_run = 9;
+    p->subaccel_air = 6;
+
+    p->subdamping_walk = 6;
+    p->subdamping_run = 6;
+    p->subdamping_air = 4;
+
+    p->max_jump_boost_frames = 16;
+    p->sub_jumpforce = 14;
+    p->sub_gravity = 9;
+    p->max_subfallspeed = 120;
+  }
+  else
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "No sprite profile for sprite type %d", (int)inType);
+  }
+}
+
 typedef struct
 {
   // typically the image's bbox
@@ -197,6 +268,7 @@ typedef struct
   AnimTypes animID;
 
   SpriteType sType;
+  SpriteProfile profile;
 
 } Sprite;
 
@@ -455,7 +527,6 @@ void OnSpriteMoved(Sprite *spr)
   // store the sprite box pos in world space
   // and the hitbox pos in subpixel space
 
-  bool forPlayer = spr->isPlayer;
   Vec2 worldOrigin = GetWorldPos(spr);
   Vec2 subOrigin = GetSubPos(spr);
 
@@ -681,6 +752,9 @@ void ResetSprite(Sprite *spr)
   spr->animReversing = false;
   spr->lastGameframe = frameCounter;
   spr->animID = ANIMTYPE_IDLE;
+
+  // Reset/create the movement profile
+  CreateSpriteProfile(&spr->profile, spr->sType);
 
   // update the hitbox, bounding box, etc
   OnSpriteMoved(spr);
@@ -973,92 +1047,103 @@ void EndOfFrame(Sprite *inSpr)
   // inSpr->lastSubAccel = inSpr->subAccel;
 }
 
-int GetXSubAccelForMode(MoveMode inMode, bool wasRunningWhenLastGrounded)
+int GetXSubAccel(Sprite *spr)
 {
 
-  switch (inMode)
+  MoveMode mMode = spr->moveMode;
+  SpriteProfile *prof = &spr->profile;
+  
+  switch (mMode)
   {
   default:
-    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Unhandled movement mode: %d", (int)inMode);
-    return SUBACCEL_WALK;
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Accel: Unhandled movement mode: %d", (int)mMode);
+    return prof->subaccel_walk;
     break;
 
   case MM_JUMP:
   case MM_FALL:
-    return SUBACCEL_AIR;
+    return prof->subaccel_air;
     break;
 
   case MM_WALK:
-    return SUBACCEL_WALK;
+    return prof->subaccel_walk;
     break;
   case MM_RUN:
-    return SUBACCEL_RUN;
+    return prof->subaccel_run;
     break;
   }
 }
 
-int GetMaxXSubSpeedForMode(MoveMode inMode, bool wasRunningWhenLastGrounded)
+int GetMaxXSubSpeed(Sprite *spr)
 {
 
-  switch (inMode)
+  MoveMode mMode = spr->moveMode;
+  SpriteProfile *prof = &spr->profile;
+  bool wasRunningWhenLastGrounded = spr->wasRunningLastTimeWasOnGround;
+
+  switch (mMode)
   {
   default:
-    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Unhandled movement mode: %d", (int)inMode);
-    return MAX_SUBSPEED_WALK;
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Subspeed: Unhandled movement mode: %d", (int)mMode);
+    return prof->max_subspeed_walk;
     break;
 
   case MM_JUMP:
   case MM_FALL:
     if (wasRunningWhenLastGrounded)
     {
-      return MAX_SUBSPEED_RUN;
+      return prof->max_subspeed_run;
     }
     else
     {
-      return MAX_SUBSPEED_WALK;
+      return prof->max_subspeed_walk;
     }
 
     break;
 
   case MM_WALK:
-    return MAX_SUBSPEED_WALK;
+    return prof->max_subspeed_walk;
     break;
 
   case MM_RUN:
-    return MAX_SUBSPEED_RUN;
+    return prof->max_subspeed_run;
     break;
   }
 }
 
-int GetXDampingForMode(MoveMode inMode, bool wasRunningWhenLastGrounded)
+int GetXDamping(Sprite *spr)
 {
 
-  switch (inMode)
+  MoveMode mMode = spr->moveMode;
+  SpriteProfile *prof = &spr->profile;
+  bool wasRunningWhenLastGrounded = spr->wasRunningLastTimeWasOnGround;
+
+  switch (mMode)
   {
   default:
-    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Unhandled movement mode: %d", (int)inMode);
-    return MAX_SUBSPEED_WALK;
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Damping: Unhandled movement mode: %d", (int)mMode);
+    return prof->subdamping_walk;
     break;
 
   case MM_JUMP:
   case MM_FALL:
     if (wasRunningWhenLastGrounded)
     {
-      return SUBDAMPING_RUN;
+      return prof->subdamping_run;
     }
     else
     {
-      return SUBDAMPING_WALK;
+      return prof->subdamping_walk;
     }
 
     break;
 
   case MM_WALK:
-    return SUBDAMPING_WALK;
+    return prof->subdamping_walk;
     break;
 
   case MM_RUN:
-    return SUBDAMPING_RUN;
+    return prof->subdamping_run;
     break;
   }
 }
@@ -1712,10 +1797,10 @@ void TryJump(Sprite *spr)
 // prevent the jump button applying further up force
 void StopJumpBoost(Sprite *spr, const char *src)
 {
-  if (spr->jumpFrameNum < MAX_JUMP_BOOST_FRAMES)
+  if (spr->jumpFrameNum < spr->profile.max_jump_boost_frames)
   {
     printf("__DBG__ jump boost canceled, src='%s'\n", src);
-    spr->jumpFrameNum = MAX_JUMP_BOOST_FRAMES;
+    spr->jumpFrameNum = spr->profile.max_jump_boost_frames;
   }
 }
 
@@ -1726,7 +1811,7 @@ void TryContinueJump(Sprite *spr)
   {
     return;
   }
-  if (spr->jumpFrameNum >= MAX_JUMP_BOOST_FRAMES)
+  if (spr->jumpFrameNum >= spr->profile.max_jump_boost_frames)
   {
     return;
   }
@@ -1736,7 +1821,7 @@ void TryContinueJump(Sprite *spr)
   if (spr->input.jump)
   {
     // add jump velo
-    spr->subVelo.y -= SUB_JUMPFORCE;
+    spr->subVelo.y -= spr->profile.sub_jumpforce;
     // printf("__DBG__ Frame %d Applying jump on frame %d - velo %d\n", frameCounter, spr->jumpFrameNum, spr->subVelo.y);
     spr->jumpFrameNum++;
   }
@@ -1769,7 +1854,8 @@ void CheckFallen(Sprite *spr)
   {
     return;
   }
-  if ( SpriteJumping(spr) ){
+  if (SpriteJumping(spr))
+  {
     return;
   }
 
@@ -1844,13 +1930,13 @@ void SolveMovement(Sprite *spr)
   bool inAir = MoveModeInAir(spr);
   bool isJumping = SpriteJumping(spr);
 
-  int maxSubSpeedX = GetMaxXSubSpeedForMode(mm, spr->wasRunningLastTimeWasOnGround);
-  int maxSubSpeedY = MAX_SUBFALLSPEED;
+  int maxSubSpeedX = GetMaxXSubSpeed(spr);
+  int maxSubSpeedY = player->profile.max_subfallspeed;
 
-  int subAccelX = GetXSubAccelForMode(mm, spr->wasRunningLastTimeWasOnGround);
-  int subAccelY = spr->isGrounded ? 0 : SUB_GRAVITY;
+  int subAccelX = GetXSubAccel(spr);
+  int subAccelY = spr->isGrounded ? 0 : player->profile.sub_gravity;
 
-  int subDampX = GetXDampingForMode(mm, spr->wasRunningLastTimeWasOnGround);
+  int subDampX = GetXDamping(spr);
   int subDampY = 0;
 
   TryJump(spr);
