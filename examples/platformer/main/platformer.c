@@ -1,3 +1,9 @@
+// 8BitMods Platformer Example
+// The goal here is to provide a working example
+// with good readability and flexibility
+// so it's not the most optimal code ever
+// but will hopefully serve as a strong foundation for
+// other projects
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -10,8 +16,10 @@
 
 const char *TAG = "[Platformer]";
 
-// float in air for collision testing
-const bool NO_GRAV = false;
+// could un-const these for debugging
+// but the compiler at least strips
+// these paths for now
+const bool DEBUG_NO_GRAV = false;
 const bool DEBUG_SPRITEBOX = false;
 const bool DEBUG_HITBOX = false;
 const bool DEBUG_HITPOINTS = false;
@@ -47,13 +55,19 @@ const bool DEBUG_ONLY_MOVE_PLAYER = false;
 
 #define BLOCK_NULL 0xFFFFFFFF
 
+// not stored on the sprite
+// since we might end up controlling
+// other sprites
+int lifeCount = 0;
+int levelNum = 0;
 int camX = 0;
 int camY = 0;
 int frameCounter = 0;
 
 // prevent rubber banding, move the camera within a scrolling
-// area which allows you to see further ahead/behind
-// based on position
+// area which allows you to see further ahead than behind
+// based on where you've walked on the screen, and where
+// you're facing
 #define SCROLLZONE_WIDTH 28
 #define SCROLLZONE_MAXOFFSET 40
 #define SCROLLZONE_SPEED 3
@@ -75,6 +89,26 @@ typedef struct
   int x;
   int y;
 } Vec2;
+
+typedef enum
+{
+  GSTATE_UNINIT,
+  GSTATE_START,
+  GSTATE_INTROFADE,
+  GSTATE_INGAME,
+  GSTATE_PAUSED,
+  GSTATE_DED,
+  GSTATE_GAMEOVER
+
+} GameState;
+
+// temporary
+Vec2 uiAnimOffset;
+Vec2 uiAnimVelo;
+// how long we've been on this particular game state
+int uiStateFrameCounter;
+
+GameState gState = GSTATE_UNINIT;
 
 typedef struct
 {
@@ -138,17 +172,18 @@ typedef enum
 
 typedef enum
 {
-  SOLIDMASK_NONE,
-  SOLIDMASK_TILE,  // don't set mobs to this, lol
-  SOLIDMASK_SOLID, // normal mob
-  SOLIDMASK_ONESIDED,
-  SOLIDMASK_PLATFORM
+  SOLIDMASK_NONE,     // non solid
+  SOLIDMASK_TILE,     // solid: tile
+  SOLIDMASK_SOLID,    // solid: other creature
+  SOLIDMASK_ONESIDED, // solid: one-way platform
+  SOLIDMASK_PLATFORM  // solid: moving platform
 } Solidity;
 
 // profile of spite behaviour
 // such as runspeed, can it walk
 // off edges, etc
-// prefix "sub" means subpixels
+// prefix "sub" means subpixels/fixed point math
+// prefix "world" means regular world space 1:1 pixels
 typedef struct
 {
 
@@ -177,9 +212,12 @@ typedef struct
   // bigger than a tile in subpixels
   int max_subfallspeed;
 
+  int default_health;
+
   Solidity solid;
 
 } SpriteProfile;
+// TODO: rename to spriteblueprint?
 
 void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
 {
@@ -212,9 +250,11 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
 
   p->solid = SOLIDMASK_SOLID;
 
+  p->default_health = 3;
+
   if (inType == STYPE_PLAYER)
   {
-    //
+    // default
   }
   else if (inType == STYPE_TESTMOB)
   {
@@ -222,6 +262,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->subaccel_walk = 1;
     p->subdamping_walk = 0;
     p->solid = SOLIDMASK_PLATFORM;
+    p->default_health = 1;
   }
   else
   {
@@ -280,11 +321,14 @@ typedef struct
   AnimGroup *anims;
   AnimFrames *activeFrameSet;
   // updated per frame, to measure elapsed frames
+  // TODO: rename to like gameFrameWhenAnimChanged
   int lastGameframe;
   // reset on anim changes
   int animIndex;
   bool animReversing;
   AnimTypes animID;
+
+  int health;
 
 } Sprite;
 
@@ -323,6 +367,9 @@ void SetAnim(Sprite *spr, AnimTypes inType)
     break;
   case ANIMTYPE_FALL:
     spr->activeFrameSet = &spr->anims->fallFrames;
+    break;
+  case ANIIMTYPE_DIE:
+    spr->activeFrameSet = &spr->anims->dieFrames;
     break;
   default:
     // we'll patch this in a sec
@@ -494,6 +541,17 @@ Vec2 GetScreenPos(Sprite *inSprite)
   return Sub2Screen(&inSprite->subPos);
 }
 
+// Get the camera bounding box in world coords
+BBox CameraBBoxWorld()
+{
+  BBox rVal;
+  rVal.x = camX;
+  rVal.y = camY;
+  rVal.width = SCREEN_WIDTH;
+  rVal.height = SCREEN_HEIGHT;
+  return rVal;
+}
+
 Sprite *player = NULL;
 
 //
@@ -503,6 +561,7 @@ Sprite *player = NULL;
 Solidity CheckGrounded(Sprite *spr);
 Vec2 GetPointOnSprite(Sprite *spr, bool hitBox, Anchor_H anchorH, Anchor_V anchorV);
 Solidity CheckSpriteCollision(Sprite *spr, Direction dir, Vec2 *subOffset, const char *src);
+void GotoGameState(GameState inState);
 
 void DrawBBoxScreen(BBox *box, uint16_t inCol)
 {
@@ -538,7 +597,7 @@ void DrawBBoxSub(BBox *box, uint16_t inCol)
   vmupro_draw_rect(screenPos.x, screenPos.y, x2, y2, inCol);
 }
 
-// in screen spsace
+// World->Screen space
 void DrawSpriteBoundingBox(Sprite *inSprite, uint16_t inCol)
 {
 
@@ -546,6 +605,7 @@ void DrawSpriteBoundingBox(Sprite *inSprite, uint16_t inCol)
   DrawBBoxWorld(box, inCol);
 }
 
+// Subpixel->Screen space
 void DrawSpriteHitBox(Sprite *inSprite, uint16_t inCol)
 {
   BBox *hitbox = &inSprite->subHitBox;
@@ -752,18 +812,68 @@ Vec2 GetPlayerWorldStartPos()
   return rVal;
 }
 
-bool CheckFellOffMap()
+void OnSpriteDied(Sprite *spr)
 {
 
-  Vec2 topleftPoint = GetPointOnSprite(player, false, player->anchorH, player->anchorV);
-  if (topleftPoint.y > MAP_HEIGHT_PIXELS + TILE_SIZE_PX)
+  if (spr == NULL)
   {
-    vmupro_log(VMUPRO_LOG_WARN, TAG, "Frame %d player fell off map at yPos %d\n", frameCounter, player->subPos.y);
-    Vec2 worldStartPos = GetPlayerWorldStartPos();
-    SetWorldPos(player, &worldStartPos);
-    return true;
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "NULL sprites can't die");
+    return;
   }
-  return false;
+
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s died. RIP", frameCounter, spr->name);
+
+  SetAnim(spr, ANIIMTYPE_DIE);
+
+  // little up boost for the death anim
+  spr->subVelo.x = 0;
+  // idk magic number, make it look dramatic
+  spr->subVelo.y = -200;
+
+  if (spr == player)
+  {
+    GotoGameState(GSTATE_DED);
+  }
+  else
+  {
+    printf("TODO: non-player sprite death\n");
+  }
+}
+
+void SpriteTakeDamage(Sprite *spr, int value, Sprite *sourceOrNull)
+{
+
+  const char *srcName = sourceOrNull != NULL ? sourceOrNull->name : "WORLD";
+
+  if (value > spr->health)
+  {
+    value = spr->health;
+  }
+
+  spr->health -= value;
+
+  if (spr->health <= 0)
+  {
+    OnSpriteDied(spr);
+  }
+  else
+  {
+    printf("TODO: pushback damage\n");
+  }
+}
+
+void CheckFellOffMap(Sprite *spr)
+{
+
+  Vec2 topleftPoint = GetPointOnSprite(spr, false, spr->anchorH, spr->anchorV);
+  if (topleftPoint.y < MAP_HEIGHT_PIXELS + TILE_SIZE_PX)
+  {
+    return;
+  }
+
+  vmupro_log(VMUPRO_LOG_WARN, TAG, "Frame %d Sprite %s fell off map at yPos %d\n", frameCounter, spr->name, spr->subPos.y);
+
+  SpriteTakeDamage(spr, spr->health, NULL);
 }
 
 void ResetSprite(Sprite *spr)
@@ -802,6 +912,9 @@ void ResetSprite(Sprite *spr)
 
   // Reset/create the movement profile
   CreateProfile(&spr->profile, spr->sType);
+
+  // And apply anything that's determined from the profile
+  spr->health = spr->profile.default_health;
 
   // update the hitbox, bounding box, etc
   OnSpriteMoved(spr);
@@ -853,9 +966,10 @@ Sprite *CreateSprite(SpriteType inType, Vec2 worldStartPos, const char *inName)
   return returnVal;
 }
 
-void LoadLevel(int levelNum)
+void LoadLevel(int inLevelNum)
 {
 
+  levelNum = inLevelNum;
   levelBG = (LevelData *)level_1_layer_0_data;
   levelCols = (LevelData *)level_1_layer_1_data;
 
@@ -873,6 +987,23 @@ void LoadLevel(int levelNum)
     testPos.y -= TILE_SIZE_PX * 1;
     CreateSprite(STYPE_TESTMOB, testPos, "testmob2");
   }
+}
+
+void InitGame()
+{
+
+  LoadLevel(0);
+  lifeCount = 3;
+  GotoGameState(GSTATE_START);
+}
+
+// Retry current level, minus a life
+void Retry()
+{
+
+  LoadLevel(levelNum);
+  lifeCount--;
+  GotoGameState(GSTATE_INGAME);
 }
 
 // returns atlas block 0-max
@@ -937,6 +1068,27 @@ void UpdatePatrollInputs(Sprite *spr)
   spr->input.left = !spr->facingRight;
 }
 
+bool SpriteIsMoving(Sprite *spr)
+{
+
+  return (spr->subVelo.x != 0) || (spr->subVelo.y != 0);
+}
+
+bool SpriteIsDead(Sprite *spr)
+{
+  return spr->animID == ANIIMTYPE_DIE;
+}
+
+bool AllowSpriteInput(Sprite *spr)
+{
+
+  if (SpriteIsDead(spr))
+    return false;
+  // TODO: knockback
+  // TODO: some kinda sequence
+  return true;
+}
+
 void UpdateSpriteInputs(Sprite *spr)
 {
 
@@ -946,11 +1098,25 @@ void UpdateSpriteInputs(Sprite *spr)
     return;
   }
 
+  // Zero out the inputs
   Inputs *inp = &spr->input;
   memset(&spr->input, 0, sizeof(Inputs));
 
+  // if we're not in a playable state
+  // just early exit since the inputs are wiped
+  if (!AllowSpriteInput(spr))
+  {
+    return;
+  }
+
   if (spr->sType == STYPE_PLAYER)
   {
+    // other sprites can continue while the player's dead
+    // but the player shouldn't walk about doing stuff
+    if (gState != GSTATE_INGAME)
+    {
+      return;
+    }
 
     vmupro_btn_read();
 
@@ -1045,6 +1211,7 @@ void SolveCamera()
   // while we're on the left or right edge, we'll add a little
   // offset (up to a max) so the cam can show a little extra
   // to the left or right as we move
+  // TLDR; you can see further in front of you than behind
   //
 
   Vec2 snapWorldPos = playerWorldPos;
@@ -1485,18 +1652,24 @@ bool Ignore2SidedBlock(int blockId, int layer, Sprite *spr, Vec2 *tileSubPos)
   return false;
 }
 
-bool SubPointInHitbox(Vec2 *subPoint, Sprite *otherSprite)
+// ensure you're using the same sub/world/screen coords
+bool IsPointInsideBox(Vec2 *point, BBox *box)
 {
 
-  if (subPoint->x < otherSprite->subHitBox.x)
+  if (point->x < box->x)
     return false;
-  if (subPoint->x > otherSprite->subHitBox.x + otherSprite->subHitBox.width)
+  if (point->x > box->x + box->width)
     return false;
-  if (subPoint->y < otherSprite->subHitBox.y)
+  if (point->y < box->y)
     return false;
-  if (subPoint->y > otherSprite->subHitBox.y + otherSprite->subHitBox.height)
+  if (point->y > box->y + box->height)
     return false;
   return true;
+}
+
+bool SubPointInHitbox(Vec2 *subPoint, Sprite *otherSprite)
+{
+  return IsPointInsideBox(subPoint, &otherSprite->subHitBox);
 }
 
 // subOffsetOrNull adds an offset to where we check for collisions
@@ -1577,6 +1750,7 @@ void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull
     // |____|
     // to get onto small 'bumps' more easily
     // or run over small gaps
+    // or to easily 'clip' past corners onto ledges
 
     if (dir == DIR_LEFT || dir == DIR_RIGHT)
     {
@@ -1638,7 +1812,8 @@ void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull
     if (blockId != BLOCK_NULL)
     {
 
-      // essentially we're rounding down and then back up
+      // essentially we're rounding down and then back up, to snap
+      // to an exact tile ID
       Vec2 tileSubPos = GetTileSubPosFromRowAndCol(&tileRowAndCol);
 
       bool ignore = Ignore2SidedBlock(blockId, LAYER_COLS, spr, &tileSubPos);
@@ -1654,10 +1829,9 @@ void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull
       rVal->blockID[i] = blockId;
       rVal->lastBlockHitIndex = i;
 
-      // default to the hit point being wherever we cheked on the sprite
+      // default to the hit point being wherever we checked on the sprite
       // we'll tweak the x/y in a sec, depending on where we hit the block
-      // rVal->blockSubEjectPoint[i].x = rVal->subCheckPos[i].x;
-      // rVal->blockSubEjectPoint[i].y = rVal->subCheckPos[i].y;
+      // that will be our ejection point
       rVal->blockSubEjectPoint[i] = rVal->subCheckPos[i];
 
       if (dir == DIR_RIGHT)
@@ -1796,7 +1970,7 @@ void GetEjectionInfo(Sprite *spr, HitInfo *info, bool horz)
     ejectPoint = info->spriteSubEjectPoint[idx];
   }
   else if (info->lastBlockHitIndex > -1)
-  {    
+  {
     // doing a sprite/block ejection
     int idx = info->lastBlockHitIndex;
     ejectPoint = info->blockSubEjectPoint[idx];
@@ -1812,7 +1986,7 @@ void GetEjectionInfo(Sprite *spr, HitInfo *info, bool horz)
   int dbgBlockX = ejectPoint.x;
   int dbgBlockY = ejectPoint.y;
 
-  int dbgPlayerX = spr->subPos.x;  
+  int dbgPlayerX = spr->subPos.x;
   int dbgPlayerY = spr->subPos.y;
 
   if (whereWasCollision == DIR_RIGHT)
@@ -1837,7 +2011,7 @@ void GetEjectionInfo(Sprite *spr, HitInfo *info, bool horz)
     }
 
     int subY = spr->subPos.y;
-    Vec2 sub = {subX, subY};    
+    Vec2 sub = {subX, subY};
     info->snapPoint = sub;
   }
 
@@ -1860,7 +2034,7 @@ void GetEjectionInfo(Sprite *spr, HitInfo *info, bool horz)
     }
 
     int subY = spr->subPos.y;
-    Vec2 sub = {subX, subY};    
+    Vec2 sub = {subX, subY};
     info->snapPoint = sub;
   }
 
@@ -2094,7 +2268,7 @@ void CheckFallen(Sprite *spr)
   // we were walking/running on the ground
   // we were on the ground
   // we are no longer on the ground
-  // we aren't jumping
+  // we aren't jumping either
 
   if (!MoveModeOnGround(spr))
   {
@@ -2161,9 +2335,9 @@ void CheckLanded(Sprite *spr)
 // - resolve horz collisions
 // - apply Y velo to positions
 // - resolve vert collisions
+// - double check that x/y ejection hasn't caused another collision
 // - check ground state
 // - check landing, etc
-
 void SolveMovement(Sprite *spr)
 {
 
@@ -2173,10 +2347,21 @@ void SolveMovement(Sprite *spr)
     return;
   }
 
+  // if the sprite is dead, we can skip a lot of
+  // the movement logic
+  if (spr->animID == ANIIMTYPE_DIE)
+  {
+
+    AddVecInts(&spr->subVelo, 0, spr->profile.sub_gravity);
+    AddVec(&spr->subPos, &spr->subVelo);
+
+    return;
+  }
+
   Inputs *inp = &spr->input;
 
-  // set up all of our state values
-  // as the result of the previous frame
+  // read in all of our state values
+  // (the result of the previous frame)
   // i.e. we don't want to check the grounded state now
   // then perform a jump + land in the same frame.
 
@@ -2213,7 +2398,7 @@ void SolveMovement(Sprite *spr)
   }
 
   // Debug/testing
-  if (NO_GRAV)
+  if (DEBUG_NO_GRAV)
   {
     subDampY = 1;
 
@@ -2343,7 +2528,7 @@ void SolveMovement(Sprite *spr)
 
   // Damp Y Velo
 
-  if (NO_GRAV)
+  if (DEBUG_NO_GRAV)
   {
 
     if (movingDown && !inp->down)
@@ -2477,7 +2662,7 @@ void SolveMovement(Sprite *spr)
 
   CheckLanded(spr);
   CheckFallen(spr);
-  CheckFellOffMap();
+  CheckFellOffMap(spr);
 
   // head or feet bonked
   // prevent jump boost
@@ -2492,7 +2677,6 @@ void MoveAllSprites()
 
   for (int i = 0; i < numSprites; i++)
   {
-    // skip it to test collisions __TEST__
     if (i > 0 && DEBUG_ONLY_MOVE_PLAYER)
       continue;
     Sprite *spr = sprites[i];
@@ -2500,10 +2684,32 @@ void MoveAllSprites()
   }
 }
 
-bool SpriteIsMoving(Sprite *spr)
+// TODO: not very efficient
+bool IsSpriteOnScreen(Sprite *spr)
 {
 
-  return (spr->subVelo.x != 0) || (spr->subVelo.y != 0);
+  if (spr == NULL)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Null sprites can't be on screen");
+  }
+
+  BBox camWorldBBox = CameraBBoxWorld();
+
+  // TODO: should we check other points?
+  Vec2 testPoint = GetPointOnSprite(spr, false, ANCHOR_HLEFT, ANCHOR_VTOP);
+  bool inside = IsPointInsideBox(&testPoint, &camWorldBBox);
+  if (inside)
+  {
+    return true;
+  }
+
+  testPoint = GetPointOnSprite(spr, false, ANCHOR_HRIGHT, ANCHOR_VBOTTOM);
+  inside = IsPointInsideBox(&testPoint, &camWorldBBox);
+  if (inside)
+  {
+    return true;
+  }
+  return false;
 }
 
 void DrawSprite(Sprite *spr)
@@ -2515,9 +2721,6 @@ void DrawSprite(Sprite *spr)
     return;
   }
 
-  Vec2 worldOrigin = GetWorldPos(spr);
-  Vec2 screenOrigin = World2Screen(&worldOrigin);
-
   // draw based on the actual bounding box
   Vec2 worldBoxPos = spr->worldBBox.vecs.pos;
   Vec2 screenBoxPos = World2Screen(&worldBoxPos);
@@ -2525,11 +2728,16 @@ void DrawSprite(Sprite *spr)
   bool goingUp = spr->subVelo.y < 0;
 
   bool isMoving = SpriteIsMoving(spr);
-  bool isTryingToMove = spr->input.left | spr->input.right;
-  bool idle = !isMoving && !isTryingToMove;
+  bool isTryingToMove = (spr->input.left || spr->input.right);
+  bool idle = (!isMoving && !isTryingToMove);
 
-  // everything else
-  if (idle)
+  bool dying = (spr->animID == ANIIMTYPE_DIE);
+
+  if (dying)
+  {
+    SetAnim(spr, ANIIMTYPE_DIE);
+  }
+  else if (idle)
   {
     SetAnim(spr, ANIMTYPE_IDLE);
   }
@@ -2558,6 +2766,14 @@ void DrawSprite(Sprite *spr)
 
   UpdateAnimation(spr);
   OnSpriteMoved(spr);
+
+  // Still update, but, don't draw if off screen
+  bool onScreen = IsSpriteOnScreen(spr);
+  if (!onScreen)
+  {
+    // vmupro_log(VMUPRO_LOG_WARN, TAG, "Frame %d Sprite %s is off screen", frameCounter, spr->name);
+    return;
+  }
 
   // update the img pointer, in case it's changed due to anims
   const Img *img = GetActiveImage(spr);
@@ -2599,6 +2815,99 @@ void DrawDebugAllSprites()
   }
 }
 
+void GotoGameState(GameState inState)
+{
+
+  if (gState == inState)
+  {
+    vmupro_log(VMUPRO_LOG_WARN, TAG, "Frame %d, Attempt to switch to same game state: %d\n", frameCounter, inState);
+  }
+
+  gState = inState;
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d switched to game state %d", frameCounter, (int)inState);
+
+  uiAnimOffset = ZeroVec();
+  uiAnimVelo = ZeroVec();
+  uiStateFrameCounter = 0;
+}
+
+void DrawUIElementCenteredWithVelo(const Img *img)
+{
+
+  vmupro_drawflags_t flags = VMUPRO_DRAWFLAGS_NORMAL;
+  uint16_t mask = *(uint16_t *)&img->data[0];
+  int x = SCREEN_WIDTH / 2 - img->width / 2;
+  x += uiAnimOffset.x;
+  int y = SCREEN_HEIGHT / 2 - img->height / 2;
+  y += uiAnimOffset.y;
+  vmupro_blit_buffer_transparent(img->data, x, y, img->width, img->height, mask, flags);
+}
+
+void DrawUI()
+{
+
+  if (gState == GSTATE_UNINIT)
+  {
+    return;
+  }
+
+  if (gState == GSTATE_START)
+  {
+
+    // TODO: very temporary code
+    // Draw the temporary "start" graphic
+    const Img *img = &img_ui_temp_start_raw;
+    DrawUIElementCenteredWithVelo(img);
+
+    vmupro_btn_read();
+    if (vmupro_btn_confirm_released() || vmupro_btn_dismiss_released())
+    {
+      GotoGameState(GSTATE_INTROFADE);
+      // apply a small upward force to the ui
+      // before gravity kicks in
+      uiAnimVelo.y = -2;
+    }
+    return;
+  }
+
+  if (gState == GSTATE_INTROFADE)
+  {
+
+    const Img *img = &img_ui_temp_start_raw;
+    DrawUIElementCenteredWithVelo(img);
+
+    uiAnimOffset.y += uiAnimVelo.y;
+    // add gravity
+    uiAnimVelo.y += 2;
+
+    if (uiAnimOffset.y > SCREEN_HEIGHT)
+    {
+      GotoGameState(GSTATE_INGAME);
+    }
+    return;
+  }
+
+  if (gState == GSTATE_DED)
+  {
+
+    const Img *img = &img_ui_temp_dead_raw;
+    DrawUIElementCenteredWithVelo(img);
+
+    // give it a few frames before you can continue
+    const int postDeathFrameDelay = 60;
+
+    if (uiStateFrameCounter >= postDeathFrameDelay)
+    {
+      printf("frame counter %d\n", uiStateFrameCounter);
+      vmupro_btn_read();
+      if (vmupro_btn_confirm_released() || vmupro_btn_dismiss_released())
+      {
+        Retry();
+      }
+    }
+  }
+}
+
 void app_main(void)
 {
   vmupro_log(VMUPRO_LOG_INFO, TAG, "8BM Platformer Example");
@@ -2608,7 +2917,7 @@ void app_main(void)
 
   vmupro_start_double_buffer_renderer();
 
-  LoadLevel(0);
+  InitGame();
 
   while (true)
   {
@@ -2626,6 +2935,8 @@ void app_main(void)
     MoveAllSprites();
     DrawAllSprites();
     EndFrameAllSprites();
+
+    DrawUI();
 
     DrawDebugAllSprites();
 
@@ -2654,7 +2965,9 @@ void app_main(void)
     }
 
     frameCounter++;
-    Anims_Player.lastFrame = frameCounter;
+    uiStateFrameCounter++;
+    //__TEST__
+    // Anims_Player.lastFrame = frameCounter;
   }
 
   // Terminate the renderer

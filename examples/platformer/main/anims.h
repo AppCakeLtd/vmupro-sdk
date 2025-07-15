@@ -32,7 +32,8 @@ typedef enum
     ANIMTYPE_IDLE,
     ANIMTYPE_WALK,
     ANIMTYPE_JUMP,
-    ANIMTYPE_FALL
+    ANIMTYPE_FALL,
+    ANIIMTYPE_DIE,
 } AnimTypes;
 
 typedef struct
@@ -41,6 +42,7 @@ typedef struct
     AnimFrames walkFrames;
     AnimFrames jumpFrames;
     AnimFrames fallFrames;
+    AnimFrames dieFrames;
 } AnimGroup;
 
 typedef struct
@@ -85,6 +87,9 @@ const Img *imgs_player_jump[] = {
 const Img *imgs_player_fall[] = {
     &img_player_fall_0_raw, &img_player_fall_1_raw, &img_player_fall_2_raw, &img_player_fall_1_raw};
 
+const Img *imgs_player_die[] = {
+    &img_player_die_0_raw};
+
 // e.g.
 /*
 AnimFrames frames_player_idle = {
@@ -104,11 +109,14 @@ AnimGroup animgroup_player = {
     .walkFrames = {.frameSpeed = 3, .numImages = ARRAYSIZE(imgs_player_walk), .images = imgs_player_walk},
     .jumpFrames = {.frameSpeed = 7, .numImages = ARRAYSIZE(imgs_player_jump), .images = imgs_player_jump},
     .fallFrames = {.frameSpeed = 4, .numImages = ARRAYSIZE(imgs_player_fall), .images = imgs_player_fall},
-
+    .dieFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_player_die), .images = imgs_player_die}
 };
 
+//__TEST__
+/*
 Anim Anims_Player = {
     .grp = NULL,
     .activeFrames = NULL,
     .lastFrame = 0,
 };
+*/
