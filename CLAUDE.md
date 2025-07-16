@@ -37,7 +37,7 @@ This is the VMUPro SDK - a development toolkit for creating applications and gam
   - File writing (vmupro_write_file_complete, vmupro_write_file_bytes)
   - Standard C file I/O functions (fopen, fclose, fread, fwrite, fseek, ftell, fflush, fsync)
   - String functions (strlen, strcmp, strchr, strrchr, strstr, strdup, strcspn, strncat, strerror, memcmp, memcpy, memset)
-  - Memory allocation (malloc, calloc, realloc, free)
+  - Standard C memory allocation (malloc, calloc, realloc, free)
   - Console I/O (printf, fprintf, vfprintf, puts, putchar, fputc, fputs)
   - String conversion (strtol, strtod)
   - Time functions (sleep, usleep, clock_gettime, strftime)
@@ -113,12 +113,20 @@ Required for every application:
 - **Troubleshooting:** Common issues and solutions for all development phases
 - **Tools Guide:** Packaging and deployment instructions in README.md
 
+## Memory Management
+The SDK uses standard C library memory management functions:
+- **malloc()** - Allocate memory blocks
+- **calloc()** - Allocate and zero-initialize memory blocks  
+- **realloc()** - Resize previously allocated memory blocks
+- **free()** - Deallocate memory blocks
+
+All memory allocation functions are provided by the firmware and work with both internal RAM and SPIRAM as available.
+
 ## Future Expansion Areas
 The SDK is designed to grow with additional APIs for:
 - Input/Controls
 - Audio system
 - File system operations
-- Memory management
 - Advanced graphics
 - Math/physics helpers
 - Text rendering

@@ -97,6 +97,58 @@ extern "C"
   void vmupro_display_refresh();
 
   /**
+   * @brief Get the current global display brightness
+   * 
+   * Returns the current brightness level of the display.
+   * 
+   * @return Current brightness level (0-100, where 0 is minimum and 100 is maximum)
+   * 
+   * @note This is the system-wide brightness setting
+   * @note Brightness affects the entire display output
+   * 
+   * @example
+   * @code
+   * // Check current brightness
+   * int current_brightness = vmupro_get_global_brightness();
+   * vmupro_log(VMUPRO_LOG_INFO, "DISPLAY", "Current brightness: %d%%", current_brightness);
+   * @endcode
+   */
+  int vmupro_get_global_brightness(void);
+
+  /**
+   * @brief Set the global display brightness
+   * 
+   * Sets the brightness level of the display. This affects the entire screen output.
+   * 
+   * @param brightness Brightness level (0-100, where 0 is minimum and 100 is maximum)
+   * 
+   * @note This is the system-wide brightness setting
+   * @note Values outside 0-100 range will be clamped
+   * @note Changes take effect immediately
+   * @note Lower brightness can help save power
+   * 
+   * @example
+   * @code
+   * // Set brightness to half
+   * vmupro_set_global_brightness(50);
+   * 
+   * // Set minimum brightness
+   * vmupro_set_global_brightness(0);
+   * 
+   * // Set maximum brightness
+   * vmupro_set_global_brightness(100);
+   * 
+   * // Auto-adjust brightness based on content
+   * if (dark_scene) {
+   *     vmupro_set_global_brightness(30);
+   * } else {
+   *     vmupro_set_global_brightness(80);
+   * }
+   * @endcode
+   */
+  void vmupro_set_global_brightness(int brightness);
+
+  /**
    * @brief Get pointer to the front framebuffer
    *
    * Returns a pointer to one of the alternating framebuffers used in
@@ -144,6 +196,32 @@ extern "C"
    * Stops the double buffering system and returns to single buffer mode.
    */
   void vmupro_stop_double_buffer_renderer();
+
+  /**
+   * @brief Pause the double buffer renderer
+   *
+   * Temporarily pauses the double buffering system without stopping it completely.
+   * This allows you to suspend automatic buffer swapping while maintaining the
+   * double buffer state. Useful for pause menus, loading screens, or when you
+   * need to temporarily halt rendering updates.
+   *
+   * @note The renderer can be resumed with vmupro_resume_double_buffer_renderer()
+   * @note Pausing does not clear or reset the buffers
+   * @note Must be called after vmupro_start_double_buffer_renderer()
+   */
+  void vmupro_pause_double_buffer_renderer();
+
+  /**
+   * @brief Resume the double buffer renderer
+   *
+   * Resumes the double buffering system after it has been paused.
+   * This restores automatic buffer swapping and rendering operations.
+   *
+   * @note Must be called after vmupro_pause_double_buffer_renderer()
+   * @note Resuming continues from the current buffer state
+   * @note Double buffer system must have been started first
+   */
+  void vmupro_resume_double_buffer_renderer();
 
   /**
    * @brief Swap and display the current framebuffer
