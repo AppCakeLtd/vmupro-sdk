@@ -10,8 +10,9 @@
     typedef struct {
         char * name;
         uint8_t* data;
-        uint32_t rawSize; // in bytes (so w * h * uint16_t for raw images)
         uint32_t compressedSize;
+        uint32_t rawSize; // in bytes (so w * h * uint16_t for raw images)        
+        uint32_t rawChecksum;
         uint32_t width;
         uint32_t height;        
     } Img;
@@ -20,97 +21,97 @@
     // Start with protos
 
     uint8_t tilemap_raw_start[];
-    const Img img_tilemap_raw = { "tilemap", tilemap_raw_start, 90112, 16245, 128, 352};
+    const Img img_tilemap_raw = { "tilemap", tilemap_raw_start, 16245, 90112, 0x6b575ae9, 128, 352};
 
     uint8_t player_jump_temp_raw_start[];
-    const Img img_player_jump_temp_raw = { "player_jump_temp", player_jump_temp_raw_start, 2048, 906, 32, 32};
+    const Img img_player_jump_temp_raw = { "player_jump_temp", player_jump_temp_raw_start, 906, 2048, 0xfff7f759, 32, 32};
 
     uint8_t ui_temp_dead_raw_start[];
-    const Img img_ui_temp_dead_raw = { "ui_temp_dead", ui_temp_dead_raw_start, 2448, 687, 51, 24};
+    const Img img_ui_temp_dead_raw = { "ui_temp_dead", ui_temp_dead_raw_start, 687, 2448, 0x6ea587de, 51, 24};
 
     uint8_t ui_temp_gameover_raw_start[];
-    const Img img_ui_temp_gameover_raw = { "ui_temp_gameover", ui_temp_gameover_raw_start, 8192, 1584, 128, 32};
+    const Img img_ui_temp_gameover_raw = { "ui_temp_gameover", ui_temp_gameover_raw_start, 1584, 8192, 0x24fa2348, 128, 32};
 
     uint8_t ui_temp_paused_raw_start[];
-    const Img img_ui_temp_paused_raw = { "ui_temp_paused", ui_temp_paused_raw_start, 4272, 1089, 89, 24};
+    const Img img_ui_temp_paused_raw = { "ui_temp_paused", ui_temp_paused_raw_start, 1089, 4272, 0xd8300f00, 89, 24};
 
     uint8_t ui_temp_start_raw_start[];
-    const Img img_ui_temp_start_raw = { "ui_temp_start", ui_temp_start_raw_start, 3552, 831, 74, 24};
+    const Img img_ui_temp_start_raw = { "ui_temp_start", ui_temp_start_raw_start, 831, 3552, 0x5344e8f3, 74, 24};
 
     uint8_t bg_1_raw_start[];
-    const Img img_bg_1_raw = { "bg_1", bg_1_raw_start, 8192, 381, 64, 64};
+    const Img img_bg_1_raw = { "bg_1", bg_1_raw_start, 381, 8192, 0x60b283c5, 64, 64};
 
     uint8_t player_buttstomp_0_raw_start[];
-    const Img img_player_buttstomp_0_raw = { "player_buttstomp_0", player_buttstomp_0_raw_start, 2048, 1053, 32, 32};
+    const Img img_player_buttstomp_0_raw = { "player_buttstomp_0", player_buttstomp_0_raw_start, 1053, 2048, 0xaf13035c, 32, 32};
 
     uint8_t player_dash_0_raw_start[];
-    const Img img_player_dash_0_raw = { "player_dash_0", player_dash_0_raw_start, 2048, 861, 32, 32};
+    const Img img_player_dash_0_raw = { "player_dash_0", player_dash_0_raw_start, 861, 2048, 0xa1072675, 32, 32};
 
     uint8_t player_die_0_raw_start[];
-    const Img img_player_die_0_raw = { "player_die_0", player_die_0_raw_start, 2048, 960, 32, 32};
+    const Img img_player_die_0_raw = { "player_die_0", player_die_0_raw_start, 960, 2048, 0x8d4e98c4, 32, 32};
 
     uint8_t player_fall_0_raw_start[];
-    const Img img_player_fall_0_raw = { "player_fall_0", player_fall_0_raw_start, 2048, 999, 32, 32};
+    const Img img_player_fall_0_raw = { "player_fall_0", player_fall_0_raw_start, 999, 2048, 0x72c06373, 32, 32};
 
     uint8_t player_fall_1_raw_start[];
-    const Img img_player_fall_1_raw = { "player_fall_1", player_fall_1_raw_start, 2048, 963, 32, 32};
+    const Img img_player_fall_1_raw = { "player_fall_1", player_fall_1_raw_start, 963, 2048, 0x9ce237d1, 32, 32};
 
     uint8_t player_fall_2_raw_start[];
-    const Img img_player_fall_2_raw = { "player_fall_2", player_fall_2_raw_start, 2048, 942, 32, 32};
+    const Img img_player_fall_2_raw = { "player_fall_2", player_fall_2_raw_start, 942, 2048, 0xe389234a, 32, 32};
 
     uint8_t player_idle_0_raw_start[];
-    const Img img_player_idle_0_raw = { "player_idle_0", player_idle_0_raw_start, 2048, 987, 32, 32};
+    const Img img_player_idle_0_raw = { "player_idle_0", player_idle_0_raw_start, 987, 2048, 0x60974f55, 32, 32};
 
     uint8_t player_idle_1_raw_start[];
-    const Img img_player_idle_1_raw = { "player_idle_1", player_idle_1_raw_start, 2048, 960, 32, 32};
+    const Img img_player_idle_1_raw = { "player_idle_1", player_idle_1_raw_start, 960, 2048, 0x2d1cea81, 32, 32};
 
     uint8_t player_idle_2_raw_start[];
-    const Img img_player_idle_2_raw = { "player_idle_2", player_idle_2_raw_start, 2048, 978, 32, 32};
+    const Img img_player_idle_2_raw = { "player_idle_2", player_idle_2_raw_start, 978, 2048, 0xe6655b75, 32, 32};
 
     uint8_t player_idle_3_raw_start[];
-    const Img img_player_idle_3_raw = { "player_idle_3", player_idle_3_raw_start, 2048, 972, 32, 32};
+    const Img img_player_idle_3_raw = { "player_idle_3", player_idle_3_raw_start, 972, 2048, 0x9ff32d9d, 32, 32};
 
     uint8_t player_idle_4_raw_start[];
-    const Img img_player_idle_4_raw = { "player_idle_4", player_idle_4_raw_start, 2048, 954, 32, 32};
+    const Img img_player_idle_4_raw = { "player_idle_4", player_idle_4_raw_start, 954, 2048, 0xa947a3c0, 32, 32};
 
     uint8_t player_jump_0_raw_start[];
-    const Img img_player_jump_0_raw = { "player_jump_0", player_jump_0_raw_start, 2048, 951, 32, 32};
+    const Img img_player_jump_0_raw = { "player_jump_0", player_jump_0_raw_start, 951, 2048, 0x871d9c86, 32, 32};
 
     uint8_t player_jump_1_raw_start[];
-    const Img img_player_jump_1_raw = { "player_jump_1", player_jump_1_raw_start, 2048, 906, 32, 32};
+    const Img img_player_jump_1_raw = { "player_jump_1", player_jump_1_raw_start, 906, 2048, 0xe544e9c9, 32, 32};
 
     uint8_t player_jump_2_raw_start[];
-    const Img img_player_jump_2_raw = { "player_jump_2", player_jump_2_raw_start, 2048, 864, 32, 32};
+    const Img img_player_jump_2_raw = { "player_jump_2", player_jump_2_raw_start, 864, 2048, 0xf82d5ad2, 32, 32};
 
     uint8_t player_knockback_0_raw_start[];
-    const Img img_player_knockback_0_raw = { "player_knockback_0", player_knockback_0_raw_start, 2048, 945, 32, 32};
+    const Img img_player_knockback_0_raw = { "player_knockback_0", player_knockback_0_raw_start, 945, 2048, 0x7e6ac8d8, 32, 32};
 
     uint8_t player_stun_0_raw_start[];
-    const Img img_player_stun_0_raw = { "player_stun_0", player_stun_0_raw_start, 2048, 954, 32, 32};
+    const Img img_player_stun_0_raw = { "player_stun_0", player_stun_0_raw_start, 954, 2048, 0xf7088b4a, 32, 32};
 
     uint8_t player_walk_0_raw_start[];
-    const Img img_player_walk_0_raw = { "player_walk_0", player_walk_0_raw_start, 2048, 966, 32, 32};
+    const Img img_player_walk_0_raw = { "player_walk_0", player_walk_0_raw_start, 966, 2048, 0x4ec312e4, 32, 32};
 
     uint8_t player_walk_1_raw_start[];
-    const Img img_player_walk_1_raw = { "player_walk_1", player_walk_1_raw_start, 2048, 957, 32, 32};
+    const Img img_player_walk_1_raw = { "player_walk_1", player_walk_1_raw_start, 957, 2048, 0x6b9d431, 32, 32};
 
     uint8_t player_walk_2_raw_start[];
-    const Img img_player_walk_2_raw = { "player_walk_2", player_walk_2_raw_start, 2048, 945, 32, 32};
+    const Img img_player_walk_2_raw = { "player_walk_2", player_walk_2_raw_start, 945, 2048, 0x63a2556c, 32, 32};
 
     uint8_t player_walk_3_raw_start[];
-    const Img img_player_walk_3_raw = { "player_walk_3", player_walk_3_raw_start, 2048, 972, 32, 32};
+    const Img img_player_walk_3_raw = { "player_walk_3", player_walk_3_raw_start, 972, 2048, 0x8c12e454, 32, 32};
 
     uint8_t player_walk_4_raw_start[];
-    const Img img_player_walk_4_raw = { "player_walk_4", player_walk_4_raw_start, 2048, 963, 32, 32};
+    const Img img_player_walk_4_raw = { "player_walk_4", player_walk_4_raw_start, 963, 2048, 0x7b00c8df, 32, 32};
 
     uint8_t player_walk_5_raw_start[];
-    const Img img_player_walk_5_raw = { "player_walk_5", player_walk_5_raw_start, 2048, 960, 32, 32};
+    const Img img_player_walk_5_raw = { "player_walk_5", player_walk_5_raw_start, 960, 2048, 0x40752e7b, 32, 32};
 
     uint8_t player_walk_6_raw_start[];
-    const Img img_player_walk_6_raw = { "player_walk_6", player_walk_6_raw_start, 2048, 942, 32, 32};
+    const Img img_player_walk_6_raw = { "player_walk_6", player_walk_6_raw_start, 942, 2048, 0x795afd5, 32, 32};
 
     uint8_t player_walk_7_raw_start[];
-    const Img img_player_walk_7_raw = { "player_walk_7", player_walk_7_raw_start, 2048, 984, 32, 32};
+    const Img img_player_walk_7_raw = { "player_walk_7", player_walk_7_raw_start, 984, 2048, 0x4fc47333, 32, 32};
 
 
 

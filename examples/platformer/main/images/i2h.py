@@ -31,9 +31,10 @@ thresh = 128
 # used to pass image data back and forth
 @dataclass
 class ImgInfo:
-    name: str
-    rawLength: int
+    name: str    
     compressedLength: int
+    rawLength: int
+    rawChecksum : int
     width: int
     height: int
     compressedBytes: bytes
@@ -83,8 +84,9 @@ def GenerateHeaderAndMakeFile(stems):
     typedef struct {
         char * name;
         uint8_t* data;
-        uint32_t rawSize; // in bytes (so w * h * uint16_t for raw images)
         uint32_t compressedSize;
+        uint32_t rawSize; // in bytes (so w * h * uint16_t for raw images)        
+        uint32_t rawChecksum;
         uint32_t width;
         uint32_t height;        
     } Img;
@@ -108,8 +110,9 @@ def GenerateHeaderAndMakeFile(stems):
         hSrc += f"    const Img img_{info.name}_{typeString} = {{ "        
         hSrc += f"\"{info.name}\", "
         hSrc += f"{info.name}_{typeString}_start, "
-        hSrc += f"{info.rawLength}, "
         hSrc += f"{info.compressedLength}, "
+        hSrc += f"{info.rawLength}, "
+        hSrc += f"{hex(info.rawChecksum)}, "
         hSrc += f"{info.width}, "
         hSrc += f"{info.height}"
         hSrc += f"}};"
@@ -148,8 +151,8 @@ def GenerateHeaderAndMakeFile(stems):
         hSrc += """{"""
         hSrc += "\n"
 
-        hex = ', '.join(f'0x{b:02X}' for b in info.compressedBytes)
-        hSrc += hex
+        hexVal = ', '.join(f'0x{b:02X}' for b in info.compressedBytes)
+        hSrc += hexVal
 
         hSrc += """};"""
         hSrc += "\n"
@@ -221,6 +224,17 @@ def RLE16BitDecode(inData):
         i += 3
     return bytes(rVal)
 
+def ChecksumDJB2(bytes):
+    # type (bytes) -> int
+
+    returnVal = 5381;
+    for i in range(len(bytes)):
+        returnVal = (returnVal<<5) + returnVal + bytes[i]
+        returnVal = returnVal &0xFFFFFFFF
+
+    return returnVal
+
+
 def ProcessFile(fName):
     # type: (str) -> ImgInfo
 
@@ -284,8 +298,11 @@ def ProcessFile(fName):
     compressedLength = len(compressedBytes)
     print("Compressed from {} to {} bytes".format(rawLength, compressedLength))
 
+    rawChecksum = ChecksumDJB2(bytes)
+    print(f"Checksum: {hex(rawChecksum)}")
+    
     # Debug: switch the last param to regular bytes for raw testing
-    return ImgInfo(stem, rawLength, compressedLength, width, height, compressedBytes)
+    return ImgInfo(stem, compressedLength, rawLength, rawChecksum, width, height, compressedBytes)
 
 
 if len(sys.argv) < 2 or sys.argv[1] == ".":
@@ -310,7 +327,7 @@ if len(sys.argv) < 2 or sys.argv[1] == ".":
         stemsAndLengths.append(info)
 
         # don't spam the console with bytes, lol        
-        printable = (info.name, info.rawLength, info.compressedLength, info.width, info.height)
+        printable = (info.name, info.compressedLength, info.rawLength, info.rawChecksum, info.width, info.height)
         print("Added: {}".format(printable))
 
     GenerateHeaderAndMakeFile(stemsAndLengths)

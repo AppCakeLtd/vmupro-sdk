@@ -1075,6 +1075,17 @@ void PrintBytes(const char *tag, uint8_t *bytes, uint32_t len)
   printf("\n");
 }
 
+uint32_t CalcDJB2(uint8_t *inBytes, uint32_t inLength)
+{
+
+  uint32_t returnVal = 5381;
+  for (int i = 0; i < inLength; i++)
+  {
+    returnVal = (returnVal << 5) + returnVal + inBytes[i];
+  }
+  return returnVal;
+}
+
 bool RLE16BitDecode(uint8_t *inBytes, uint32_t inLength, uint16_t *outBytes, uint32_t outLength)
 {
 
@@ -1129,11 +1140,15 @@ void DecompressImage(Img *img)
   }
   RLE16BitDecode(img->data, img->compressedSize, newData, img->rawSize);
 
-  //__TEST__
-  // if (strcmp(img->name, "bg_1") == 0)
-  // {
-  //   PrintBytes("bg_1", (uint8_t *)newData, 2000);
-  // }
+  uint32_t checksumCalced = CalcDJB2((uint8_t*)newData, img->rawSize);
+  uint32_t checksumExpected = img->rawChecksum;
+
+  if (checksumCalced != checksumExpected)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Decompressed Img %s expected checksum: 0x%lx, calced checksum: %lx", img->name, checksumCalced, checksumExpected);
+  } else {
+    vmupro_log(VMUPRO_LOG_INFO, TAG, "Img %s checksum: 0x%lx (success)", img->name, checksumCalced, checksumExpected);
+  }
 
   // NASTY HACK!
   // Temporary solution during development
@@ -1157,6 +1172,7 @@ void DecompressAllImages()
   for (int i = 0; i < allImagesLength; i++)
   {
     const Img *img = allImages[i];
+
     DecompressImage(img);
   }
 }
