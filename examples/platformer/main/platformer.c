@@ -966,8 +966,44 @@ Sprite *CreateSprite(SpriteType inType, Vec2 worldStartPos, const char *inName)
   return returnVal;
 }
 
+// TODO: placeholder for anything malloced
+void UnloadSprite(Sprite * spr){
+
+}
+
+// - Unload sprites
+// - clear the player pointer
+// - restore default blocks
+void UnloadLevel(){
+
+  // TODO: proper flag when adding level state
+  if ( levelBG == NULL ){
+    vmupro_log(VMUPRO_LOG_WARN, TAG, "Not unloading level due to null level bg");
+    return;
+  }
+
+  levelNum = -1;
+  levelBG = NULL;
+  levelCols = NULL;
+
+  // unloaded via sprite list
+  player = NULL;
+
+  for( int i = 0; i < numSprites; i++ ){
+    Sprite * spr = sprites[i];
+    UnloadSprite(spr);
+    sprites[i] = NULL;
+  }
+  numSprites = 0;
+
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Unloaded level & sprites");
+
+}
+
 void LoadLevel(int inLevelNum)
 {
+
+  UnloadLevel();
 
   levelNum = inLevelNum;
   levelBG = (LevelData *)level_1_layer_0_data;
