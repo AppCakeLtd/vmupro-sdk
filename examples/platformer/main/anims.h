@@ -30,18 +30,26 @@ typedef struct
 typedef enum
 {
     ANIMTYPE_IDLE,
+    ANIMTYPE_FALL,
     ANIMTYPE_WALK,
     ANIMTYPE_JUMP,
-    ANIMTYPE_FALL,
+    ANIMTYPE_DASH,
+    ANIMTYPE_BUTTSTOMP,
+    ANIMTYPE_KNOCKBACK,
+    ANIMTYPE_STUNNED,
     ANIIMTYPE_DIE,
 } AnimTypes;
 
 typedef struct
 {
     AnimFrames idleFrames;
+    AnimFrames fallFrames;
     AnimFrames walkFrames;
     AnimFrames jumpFrames;
-    AnimFrames fallFrames;
+    AnimFrames dashFrames;
+    AnimFrames buttstompFrames;
+    AnimFrames knockbackFrames;
+    AnimFrames stunFrames;
     AnimFrames dieFrames;
 } AnimGroup;
 
@@ -70,6 +78,9 @@ const Img *imgs_player_idle[] = {
     &img_player_idle_3_raw,
 };
 
+const Img *imgs_player_fall[] = {
+    &img_player_fall_0_raw, &img_player_fall_1_raw, &img_player_fall_2_raw, &img_player_fall_1_raw};
+
 const Img *imgs_player_walk[] = {
     &img_player_walk_0_raw,
     &img_player_walk_1_raw,
@@ -84,8 +95,17 @@ const Img *imgs_player_walk[] = {
 const Img *imgs_player_jump[] = {
     &img_player_jump_0_raw, &img_player_jump_1_raw};
 
-const Img *imgs_player_fall[] = {
-    &img_player_fall_0_raw, &img_player_fall_1_raw, &img_player_fall_2_raw, &img_player_fall_1_raw};
+const Img *imgs_player_dash[] = {
+    &img_player_dash_0_raw};
+
+const Img *imgs_player_buttstomp[] = {
+    &img_player_buttstomp_0_raw};
+
+const Img *imgs_player_knockback[] = {
+    &img_player_knockback_0_raw};
+
+const Img *imgs_player_stun[] = {
+    &img_player_stun_0_raw};
 
 const Img *imgs_player_die[] = {
     &img_player_die_0_raw};
@@ -106,11 +126,14 @@ AnimGroup animgroup_player = {
         .frameSpeed = 20,
         .numImages = ARRAYSIZE(imgs_player_idle),
         .images = imgs_player_idle},
+    .fallFrames = {.frameSpeed = 4, .numImages = ARRAYSIZE(imgs_player_fall), .images = imgs_player_fall},
     .walkFrames = {.frameSpeed = 3, .numImages = ARRAYSIZE(imgs_player_walk), .images = imgs_player_walk},
     .jumpFrames = {.frameSpeed = 7, .numImages = ARRAYSIZE(imgs_player_jump), .images = imgs_player_jump},
-    .fallFrames = {.frameSpeed = 4, .numImages = ARRAYSIZE(imgs_player_fall), .images = imgs_player_fall},
-    .dieFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_player_die), .images = imgs_player_die}
-};
+    .dashFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_player_dash), .images = imgs_player_dash},
+    .buttstompFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_player_buttstomp), .images = imgs_player_buttstomp},
+    .knockbackFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_player_knockback), .images = imgs_player_knockback},
+    .stunFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_player_stun), .images = imgs_player_stun},
+    .dieFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_player_die), .images = imgs_player_die}};
 
 //__TEST__
 /*

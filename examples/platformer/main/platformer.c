@@ -13,6 +13,7 @@
 #include "anims.h"
 #include "images/level_1_layer_0.h"
 #include "images/level_1_layer_1.h"
+#include "esp_heap_caps.h"
 
 const char *TAG = "[Platformer]";
 
@@ -1053,8 +1054,101 @@ void InitPersistentData()
   pData.levelNum = 0;
 }
 
+void PrintBytes(const char *tag, uint8_t *bytes, uint32_t len)
+{
+
+  printf("Bytes (%s): ", tag);
+  for (int i = 0; i < len; i++)
+  {
+    printf("0x%02x ", (uint8_t)bytes[i]);
+  }
+  printf("\n");
+}
+
+bool RLE16BitDecode(uint8_t *inBytes, uint32_t inLength, uint16_t *outBytes, uint32_t outLength)
+{
+
+  uint32_t readPos = 0;
+  uint32_t writePos = 0;
+
+  for (int i = 0; i < inLength; i += 3)
+  {
+
+    uint8_t runLength = inBytes[i];
+    uint16_t pix = inBytes[i + 2] << 8 | inBytes[i + 1];
+
+    for (int j = 0; j < runLength; j++)
+    {
+      if (writePos >= outLength)
+      {
+        vmupro_log(VMUPRO_LOG_ERROR, TAG, "Writing beyond 16 bit decmpression length");
+        return false;
+      }
+      outBytes[writePos] = pix;
+      writePos++;
+    }
+  }
+
+  uint32_t bytesWritten = writePos * 2;
+
+  if (bytesWritten != outLength)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Wrote %ld bytes, but expected to write %ld", bytesWritten, outLength);
+  }
+  else
+  {
+    vmupro_log(VMUPRO_LOG_INFO, TAG, "...Decompressed %ld bytes to %ld", inLength, bytesWritten);
+  }
+
+  // PrintBytes("com", inBytes, 60);
+  // PrintBytes("raw", (uint8_t *)outBytes, 60);
+
+  return false;
+}
+
+void DecompressImage(Img *img)
+{
+
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Decompressing %s...", img->name);
+
+  uint16_t *newData = malloc(img->rawSize);
+  if (newData == NULL)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Failed to allocate %ld bytes!", img->rawSize);
+    return;
+  }
+  RLE16BitDecode(img->data, img->compressedSize, newData, img->rawSize);
+
+  if (strcmp(img->name, "bg_1") == 0)
+  {
+    PrintBytes("bg_1", (uint8_t *)newData, 2000);
+  }
+
+  // NASTY HACK!
+  // Temporary solution during development
+  // since we know the ELF is running from PSRAM
+  // we an cast the const * Img to a normal * img
+  // and patch its data
+
+  //__TEST__
+  ((Img *)img)->data = (uint8_t *)newData;  
+  // uint32_t addr = (uint32_t)&img->data;
+  //*(uint32_t *)addr = (uint32_t)newData;
+}
+
+void DecompressAllImages()
+{
+
+  for (int i = 0; i < allImagesLength; i++)
+  {
+    const Img *img = allImages[i];
+    DecompressImage(img);
+  }
+}
+
 void InitGame()
 {
+  DecompressAllImages();
   InitPersistentData();
   LoadLevel(0);
   GotoGameState(GSTATE_START);
@@ -2148,7 +2242,7 @@ void GetEjectionInfo(Sprite *spr, HitInfo *info, bool horz)
   }
 
   // debug block
-  if (true)
+  if (false)
   {
     printf("__DBG__ Frame %d eject from dir (urdl) %d\n", frameCounter, whereWasCollision);
     printf("....from blockpos x=%d/%d y=%d/%d\n", dbgBlockX, dbgBlockX >> SHIFT, dbgBlockY, dbgBlockY >> SHIFT);
@@ -3041,8 +3135,7 @@ void app_main(void)
 
     frameCounter++;
     uiStateFrameCounter++;
-    //__TEST__
-    // Anims_Player.lastFrame = frameCounter;
+    
   }
 
   // Terminate the renderer
