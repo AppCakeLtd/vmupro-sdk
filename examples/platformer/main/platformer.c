@@ -14,6 +14,7 @@
 #include "images/level_1_layer_0.h"
 #include "images/level_1_layer_1.h"
 #include "esp_heap_caps.h"
+#include "vmupro_utils.h"
 
 const char *TAG = "[Platformer]";
 
@@ -76,6 +77,7 @@ PersistentData pData;
 int camX = 0;
 int camY = 0;
 int frameCounter = 0;
+bool didDecompressImages = false;
 
 // prevent rubber banding, move the camera within a scrolling
 // area which allows you to see further ahead than behind
@@ -953,6 +955,7 @@ Sprite *CreateSprite(SpriteType inType, Vec2 worldStartPos, const char *inName)
   // Initial config
   //
 
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Spawning sprite %s of type %d\n", frameCounter, inName, (int)inType);
   Sprite *returnVal = malloc(sizeof(Sprite));
   memset(returnVal, 0, sizeof(Sprite));
 
@@ -989,6 +992,13 @@ Sprite *CreateSprite(SpriteType inType, Vec2 worldStartPos, const char *inName)
 // TODO: placeholder for anything malloced
 void UnloadSprite(Sprite *spr)
 {
+  if (spr == NULL)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Attempt to unload a null sprite!");
+    return;
+  }
+  vmupro_log(VMUPRO_LOG_ERROR, TAG, "Frame %d Sprite %s unloading", frameCounter, spr->name);
+  free(spr);
 }
 
 // - Unload sprites
@@ -1119,10 +1129,11 @@ void DecompressImage(Img *img)
   }
   RLE16BitDecode(img->data, img->compressedSize, newData, img->rawSize);
 
-  if (strcmp(img->name, "bg_1") == 0)
-  {
-    PrintBytes("bg_1", (uint8_t *)newData, 2000);
-  }
+  //__TEST__
+  // if (strcmp(img->name, "bg_1") == 0)
+  // {
+  //   PrintBytes("bg_1", (uint8_t *)newData, 2000);
+  // }
 
   // NASTY HACK!
   // Temporary solution during development
@@ -1131,14 +1142,18 @@ void DecompressImage(Img *img)
   // and patch its data
 
   //__TEST__
-  ((Img *)img)->data = (uint8_t *)newData;  
+  ((Img *)img)->data = (uint8_t *)newData;
   // uint32_t addr = (uint32_t)&img->data;
   //*(uint32_t *)addr = (uint32_t)newData;
 }
 
 void DecompressAllImages()
 {
-
+  if (didDecompressImages)
+  {
+    return;
+  }
+  didDecompressImages = true;
   for (int i = 0; i < allImagesLength; i++)
   {
     const Img *img = allImages[i];
@@ -3135,7 +3150,6 @@ void app_main(void)
 
     frameCounter++;
     uiStateFrameCounter++;
-    
   }
 
   // Terminate the renderer
