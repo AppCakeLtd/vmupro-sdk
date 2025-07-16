@@ -55,11 +55,23 @@ const bool DEBUG_ONLY_MOVE_PLAYER = false;
 
 #define BLOCK_NULL 0xFFFFFFFF
 
+const int DEFAULT_LIFE_COUNT = 3;
+// give it a few frames before you can continue
+const int POST_DEATH_FRAME_DELAY = 60;
+
 // not stored on the sprite
-// since we might end up controlling
-// other sprites
-int lifeCount = 0;
-int levelNum = 0;
+// since we may despawn/respawn
+// or control other sprites
+typedef struct
+{
+
+  int lifeCount;
+  int levelNum;
+
+} PersistentData;
+
+PersistentData pData;
+
 int camX = 0;
 int camY = 0;
 int frameCounter = 0;
@@ -832,7 +844,14 @@ void OnSpriteDied(Sprite *spr)
 
   if (spr == player)
   {
-    GotoGameState(GSTATE_DED);
+    if (pData.lifeCount == 0)
+    {
+      GotoGameState(GSTATE_GAMEOVER);
+    }
+    else
+    {
+      GotoGameState(GSTATE_DED);
+    }
   }
   else
   {
@@ -967,37 +986,39 @@ Sprite *CreateSprite(SpriteType inType, Vec2 worldStartPos, const char *inName)
 }
 
 // TODO: placeholder for anything malloced
-void UnloadSprite(Sprite * spr){
-
+void UnloadSprite(Sprite *spr)
+{
 }
 
 // - Unload sprites
 // - clear the player pointer
 // - restore default blocks
-void UnloadLevel(){
+void UnloadLevel()
+{
 
   // TODO: proper flag when adding level state
-  if ( levelBG == NULL ){
+  if (levelBG == NULL)
+  {
     vmupro_log(VMUPRO_LOG_WARN, TAG, "Not unloading level due to null level bg");
     return;
   }
 
-  levelNum = -1;
+  pData.levelNum = -1;
   levelBG = NULL;
   levelCols = NULL;
 
   // unloaded via sprite list
   player = NULL;
 
-  for( int i = 0; i < numSprites; i++ ){
-    Sprite * spr = sprites[i];
+  for (int i = 0; i < numSprites; i++)
+  {
+    Sprite *spr = sprites[i];
     UnloadSprite(spr);
     sprites[i] = NULL;
   }
   numSprites = 0;
 
   vmupro_log(VMUPRO_LOG_INFO, TAG, "Unloaded level & sprites");
-
 }
 
 void LoadLevel(int inLevelNum)
@@ -1005,7 +1026,7 @@ void LoadLevel(int inLevelNum)
 
   UnloadLevel();
 
-  levelNum = inLevelNum;
+  pData.levelNum = inLevelNum;
   levelBG = (LevelData *)level_1_layer_0_data;
   levelCols = (LevelData *)level_1_layer_1_data;
 
@@ -1025,11 +1046,17 @@ void LoadLevel(int inLevelNum)
   }
 }
 
+void InitPersistentData()
+{
+  memset(&pData, 0, sizeof(PersistentData));
+  pData.lifeCount = DEFAULT_LIFE_COUNT;
+  pData.levelNum = 0;
+}
+
 void InitGame()
 {
-
+  InitPersistentData();
   LoadLevel(0);
-  lifeCount = 3;
   GotoGameState(GSTATE_START);
 }
 
@@ -1037,8 +1064,8 @@ void InitGame()
 void Retry()
 {
 
-  LoadLevel(levelNum);
-  lifeCount--;
+  LoadLevel(pData.levelNum);
+  pData.lifeCount--;
   GotoGameState(GSTATE_INGAME);
 }
 
@@ -2929,16 +2956,28 @@ void DrawUI()
     const Img *img = &img_ui_temp_dead_raw;
     DrawUIElementCenteredWithVelo(img);
 
-    // give it a few frames before you can continue
-    const int postDeathFrameDelay = 60;
-
-    if (uiStateFrameCounter >= postDeathFrameDelay)
+    if (uiStateFrameCounter >= POST_DEATH_FRAME_DELAY)
     {
-      printf("frame counter %d\n", uiStateFrameCounter);
       vmupro_btn_read();
       if (vmupro_btn_confirm_released() || vmupro_btn_dismiss_released())
       {
         Retry();
+      }
+    }
+  }
+
+  if (gState == GSTATE_GAMEOVER)
+  {
+
+    const Img *img = &img_ui_temp_gameover_raw;
+    DrawUIElementCenteredWithVelo(img);
+
+    if (uiStateFrameCounter >= POST_DEATH_FRAME_DELAY)
+    {
+      vmupro_btn_read();
+      if (vmupro_btn_confirm_released() || vmupro_btn_dismiss_released())
+      {
+        InitGame();
       }
     }
   }
