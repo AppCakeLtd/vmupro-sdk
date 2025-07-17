@@ -54,7 +54,7 @@ const bool DEBUG_ONLY_MOVE_PLAYER = false;
 #define MAP_WIDTH_PIXELS (MAP_WIDTH_TILES * TILE_SIZE_PX)
 #define MAP_HEIGHT_PIXELS (MAP_HEIGHT_TILES * TILE_SIZE_PX)
 
-#define BLOCK_NULL 0xFFFFFFFF
+#define BLOCK_NULL 0xFF
 
 const int DEFAULT_LIFE_COUNT = 3;
 // give it a few frames before you can continue
@@ -1390,7 +1390,7 @@ uint32_t GetBlockIDAtColRow(int blockCol, int blockRow, int layer)
   uint32_t offset = (blockRow * widthInTiles) + blockCol;
 
   uint32_t block = tileData[offset];
-  return block - 1;
+  return block;
 }
 
 // __TEST__

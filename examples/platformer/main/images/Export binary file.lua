@@ -1,7 +1,8 @@
 -- Export binary file
 -- Thanks to Jerzy Kut for the num_to_char function
 -- Modified 2025 8BM to:
--- - auto select adjustment of 0
+-- - auto select adjustment of -1
+-- - wrap values < 0 to 0xFF
 -- - disable example script dialogue
 -- - export all layers
 
@@ -59,7 +60,7 @@ function main ()
 
     local asname = noExt.."_layer_"..string.format("%01d",l)..".map"
 
-    adjust = 0
+    adjust = -1
 -- open file as binary
     outas = io.open (asname, "wb")
     writeIntLSB (outas, w)
@@ -68,10 +69,10 @@ function main ()
     while y < h do
      local x = 0
      while x < w do
-      local mapval = mappy.getBlockValue (mappy.getBlock (x, y), mappy.BLKBG)
+      local mapval = mappy.getBlockValue (mappy.getBlock (x, y, l), mappy.BLKBG)
       mapval = mapval + adjust
       if mapval < 0 then
-       mapval = 0
+       mapval = 255
       end
       writeu8 (outas, mapval)
       x = x + 1
