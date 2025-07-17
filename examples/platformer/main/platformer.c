@@ -210,8 +210,13 @@ typedef enum
   STYPE_RESERVED_14,
   STYPE_RESERVED_15,
   // second row of sprites in tilemap
-  STYPE_AREA_TOPLEFT,
-  STYPE_AREA_BOTTOMRIGHT,
+  STYPE_ROOM_MARKER_0,
+  STYPE_ROOM_MARKER_1,
+  STYPE_ROOM_MARKER_2,
+  STYPE_ROOM_MARKER_3,
+  STYPE_ROOM_MARKER_4,
+  STYPE_ROOM_MARKER_5,
+  STYPE_ROOM_MARKER_6,
   STYPE_MAX
 } SpriteType;
 
@@ -266,10 +271,9 @@ typedef struct
 
 #define MAX_ROOMS 6
 Vec2 roomTopLeftPositions[MAX_ROOMS];
-int numTopLeftRoomPositions = 0;
-
 Vec2 roomBottomRightPositions[MAX_ROOMS];
-int numBottomRightRoomPositions = 0;
+bool hasTopLeftRoomPosition[MAX_ROOMS];
+bool hasBottomRightRoomPositions[MAX_ROOMS];
 
 typedef struct
 {
@@ -1019,31 +1023,41 @@ void HandleSpecialSpriteType(SpriteType inType, Vec2 worldStartPos)
   switch (inType)
   {
 
-  case STYPE_AREA_TOPLEFT:
+  case STYPE_ROOM_MARKER_0:
+  case STYPE_ROOM_MARKER_1:
+  case STYPE_ROOM_MARKER_2:
+  case STYPE_ROOM_MARKER_3:
+  case STYPE_ROOM_MARKER_4:
+  case STYPE_ROOM_MARKER_5:
+  case STYPE_ROOM_MARKER_6:
 
-    if (numTopLeftRoomPositions >= MAX_ROOMS)
+    int markerIndex = inType - STYPE_ROOM_MARKER_0;
+
+    vmupro_log(VMUPRO_LOG_INFO, TAG, "Add room position indicator: %d, %d", worldStartPos.x, worldStartPos.y);
+
+    bool isBottomRight = hasTopLeftRoomPosition[markerIndex];
+
+    // One for top left, one for bottom right, but we somehow have like 3 or more
+    if (hasBottomRightRoomPositions[markerIndex])
     {
-      vmupro_log(VMUPRO_LOG_ERROR, TAG, "Max top left room markers reached");
+      vmupro_log(VMUPRO_LOG_INFO, TAG, "Mismatched room marker on index: %d", markerIndex);
       return;
     }
-    vmupro_log(VMUPRO_LOG_INFO, TAG, "Add top left room position: %d, %d", worldStartPos.x, worldStartPos.y);
-    roomTopLeftPositions[numTopLeftRoomPositions] = worldStartPos;
-    numTopLeftRoomPositions++;
 
-    break;
-
-  case STYPE_AREA_BOTTOMRIGHT:
-
-    if (numBottomRightRoomPositions >= MAX_ROOMS)
+    if (!isBottomRight)
     {
-      vmupro_log(VMUPRO_LOG_ERROR, TAG, "Max bottom right room markers reached");
-      return;
+      vmupro_log(VMUPRO_LOG_INFO, TAG, "(set to top left");
+      // top left room marker
+      roomTopLeftPositions[markerIndex] = worldStartPos;
+      hasTopLeftRoomPosition[markerIndex] = true;
     }
-    vmupro_log(VMUPRO_LOG_INFO, TAG, "Add bottom right room position: %d, %d", worldStartPos.x, worldStartPos.y);
-    // use the bottom right
-    AddVecInts(&worldStartPos, TILE_SIZE_PX, TILE_SIZE_PX);
-    roomBottomRightPositions[numBottomRightRoomPositions] = worldStartPos;
-    numBottomRightRoomPositions++;
+    else
+    {
+      vmupro_log(VMUPRO_LOG_INFO, TAG, "(set to bottom right");
+      AddVecInts(&worldStartPos, TILE_SIZE_PX, TILE_SIZE_PX);
+      roomBottomRightPositions[markerIndex] = worldStartPos;
+      hasBottomRightRoomPositions[markerIndex] = true;
+    }
 
     break;
 
@@ -1144,10 +1158,10 @@ void UnloadSprites()
 void UnloadRoomMarkers()
 {
 
-  numTopLeftRoomPositions = 0;
-  numBottomRightRoomPositions = 0;
   memset(roomTopLeftPositions, 0, sizeof(roomTopLeftPositions) / sizeof(roomTopLeftPositions[0]));
   memset(roomBottomRightPositions, 0, sizeof(roomBottomRightPositions) / sizeof(roomBottomRightPositions[0]));
+  memset(hasTopLeftRoomPosition, 0, sizeof(hasTopLeftRoomPosition) / sizeof(hasTopLeftRoomPosition[0]));
+  memset(hasBottomRightRoomPositions, 0, sizeof(hasBottomRightRoomPositions) / sizeof(hasBottomRightRoomPositions[0]));
 }
 
 // - Unload sprites
@@ -1753,13 +1767,15 @@ BBox GetRoomBounds(Vec2 *playerWorldPos)
 
   printf("Player at position %d %d\n", playerWorldPos->x, playerWorldPos->y);
   int foundIndex = -1;
-  for (int i = 0; i < numTopLeftRoomPositions; i++)
+  for (int i = 0; i < MAX_ROOMS; i++)
   {
+    // this one isn't filled in
+    if ( !hasBottomRightRoomPositions[i] ) continue;
+
     Vec2 *tl = &roomTopLeftPositions[i];
     Vec2 *br = &roomBottomRightPositions[i];
 
-    
-    printf("Checking index %d of %d  for xrange: %d-%d yrange: %d %d\n", i, numTopLeftRoomPositions, tl->x, br->x, tl->y, br->y);
+    printf("Checking index %d of %d  for xrange: %d-%d yrange: %d %d\n", i, MAX_ROOMS, tl->x, br->x, tl->y, br->y);
 
     if (playerWorldPos->x < tl->x)
       continue;
@@ -1844,7 +1860,8 @@ void SolveCamera()
 
   // check if cam's going off left of the level
   int camLeft = snapWorldPos.x;
-  if (camLeft < roomBounds.x){
+  if (camLeft < roomBounds.x)
+  {
     camLeft = roomBounds.x;
   }
 
