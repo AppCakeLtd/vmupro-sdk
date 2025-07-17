@@ -43,16 +43,24 @@ const bool DEBUG_ONLY_MOVE_PLAYER = false;
 #define TILE_SIZE_SUB (TILE_SIZE_PX << SHIFT)
 
 // the spritesheet/atlas
-#define TILEMAP_WIDTH_TILES 8
-#define TILEMAP_HEIGHT_TILES 22
+// could read it out from the data
+// but we'll improve performance by hard coding it
+#define TILEMAP_WIDTH_TILES 16
+#define TILEMAP_HEIGHT_TILES 16
 #define TILEMAP_WIDTH_PIXELS (TILEMAP_WIDTH_TILES * TILE_SIZE_PX)
 #define TILEMAP_HEIGHT_PIXELS (TILEMAP_HEIGHT_TILES * TILE_SIZE_PX)
 
 // the actual map
 #define MAP_WIDTH_TILES 128
-#define MAP_HEIGHT_TILES 32
+#define MAP_HEIGHT_TILES 64
 #define MAP_WIDTH_PIXELS (MAP_WIDTH_TILES * TILE_SIZE_PX)
 #define MAP_HEIGHT_PIXELS (MAP_HEIGHT_TILES * TILE_SIZE_PX)
+
+// Hard coded rows in the tilemap for transparency and one-way interaction
+#define TILEMAP_ONEWAY_PLATFORM_ROW_0 0
+#define TILEMAP_ONEWAY_PLATFORM_ROW_11 11
+#define TILEMAP_TRANSPARENT_ROW_11 11
+#define TILEMAP_TRANSPARENT_ROW_12 12
 
 #define BLOCK_NULL 0xFF
 
@@ -279,8 +287,7 @@ Level level1 = {
 
 Level *allLevels[] = {
     &level0,
-    &level1
-  };
+    &level1};
 
 Level *currentLevel = NULL;
 
@@ -873,9 +880,10 @@ void SetMoveMode(Sprite *spr, MoveMode inMode)
   }
 }
 
+// Player spawn pos
 Vec2 GetPlayerWorldStartPos()
 {
-  Vec2 rVal = {80, MAP_HEIGHT_PIXELS - (TILE_SIZE_PX * 4)};
+  Vec2 rVal = {80, MAP_HEIGHT_PIXELS - (TILE_SIZE_PX * 36)};
   return rVal;
 }
 
@@ -1063,7 +1071,6 @@ void UnloadSprites()
     sprites[i] = NULL;
   }
   numSprites = 0;
-
 }
 
 // - Unload sprites
@@ -1203,7 +1210,7 @@ bool RLE8BitDecode(uint8_t *inBytes, uint32_t inLength, uint8_t *outBytes, uint3
         vmupro_log(VMUPRO_LOG_ERROR, TAG, "Writing beyond 16 bit decompression length");
         return false;
       }
-      outBytes[writePos + 0] = pix & 0xFF;      
+      outBytes[writePos + 0] = pix & 0xFF;
       writePos += 1;
     }
   }
@@ -1222,9 +1229,7 @@ bool RLE8BitDecode(uint8_t *inBytes, uint32_t inLength, uint8_t *outBytes, uint3
   return false;
 }
 
-
-
-void DecompressImage(Img * img)
+void DecompressImage(Img *img)
 {
 
   vmupro_log(VMUPRO_LOG_INFO, TAG, "Decompressing Image '%s'...", img->name);
@@ -1258,7 +1263,7 @@ void DecompressImage(Img * img)
 // Return the decompressed img data
 // from a runtime-generated table
 // involves a little pointer hopping
-uint8_t *ImgData(Img * img)
+uint8_t *ImgData(Img *img)
 {
 
   int index = img->index;
@@ -1281,7 +1286,7 @@ void DecompressAllImages()
   }
 }
 
-uint8_t *DecompressTileLayer(TileLayer * inLayer)
+uint8_t *DecompressTileLayer(TileLayer *inLayer)
 {
 
   vmupro_log(VMUPRO_LOG_INFO, TAG, "Decompressing tile layer: %s");
@@ -1322,7 +1327,7 @@ void UnloadTileLayers()
   memset(decompressedTileLayerTable, 0, sizeof(uint8_t *) * MAX_DECOMPRESSED_TILE_LAYERS);
 }
 
-void DecompressAllTileLayers(Level * inLevel, PersistentData * inData)
+void DecompressAllTileLayers(Level *inLevel, PersistentData *inData)
 {
 
   vmupro_log(VMUPRO_LOG_INFO, TAG, "Decompressing tile layers for level num %d / %s...", inData->levelNum, currentLevel->name);
@@ -1368,7 +1373,7 @@ uint32_t GetBlockIDAtColRow(int blockCol, int blockRow, int layer)
 {
 
   // TODO: subscreens
-  uint8_t * tileData = GetTileLayerData(layer);
+  uint8_t *tileData = GetTileLayerData(layer);
 
   if (tileData == NULL)
     return BLOCK_NULL;
@@ -1393,14 +1398,7 @@ uint32_t GetBlockIDAtColRow(int blockCol, int blockRow, int layer)
   return block;
 }
 
-// __TEST__
-bool IsSpecialBlock(int blockID){
-
-  return false;
-
-}
-
-void UpdatePatrollInputs(Sprite * spr)
+void UpdatePatrollInputs(Sprite *spr)
 {
 
   // might lose ground and bonk on the same frame
@@ -1433,18 +1431,18 @@ void UpdatePatrollInputs(Sprite * spr)
   spr->input.left = !spr->facingRight;
 }
 
-bool SpriteIsMoving(Sprite * spr)
+bool SpriteIsMoving(Sprite *spr)
 {
 
   return (spr->subVelo.x != 0) || (spr->subVelo.y != 0);
 }
 
-bool SpriteIsDead(Sprite * spr)
+bool SpriteIsDead(Sprite *spr)
 {
   return spr->animID == ANIIMTYPE_DIE;
 }
 
-bool AllowSpriteInput(Sprite * spr)
+bool AllowSpriteInput(Sprite *spr)
 {
 
   if (SpriteIsDead(spr))
@@ -1454,7 +1452,7 @@ bool AllowSpriteInput(Sprite * spr)
   return true;
 }
 
-void UpdateSpriteInputs(Sprite * spr)
+void UpdateSpriteInputs(Sprite *spr)
 {
 
   if (spr == NULL)
@@ -1516,15 +1514,15 @@ void InputAllSprites()
   }
 }
 
-void DrawLevelBlock(int x, int y, int layer)
+void DrawLevelBlock(int inBlockCol, int inBlockRow, int layer)
 {
 
-  uint8_t * tileData = GetTileLayerData(layer);
+  uint8_t *tileData = GetTileLayerData(layer);
 
   if (tileData == NULL)
     return;
 
-  uint32_t blockId = GetBlockIDAtColRow(x, y, layer);
+  uint32_t blockId = GetBlockIDAtColRow(inBlockCol, inBlockRow, layer);
 
   if (blockId == BLOCK_NULL)
   {
@@ -1534,17 +1532,17 @@ void DrawLevelBlock(int x, int y, int layer)
   uint32_t pixSrcX = (blockId % TILEMAP_WIDTH_TILES) * TILE_SIZE_PX;
   uint32_t pixSrcY = (blockId / TILEMAP_WIDTH_TILES) * TILE_SIZE_PX;
 
-  uint32_t pixTargX = x * TILE_SIZE_PX;
-  uint32_t pixTargY = y * TILE_SIZE_PX;
+  uint32_t pixTargX = inBlockCol * TILE_SIZE_PX;
+  uint32_t pixTargY = inBlockRow * TILE_SIZE_PX;
 
   const Img *sheet = &img_tilemap;
   vmupro_drawflags_t flags = VMUPRO_DRAWFLAGS_NORMAL;
   vmupro_color_t transColor = VMUPRO_COLOR_BLACK;
-  
+
   uint8_t *imgData = ImgData(sheet);
 
-  // bit of a hack, but hey, everything at or below row 18 in the tilemap is transparent
-  if (pixSrcY >= 18 * TILE_SIZE_PX)
+  // bit of a hack, but hey, everything on rowss 11 and 12 are transparent
+  if (inBlockRow == TILEMAP_TRANSPARENT_ROW_11 || inBlockRow == TILEMAP_TRANSPARENT_ROW_12)
   {
 
     vmupro_blit_tile_advanced(imgData, pixTargX - camX, pixTargY - camY, pixSrcX, pixSrcY, TILE_SIZE_PX, TILE_SIZE_PX, sheet->width, transColor, flags);
@@ -1683,7 +1681,7 @@ void DrawGroundtiles(int layer)
 // do it at the end of the frame in case
 // the pos is updated multiple times in a frame
 // (collision, etc)
-void EndFrameSprite(Sprite * inSpr)
+void EndFrameSprite(Sprite *inSpr)
 {
   inSpr->lastSubPos = inSpr->subPos;
   inSpr->lastSubVelo = inSpr->subVelo;
@@ -1700,7 +1698,7 @@ void EndFrameAllSprites()
   }
 }
 
-int GetXSubAccel(Sprite * spr)
+int GetXSubAccel(Sprite *spr)
 {
 
   MoveMode mMode = spr->moveMode;
@@ -1727,7 +1725,7 @@ int GetXSubAccel(Sprite * spr)
   }
 }
 
-int GetMaxXSubSpeed(Sprite * spr)
+int GetMaxXSubSpeed(Sprite *spr)
 {
 
   MoveMode mMode = spr->moveMode;
@@ -1764,7 +1762,7 @@ int GetMaxXSubSpeed(Sprite * spr)
   }
 }
 
-int GetXDamping(Sprite * spr)
+int GetXDamping(Sprite *spr)
 {
 
   MoveMode mMode = spr->moveMode;
@@ -1804,7 +1802,7 @@ int GetXDamping(Sprite * spr)
 // hitbox = false: return sprite box in world coords
 // hitbox = true: return hitbox in subpixel coords
 // note: returns a point INSIDE the hitbox, always
-Vec2 GetPointOnSprite(Sprite * spr, bool hitBox, Anchor_H anchorH, Anchor_V anchorV)
+Vec2 GetPointOnSprite(Sprite *spr, bool hitBox, Anchor_H anchorH, Anchor_V anchorV)
 {
 
   // TODO: switch to an actual hitbox
@@ -1933,7 +1931,7 @@ typedef struct
 
 } HitInfo;
 
-Vec2 GetTileRowAndColFromSubPos(Vec2 * subPos)
+Vec2 GetTileRowAndColFromSubPos(Vec2 *subPos)
 {
 
   Vec2 returnVal;
@@ -1954,7 +1952,7 @@ Vec2 GetTileRowAndColFromSubPos(Vec2 * subPos)
   return returnVal;
 }
 
-Vec2 GetTileSubPosFromRowAndCol(Vec2 * rowAndcol)
+Vec2 GetTileSubPosFromRowAndCol(Vec2 *rowAndcol)
 {
 
   Vec2 returnVal;
@@ -1963,19 +1961,22 @@ Vec2 GetTileSubPosFromRowAndCol(Vec2 * rowAndcol)
   return returnVal;
 }
 
-bool IsBlockID2Sided(int blockId)
+bool IsBlockOneWay(int blockId)
 {
 
-  if (blockId >= 48 && blockId <= 50)
+  int rowNum = blockId / TILEMAP_WIDTH_TILES;
+
+  // Top row of the tilemap are one-way platforms
+  if (rowNum == TILEMAP_ONEWAY_PLATFORM_ROW_0)
+  {
     return true;
-  if (blockId >= 59 && blockId <= 60)
+  }
+
+  // as is row 11
+  if (rowNum == TILEMAP_ONEWAY_PLATFORM_ROW_11)
+  {
     return true;
-  if (blockId >= 72 && blockId <= 74)
-    return true;
-  if (blockId >= 83 && blockId <= 84)
-    return true;
-  if (blockId >= 144)
-    return true;
+  }
 
   return false;
 }
@@ -1984,7 +1985,7 @@ bool Ignore2SidedBlock(int blockId, int layer, Sprite *spr, Vec2 *tileSubPos)
 {
 
   // if it's not 2-sideable, just early exit
-  if (!IsBlockID2Sided(blockId))
+  if (!IsBlockOneWay(blockId))
     return false;
 
   bool movingUp = spr->subVelo.y < 0;
@@ -2020,7 +2021,7 @@ bool Ignore2SidedBlock(int blockId, int layer, Sprite *spr, Vec2 *tileSubPos)
 }
 
 // ensure you're using the same sub/world/screen coords
-bool IsPointInsideBox(Vec2 * point, BBox * box)
+bool IsPointInsideBox(Vec2 *point, BBox *box)
 {
 
   if (point->x < box->x)
@@ -2034,7 +2035,7 @@ bool IsPointInsideBox(Vec2 * point, BBox * box)
   return true;
 }
 
-bool SubPointInHitbox(Vec2 * subPoint, Sprite * otherSprite)
+bool SubPointInHitbox(Vec2 *subPoint, Sprite *otherSprite)
 {
   return IsPointInsideBox(subPoint, &otherSprite->subHitBox);
 }
@@ -2043,7 +2044,7 @@ bool SubPointInHitbox(Vec2 * subPoint, Sprite * otherSprite)
 // e.g. when moving right we check currentPos.x + velo.x
 // for where we'll be, rather than where we are
 // Used for for collision and for ground checks
-void GetHitInfo(HitInfo * rVal, Sprite * spr, Direction dir, Vec2 * subOffsetOrNull, const char *src)
+void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull, const char *src)
 {
 
   rVal->whereWasCollision = dir;
@@ -2305,7 +2306,7 @@ void GetHitInfo(HitInfo * rVal, Sprite * spr, Direction dir, Vec2 * subOffsetOrN
   } // for i to 3 (sprites)
 }
 
-void PrintHitInfo(HitInfo * info)
+void PrintHitInfo(HitInfo *info)
 {
 
   printf("HitInfo dir %d hit = 0x%lx\n", info->whereWasCollision, (uint32_t)info->hitMask);
@@ -2317,7 +2318,7 @@ void PrintHitInfo(HitInfo * info)
 }
 
 // Perform the ejection part after collecting hit info
-void GetEjectionInfo(Sprite * spr, HitInfo * info, bool horz)
+void GetEjectionInfo(Sprite *spr, HitInfo *info, bool horz)
 {
 
   // simple early exit
@@ -2477,7 +2478,7 @@ void GetEjectionInfo(Sprite * spr, HitInfo * info, bool horz)
 // returns the sign of the movement direction
 // e.g. -1 for jump, 1 for ground
 // e.g. -1 for left, 1 for right
-int GetHitInfoAndEjectionInfo(HitInfo * info, Sprite * spr, bool horz)
+int GetHitInfoAndEjectionInfo(HitInfo *info, Sprite *spr, bool horz)
 {
 
   memset(info, 0, sizeof(HitInfo));
@@ -2546,7 +2547,7 @@ int GetHitInfoAndEjectionInfo(HitInfo * info, Sprite * spr, bool horz)
 // Apply an offset to check for stuff ahead, behind, above, below, etc
 // Note: for a ground check, add 1 to y, since the hitbox ends on the last
 //       subpixel before the next ground tile
-Solidity CheckSpriteCollision(Sprite * spr, Direction dir, Vec2 * subOffset, const char *src)
+Solidity CheckSpriteCollision(Sprite *spr, Direction dir, Vec2 *subOffset, const char *src)
 {
 
   HitInfo nhi;
@@ -2556,7 +2557,7 @@ Solidity CheckSpriteCollision(Sprite * spr, Direction dir, Vec2 * subOffset, con
   return nhi.hitMask;
 }
 
-Solidity CheckGrounded(Sprite * spr)
+Solidity CheckGrounded(Sprite *spr)
 {
   // hitbox ends on the very last subpixel
   // so adding one takes you into the next tile
@@ -2568,7 +2569,7 @@ Solidity CheckGrounded(Sprite * spr)
 }
 
 // the first part of the jump, triggering it
-void TryJump(Sprite * spr)
+void TryJump(Sprite *spr)
 {
 
   if (!spr->input.jump)
@@ -2590,7 +2591,7 @@ void TryJump(Sprite * spr)
 }
 
 // prevent the jump button applying further up force
-void StopJumpBoost(Sprite * spr, const char *src)
+void StopJumpBoost(Sprite *spr, const char *src)
 {
   if (spr->jumpFrameNum < spr->profile.max_jump_boost_frames)
   {
@@ -2599,7 +2600,7 @@ void StopJumpBoost(Sprite * spr, const char *src)
   }
 }
 
-void TryContinueJump(Sprite * spr)
+void TryContinueJump(Sprite *spr)
 {
 
   if (!SpriteJumping(spr))
@@ -2629,7 +2630,7 @@ void TryContinueJump(Sprite * spr)
 }
 
 // e.g. walking off an edge
-void CheckFallen(Sprite * spr)
+void CheckFallen(Sprite *spr)
 {
 
   // we were walking/running on the ground
@@ -2661,7 +2662,7 @@ void CheckFallen(Sprite * spr)
   SetMoveMode(spr, MM_FALL);
 }
 
-void CheckLanded(Sprite * spr)
+void CheckLanded(Sprite *spr)
 {
 
   if (!spr->isGrounded)
@@ -2705,7 +2706,7 @@ void CheckLanded(Sprite * spr)
 // - double check that x/y ejection hasn't caused another collision
 // - check ground state
 // - check landing, etc
-void SolveMovement(Sprite * spr)
+void SolveMovement(Sprite *spr)
 {
 
   if (spr == NULL)
@@ -3052,7 +3053,7 @@ void MoveAllSprites()
 }
 
 // TODO: not very efficient
-bool IsSpriteOnScreen(Sprite * spr)
+bool IsSpriteOnScreen(Sprite *spr)
 {
 
   if (spr == NULL)
@@ -3079,7 +3080,7 @@ bool IsSpriteOnScreen(Sprite * spr)
   return false;
 }
 
-void DrawSprite(Sprite * spr)
+void DrawSprite(Sprite *spr)
 {
 
   if (spr == NULL)
@@ -3334,9 +3335,9 @@ void app_main(void)
     // test: cycle through sprite offsets
     if (vmupro_btn_pressed(Btn_A))
     {
-      //printf("PlayerX world:%d sub: %d \n", GetWorldPos(player).x, GetSubPos(player).x);
-      //printf("PlayerY world:%d sub: %d \n", GetWorldPos(player).y, GetSubPos(player).y);
-      //printf("Player grounded? %d\n", (int)player->isGrounded);
+      // printf("PlayerX world:%d sub: %d \n", GetWorldPos(player).x, GetSubPos(player).x);
+      // printf("PlayerY world:%d sub: %d \n", GetWorldPos(player).y, GetSubPos(player).y);
+      // printf("Player grounded? %d\n", (int)player->isGrounded);
       LoadLevel(1);
     }
 
