@@ -245,13 +245,21 @@ typedef struct
 } Level;
 
 Level level0 = {
-    "DuckStuff",
+    "Duck Fails",
+    &tl_level_0_layer_0,
+    &tl_level_0_layer_1,
+};
+
+Level level1 = {
+    "Duck & Cover",
     &tl_level_1_layer_0,
     &tl_level_1_layer_1,
 };
 
 Level *allLevels[] = {
-    &level0};
+    &level0,
+    &level1
+  };
 
 Level *currentLevel = NULL;
 
@@ -1293,7 +1301,7 @@ void UnloadTileLayers()
   memset(decompressedTileLayerTable, 0, sizeof(uint8_t *) * MAX_DECOMPRESSED_TILE_LAYERS);
 }
 
-void DecompressAllTileLayers(Level * currentLevel, PersistentData * inData)
+void DecompressAllTileLayers(Level * inLevel, PersistentData * inData)
 {
 
   vmupro_log(VMUPRO_LOG_INFO, TAG, "Decompressing tile layers for level num %d / %s...", inData->levelNum, currentLevel->name);
@@ -1304,8 +1312,8 @@ void DecompressAllTileLayers(Level * currentLevel, PersistentData * inData)
   }
   didDecompressImages = true;
 
-  decompressedTileLayerTable[0] = DecompressTileLayer(currentLevel->bgLayer);
-  decompressedTileLayerTable[1] = DecompressTileLayer(currentLevel->colLayer);
+  decompressedTileLayerTable[0] = DecompressTileLayer(inLevel->bgLayer);
+  decompressedTileLayerTable[1] = DecompressTileLayer(inLevel->colLayer);
 }
 
 void InitGame()
@@ -3298,9 +3306,10 @@ void app_main(void)
     // test: cycle through sprite offsets
     if (vmupro_btn_pressed(Btn_A))
     {
-      printf("PlayerX world:%d sub: %d \n", GetWorldPos(player).x, GetSubPos(player).x);
-      printf("PlayerY world:%d sub: %d \n", GetWorldPos(player).y, GetSubPos(player).y);
-      printf("Player grounded? %d\n", (int)player->isGrounded);
+      //printf("PlayerX world:%d sub: %d \n", GetWorldPos(player).x, GetSubPos(player).x);
+      //printf("PlayerY world:%d sub: %d \n", GetWorldPos(player).y, GetSubPos(player).y);
+      //printf("Player grounded? %d\n", (int)player->isGrounded);
+      LoadLevel(1);
     }
 
     if (vmupro_btn_pressed(Btn_B))

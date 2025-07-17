@@ -175,9 +175,12 @@ typedef struct {
     # so we can unpack them
 
     hSrc += "\n\n\n"
+
+    hSrc += "/*"
     hSrc += "// force a compile time const without #define\n"
     hSrc += f"enum{{ allTileLayersLength = {len(inLayers)}}};\n"    
     hSrc += "const TileLayer * allTileLayers[] = {\n"
+    
 
     # Generate a little pointer list to make it easier to decompress everything
     for info in inLayers:        
@@ -186,6 +189,7 @@ typedef struct {
 
     hSrc += "};"
     hSrc += "\n\n\n"
+    hSrc += "*/"
 
     # then put the actual hex data at the bottom
     for info in inLayers:
