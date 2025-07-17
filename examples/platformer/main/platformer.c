@@ -68,6 +68,7 @@ const bool DEBUG_ONLY_MOVE_PLAYER = false;
 const int DEFAULT_LIFE_COUNT = 3;
 // give it a few frames before you can continue
 const int POST_DEATH_FRAME_DELAY = 60;
+const int TRANSITION_FRAME_DELAY = 20;
 
 // not stored on the sprite
 // since we may despawn/respawn
@@ -123,6 +124,7 @@ typedef enum
   GSTATE_INTROFADE,
   GSTATE_INGAME,
   GSTATE_PAUSED,
+  GSTATE_TRANSITION,
   GSTATE_DED,
   GSTATE_GAMEOVER
 
@@ -1637,7 +1639,33 @@ bool AllowSpriteInput(Sprite *spr)
     return false;
   // TODO: knockback
   // TODO: some kinda sequence
-  return true;
+
+  switch (gState)
+  {
+
+  // other sprites will continue in these state
+  case GSTATE_START:
+  case GSTATE_DED:
+  case GSTATE_GAMEOVER:
+    return (spr != player);
+    break;
+
+  case GSTATE_INGAME:
+    return true;
+    break;
+
+  case GSTATE_UNINIT:
+  case GSTATE_INTROFADE:
+  case GSTATE_PAUSED:
+  case GSTATE_TRANSITION:
+    return false;
+    break;
+
+  default:
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Unhandled game state %d in AllowSpriteInput", (int)gState);
+    // don't jam up the game 'cause of an error
+    return true;
+  }
 }
 
 void UpdateSpriteInputs(Sprite *spr)
@@ -2800,9 +2828,9 @@ int CheckCollisionsAndEject(HitInfo *info, Sprite *spr, bool horz)
 
   memset(info, 0, sizeof(HitInfo));
 
-  bool movingRight = spr->subVelo.x > 0;
+  bool movingRight = spr->subVelo.x >= 0;
   bool movingLeft = spr->subVelo.x < 0;
-  bool movingDown = spr->subVelo.y > 0;
+  bool movingDown = spr->subVelo.y >= 0;
   bool movingUp = spr->subVelo.y < 0;
 
   // We're not using prediction by default
@@ -2822,6 +2850,8 @@ int CheckCollisionsAndEject(HitInfo *info, Sprite *spr, bool horz)
     }
     else
     {
+      // we could cut these off
+      // but we miss trigger collisions like doors
       return 0;
     }
   }
@@ -3012,7 +3042,97 @@ void CheckLanded(Sprite *spr)
   }
 }
 
+Sprite * FindSpriteOfType(SpriteType inType, Sprite * excludeOrNull){
 
+  for( int i = 0; i < numSprites; i++ ){
+    Sprite * spr = sprites[i];
+    if ( spr == excludeOrNull ) continue;
+    if ( spr->sType == inType ) return spr;
+  }
+
+  return NULL;
+
+}
+
+void HandleDoorTransition(Sprite *activator, Sprite *door)
+{
+
+  if (!activator->input.up)
+    return;
+
+  if (!AllowSpriteInput(activator))
+    return;
+
+  // let's do the door thing!
+
+  // find the other door with the same ID
+  Sprite * connectedDoor = FindSpriteOfType(door->sType, door);
+
+  if ( connectedDoor == NULL){
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Couldn't find a matching door!\n");
+    return;
+  }
+
+  // find the delta between the center of the other door
+  // and the center of the player
+  // and then add that to the player's pos
+  Vec2 doorCenterSub = GetPointOnSprite(connectedDoor, true, ANCHOR_HMID, ANCHOR_VMID);
+  Vec2 playerCenterSub = GetPointOnSprite(player, true, ANCHOR_HMID, ANCHOR_VMID);
+
+  Vec2 delta = {doorCenterSub.x - playerCenterSub.x, doorCenterSub.y - playerCenterSub.y};
+  
+  Vec2 newPos = {player->subPos.x + delta.x, player->subPos.y + delta.y};
+  
+  SetSubPos(player, &newPos);
+  player->subVelo = ZeroVec();
+  GotoGameState(GSTATE_TRANSITION);
+
+
+}
+
+void HandleTriggers(Sprite *srcSprite, HitInfo *info)
+{
+
+  if (srcSprite == NULL || info == NULL)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "HandleTriggers got a null sprite ref or info ref");
+    return;
+  }
+
+  if (info->lastSpriteHitIndex == -1)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "HandleTriggers got an info with no sprite->sprite hits");
+    return;
+  }
+
+  Sprite *otherSprite = info->otherSprites[info->lastSpriteHitIndex];
+  if (otherSprite == NULL)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "HandleTriggers got an info with null other sprite");
+    return;
+  }
+
+  SpriteType sType = otherSprite->sType;
+
+  switch (sType)
+  {
+
+  case STYPE_DOOR_0:
+  case STYPE_DOOR_1:
+  case STYPE_DOOR_2:
+  case STYPE_DOOR_3:
+  case STYPE_DOOR_4:
+
+    // it's a door, if they're pushing up, let's warp
+    HandleDoorTransition(srcSprite, otherSprite);
+    break;
+
+  default:
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Unhandled sprite type %d in HandleTriggers!", sType);
+    return;
+    break;
+  }
+}
 
 // basic order of operations
 // - use state from previous frame, since it's fully resolved
@@ -3353,6 +3473,22 @@ void SolveMovement(Sprite *spr)
       }
     }
   }
+  else
+  {
+
+    // finally check triggers
+    // let's not allow both on the same frame
+    // to avoid e.g. double door transitions
+
+    if (xHitInfo.hitMask && !xHitInfo.hitMaskIsSolid)
+    {
+      HandleTriggers(spr, &xHitInfo);
+    }
+    else if (yHitInfo.hitMask && !yHitInfo.hitMaskIsSolid)
+    {
+      HandleTriggers(spr, &yHitInfo);
+    }
+  }
 
   spr->isGrounded = CheckGrounded(spr) > SOLIDMASK_TRIGGER;
   // printf("Frame %d is grounded %d yVel = %d\n", frameCounter, spr->isGrounded, spr->subVelo.y);
@@ -3602,6 +3738,16 @@ void DrawUI()
         Retry();
       }
     }
+  }
+
+  if(gState == GSTATE_TRANSITION ){
+    const Img * img = &img_ui_temp_transition;
+    DrawUIElementCenteredWithVelo(img);
+
+    if ( uiStateFrameCounter >= TRANSITION_FRAME_DELAY ){
+      GotoGameState(GSTATE_INGAME);
+    }
+
   }
 
   if (gState == GSTATE_GAMEOVER)
