@@ -11,11 +11,9 @@
 #include "vmupro_sdk.h"
 #include "images/images.h"
 #include "anims.h"
-#include "images/level_1_layer_0.h"
-#include "images/level_1_layer_1.h"
+#include "images/maps.h"
 #include "esp_heap_caps.h"
 #include "vmupro_utils.h"
-
 
 const char *TAG = "[Platformer]";
 
@@ -80,9 +78,18 @@ int camY = 0;
 int frameCounter = 0;
 
 bool didDecompressImages = false;
-uint8_t * decompressedImageDataTable[allImagesLength];
+uint8_t *decompressedImageDataTable[allImagesLength];
 
-
+// We only have 2 tile layers per level
+// 256*64 = 16k per layer
+// 0 for background
+// 1 for foreground
+enum
+{
+  MAX_DECOMPRESSED_TILE_LAYERS = 2
+};
+bool hasDecompressedTileLayers = false;
+uint8_t *decompressedTileLayerTable[MAX_DECOMPRESSED_TILE_LAYERS];
 
 // prevent rubber banding, move the camera within a scrolling
 // area which allows you to see further ahead than behind
@@ -93,16 +100,6 @@ uint8_t * decompressedImageDataTable[allImagesLength];
 #define SCROLLZONE_SPEED 3
 int scrollZoneWorldX = 50;
 int scrollzoneOffsetX = 0;
-
-typedef struct
-{
-  uint32_t widthInTiles;
-  uint32_t heightInTiles;
-  uint8_t blockData[];
-} LevelData;
-
-LevelData *levelBG = NULL;
-LevelData *levelCols = NULL;
 
 typedef struct
 {
@@ -238,6 +235,25 @@ typedef struct
 
 } SpriteProfile;
 // TODO: rename to spriteblueprint?
+
+typedef struct
+{
+  const char *name;
+  TileLayer *bgLayer;
+  TileLayer *colLayer;
+
+} Level;
+
+Level level0 = {
+    "DuckStuff",
+    &tl_level_1_layer_0,
+    &tl_level_1_layer_1,
+};
+
+Level *allLevels[] = {
+    &level0};
+
+Level *currentLevel = NULL;
 
 void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
 {
@@ -582,6 +598,8 @@ Solidity CheckGrounded(Sprite *spr);
 Vec2 GetPointOnSprite(Sprite *spr, bool hitBox, Anchor_H anchorH, Anchor_V anchorV);
 Solidity CheckSpriteCollision(Sprite *spr, Direction dir, Vec2 *subOffset, const char *src);
 void GotoGameState(GameState inState);
+void UnloadTileLayers();
+void DecompressAllTileLayers(Level *currentLevel, PersistentData *inData);
 
 void DrawBBoxScreen(BBox *box, uint16_t inCol)
 {
@@ -1006,25 +1024,8 @@ void UnloadSprite(Sprite *spr)
   free(spr);
 }
 
-// - Unload sprites
-// - clear the player pointer
-// - restore default blocks
-void UnloadLevel()
+void UnloadSprites()
 {
-
-  // TODO: proper flag when adding level state
-  if (levelBG == NULL)
-  {
-    vmupro_log(VMUPRO_LOG_WARN, TAG, "Not unloading level due to null level bg");
-    return;
-  }
-
-  pData.levelNum = -1;
-  levelBG = NULL;
-  levelCols = NULL;
-
-  // unloaded via sprite list
-  player = NULL;
 
   for (int i = 0; i < numSprites; i++)
   {
@@ -1034,6 +1035,29 @@ void UnloadLevel()
   }
   numSprites = 0;
 
+}
+
+// - Unload sprites
+// - clear the player pointer
+// - restore default blocks
+void UnloadLevel()
+{
+
+  if (currentLevel == NULL)
+  {
+    vmupro_log(VMUPRO_LOG_INFO, TAG, "No level loaded, skipping unload...");
+    return;
+  }
+
+  UnloadTileLayers();
+
+  pData.levelNum = -1;
+
+  // unloaded via sprite list
+  player = NULL;
+
+  UnloadSprites();
+
   vmupro_log(VMUPRO_LOG_INFO, TAG, "Unloaded level & sprites");
 }
 
@@ -1042,9 +1066,12 @@ void LoadLevel(int inLevelNum)
 
   UnloadLevel();
 
+  // TODO: bounds checking?
+  // but then we wouldn't get minus worlds.
+  currentLevel = allLevels[inLevelNum];
+
   pData.levelNum = inLevelNum;
-  levelBG = (LevelData *)level_1_layer_0_data;
-  levelCols = (LevelData *)level_1_layer_1_data;
+  DecompressAllTileLayers(currentLevel, &pData);
 
   player = CreateSprite(STYPE_PLAYER, GetPlayerWorldStartPos(), "player");
 
@@ -1091,8 +1118,7 @@ uint32_t CalcDJB2(uint8_t *inBytes, uint32_t inLength)
   return returnVal;
 }
 
-
-bool RLE16BitDecode(uint8_t *inBytes, uint32_t inLength, uint8_t *outBytes, uint32_t outLength, bool test)
+bool RLE16BitDecode(uint8_t *inBytes, uint32_t inLength, uint8_t *outBytes, uint32_t outLength)
 {
 
   uint32_t writePos = 0;
@@ -1110,9 +1136,46 @@ bool RLE16BitDecode(uint8_t *inBytes, uint32_t inLength, uint8_t *outBytes, uint
         vmupro_log(VMUPRO_LOG_ERROR, TAG, "Writing beyond 16 bit decompression length");
         return false;
       }
-      outBytes[writePos+0] = pix & 0xFF;
-      outBytes[writePos+1] = (pix >> 8) & 0xFF;
-      writePos+=2;
+      outBytes[writePos + 0] = pix & 0xFF;
+      outBytes[writePos + 1] = (pix >> 8) & 0xFF;
+      writePos += 2;
+    }
+  }
+
+  uint32_t bytesWritten = writePos;
+
+  if (bytesWritten != outLength)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Wrote %ld bytes, but expected to write %ld", bytesWritten, outLength);
+  }
+  else
+  {
+    vmupro_log(VMUPRO_LOG_INFO, TAG, "...Decompressed %ld bytes to %ld", inLength, bytesWritten);
+  }
+
+  return false;
+}
+
+bool RLE8BitDecode(uint8_t *inBytes, uint32_t inLength, uint8_t *outBytes, uint32_t outLength)
+{
+
+  uint32_t writePos = 0;
+
+  for (int i = 0; i < inLength; i += 2)
+  {
+
+    uint8_t runLength = inBytes[i];
+    uint16_t pix = inBytes[i + 1];
+
+    for (int j = 0; j < runLength; j++)
+    {
+      if (writePos >= outLength)
+      {
+        vmupro_log(VMUPRO_LOG_ERROR, TAG, "Writing beyond 16 bit decompression length");
+        return false;
+      }
+      outBytes[writePos + 0] = pix & 0xFF;      
+      writePos += 1;
     }
   }
 
@@ -1132,16 +1195,10 @@ bool RLE16BitDecode(uint8_t *inBytes, uint32_t inLength, uint8_t *outBytes, uint
 
 
 
-void DecompressImage(Img *img)
+void DecompressImage(Img * img)
 {
 
-  bool isTest = false;
-    if (strcmp(img->name, "bg_1") == 0)
-    {
-      isTest = true;
-    }
-
-  vmupro_log(VMUPRO_LOG_INFO, TAG, "Decompressing %s...", img->name);
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Decompressing Image '%s'...", img->name);
 
   int index = img->index;
   int rawSize = img->rawSize;
@@ -1154,30 +1211,29 @@ void DecompressImage(Img *img)
     return;
   }
 
-  
-  RLE16BitDecode(img->compressedData, img->compressedSize, newData, rawSize, false);
+  RLE16BitDecode(img->compressedData, img->compressedSize, newData, rawSize);
 
-
-  uint32_t checksumCalced = CalcDJB2((uint8_t*)newData, rawSize);
+  uint32_t checksumCalced = CalcDJB2((uint8_t *)newData, rawSize);
   uint32_t checksumExpected = img->rawChecksum;
 
   if (checksumCalced != checksumExpected)
   {
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Decompressed Img %s expected checksum: 0x%lx, calced checksum: %lx", img->name, checksumCalced, checksumExpected);
-  } else {
+  }
+  else
+  {
     vmupro_log(VMUPRO_LOG_INFO, TAG, "Img %s checksum: 0x%lx (success)", img->name, checksumCalced, checksumExpected);
   }
-
 }
 
 // Return the decompressed img data
 // from a runtime-generated table
 // involves a little pointer hopping
-uint8_t * ImgData(Img * img){
+uint8_t *ImgData(Img * img)
+{
 
   int index = img->index;
   return decompressedImageDataTable[index];
-
 }
 
 void DecompressAllImages()
@@ -1187,13 +1243,69 @@ void DecompressAllImages()
     return;
   }
   didDecompressImages = true;
-  memset(decompressedImageDataTable, 0, sizeof(uint8_t*) * allImagesLength);
+  memset(decompressedImageDataTable, 0, sizeof(uint8_t *) * allImagesLength);
 
   for (int i = 0; i < allImagesLength; i++)
   {
     const Img *img = allImages[i];
     DecompressImage(img);
   }
+}
+
+uint8_t *DecompressTileLayer(TileLayer * inLayer)
+{
+
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Decompressing tile layer: %s");
+
+  uint32_t rawSize = inLayer->rawSize;
+  uint8_t *newData = malloc(rawSize);
+  RLE8BitDecode(inLayer->compressedData, inLayer->compressedSize, newData, rawSize);
+
+  uint32_t checksumExpected = inLayer->rawChecksum;
+  uint32_t checksumCalced = CalcDJB2(newData, rawSize);
+
+  if (checksumCalced != checksumExpected)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Decompressed TileLayer %s expected checksum: 0x%lx, calced checksum: %lx", inLayer->name, checksumCalced, checksumExpected);
+  }
+  else
+  {
+    vmupro_log(VMUPRO_LOG_INFO, TAG, "TileLayer %s checksum: 0x%lx (success)", inLayer->name, checksumCalced, checksumExpected);
+  }
+
+  return newData;
+}
+
+void UnloadTileLayers()
+{
+
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Unloading tile layers...");
+  for (int i = 0; i < MAX_DECOMPRESSED_TILE_LAYERS; i++)
+  {
+    uint8_t *tlData = decompressedTileLayerTable[i];
+    if (tlData == NULL)
+      continue;
+    free(tlData);
+  }
+  hasDecompressedTileLayers = false;
+
+  // wipe the decompressed tile list
+  memset(decompressedTileLayerTable, 0, sizeof(uint8_t *) * MAX_DECOMPRESSED_TILE_LAYERS);
+}
+
+void DecompressAllTileLayers(Level * currentLevel, PersistentData * inData)
+{
+
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Decompressing tile layers for level num %d / %s...", inData->levelNum, currentLevel->name);
+
+  if (didDecompressImages)
+  {
+    UnloadTileLayers();
+  }
+  didDecompressImages = true;
+
+  decompressedTileLayerTable[0] = DecompressTileLayer(currentLevel->bgLayer);
+  decompressedTileLayerTable[1] = DecompressTileLayer(currentLevel->colLayer);
 }
 
 void InitGame()
@@ -1213,6 +1325,12 @@ void Retry()
   GotoGameState(GSTATE_INGAME);
 }
 
+uint8_t *GetTileLayerData(int layer)
+{
+  uint8_t *rVal = (layer == 0) ? decompressedTileLayerTable[0] : decompressedTileLayerTable[1];
+  return rVal;
+}
+
 // returns atlas block 0-max
 // note: the .map file uses 0x00 for blank spots
 // so we'll always sub 1 to get a 0-indexed
@@ -1220,9 +1338,10 @@ void Retry()
 uint32_t GetBlockIDAtColRow(int blockCol, int blockRow, int layer)
 {
 
-  LevelData *level = layer == 0 ? levelBG : levelCols;
+  // TODO: subscreens
+  uint8_t * tileData = GetTileLayerData(layer);
 
-  if (level == NULL)
+  if (tileData == NULL)
     return BLOCK_NULL;
 
   // bounds check the input values
@@ -1231,18 +1350,21 @@ uint32_t GetBlockIDAtColRow(int blockCol, int blockRow, int layer)
     return BLOCK_NULL;
   }
 
-  if (blockCol >= level->widthInTiles || blockRow >= level->heightInTiles)
+  int widthInTiles = currentLevel->bgLayer->width;
+  int heightInTiles = currentLevel->bgLayer->height;
+
+  if (blockCol >= widthInTiles || blockRow >= heightInTiles)
   {
     return BLOCK_NULL;
   }
 
-  uint32_t offset = (blockRow * level->widthInTiles) + blockCol;
+  uint32_t offset = (blockRow * widthInTiles) + blockCol;
 
-  uint32_t block = level->blockData[offset];
+  uint32_t block = tileData[offset];
   return block - 1;
 }
 
-void UpdatePatrollInputs(Sprite *spr)
+void UpdatePatrollInputs(Sprite * spr)
 {
 
   // might lose ground and bonk on the same frame
@@ -1275,18 +1397,18 @@ void UpdatePatrollInputs(Sprite *spr)
   spr->input.left = !spr->facingRight;
 }
 
-bool SpriteIsMoving(Sprite *spr)
+bool SpriteIsMoving(Sprite * spr)
 {
 
   return (spr->subVelo.x != 0) || (spr->subVelo.y != 0);
 }
 
-bool SpriteIsDead(Sprite *spr)
+bool SpriteIsDead(Sprite * spr)
 {
   return spr->animID == ANIIMTYPE_DIE;
 }
 
-bool AllowSpriteInput(Sprite *spr)
+bool AllowSpriteInput(Sprite * spr)
 {
 
   if (SpriteIsDead(spr))
@@ -1296,7 +1418,7 @@ bool AllowSpriteInput(Sprite *spr)
   return true;
 }
 
-void UpdateSpriteInputs(Sprite *spr)
+void UpdateSpriteInputs(Sprite * spr)
 {
 
   if (spr == NULL)
@@ -1361,9 +1483,9 @@ void InputAllSprites()
 void DrawLevelBlock(int x, int y, int layer)
 {
 
-  LevelData *level = layer == 0 ? levelBG : levelCols;
+  uint8_t * tileData = GetTileLayerData(layer);
 
-  if (level == NULL)
+  if (tileData == NULL)
     return;
 
   uint32_t blockId = GetBlockIDAtColRow(x, y, layer);
@@ -1382,14 +1504,13 @@ void DrawLevelBlock(int x, int y, int layer)
   const Img *sheet = &img_tilemap;
   vmupro_drawflags_t flags = VMUPRO_DRAWFLAGS_NORMAL;
   vmupro_color_t transColor = VMUPRO_COLOR_BLACK;
-  // vmupro_blit_tile(sheet->data, pixTargX - camX, pixTargY - camY, pixSrcX, pixSrcY, TILE_SIZE_PX, TILE_SIZE_PX, sheet->width);
-
-  uint8_t * imgData = ImgData(sheet);
+  
+  uint8_t *imgData = ImgData(sheet);
 
   // bit of a hack, but hey, everything at or below row 18 in the tilemap is transparent
   if (pixSrcY >= 18 * TILE_SIZE_PX)
   {
-    
+
     vmupro_blit_tile_advanced(imgData, pixTargX - camX, pixTargY - camY, pixSrcX, pixSrcY, TILE_SIZE_PX, TILE_SIZE_PX, sheet->width, transColor, flags);
   }
   else
@@ -1526,7 +1647,7 @@ void DrawGroundtiles(int layer)
 // do it at the end of the frame in case
 // the pos is updated multiple times in a frame
 // (collision, etc)
-void EndFrameSprite(Sprite *inSpr)
+void EndFrameSprite(Sprite * inSpr)
 {
   inSpr->lastSubPos = inSpr->subPos;
   inSpr->lastSubVelo = inSpr->subVelo;
@@ -1543,7 +1664,7 @@ void EndFrameAllSprites()
   }
 }
 
-int GetXSubAccel(Sprite *spr)
+int GetXSubAccel(Sprite * spr)
 {
 
   MoveMode mMode = spr->moveMode;
@@ -1570,7 +1691,7 @@ int GetXSubAccel(Sprite *spr)
   }
 }
 
-int GetMaxXSubSpeed(Sprite *spr)
+int GetMaxXSubSpeed(Sprite * spr)
 {
 
   MoveMode mMode = spr->moveMode;
@@ -1607,7 +1728,7 @@ int GetMaxXSubSpeed(Sprite *spr)
   }
 }
 
-int GetXDamping(Sprite *spr)
+int GetXDamping(Sprite * spr)
 {
 
   MoveMode mMode = spr->moveMode;
@@ -1647,7 +1768,7 @@ int GetXDamping(Sprite *spr)
 // hitbox = false: return sprite box in world coords
 // hitbox = true: return hitbox in subpixel coords
 // note: returns a point INSIDE the hitbox, always
-Vec2 GetPointOnSprite(Sprite *spr, bool hitBox, Anchor_H anchorH, Anchor_V anchorV)
+Vec2 GetPointOnSprite(Sprite * spr, bool hitBox, Anchor_H anchorH, Anchor_V anchorV)
 {
 
   // TODO: switch to an actual hitbox
@@ -1776,7 +1897,7 @@ typedef struct
 
 } HitInfo;
 
-Vec2 GetTileRowAndColFromSubPos(Vec2 *subPos)
+Vec2 GetTileRowAndColFromSubPos(Vec2 * subPos)
 {
 
   Vec2 returnVal;
@@ -1797,7 +1918,7 @@ Vec2 GetTileRowAndColFromSubPos(Vec2 *subPos)
   return returnVal;
 }
 
-Vec2 GetTileSubPosFromRowAndCol(Vec2 *rowAndcol)
+Vec2 GetTileSubPosFromRowAndCol(Vec2 * rowAndcol)
 {
 
   Vec2 returnVal;
@@ -1863,7 +1984,7 @@ bool Ignore2SidedBlock(int blockId, int layer, Sprite *spr, Vec2 *tileSubPos)
 }
 
 // ensure you're using the same sub/world/screen coords
-bool IsPointInsideBox(Vec2 *point, BBox *box)
+bool IsPointInsideBox(Vec2 * point, BBox * box)
 {
 
   if (point->x < box->x)
@@ -1877,7 +1998,7 @@ bool IsPointInsideBox(Vec2 *point, BBox *box)
   return true;
 }
 
-bool SubPointInHitbox(Vec2 *subPoint, Sprite *otherSprite)
+bool SubPointInHitbox(Vec2 * subPoint, Sprite * otherSprite)
 {
   return IsPointInsideBox(subPoint, &otherSprite->subHitBox);
 }
@@ -1886,7 +2007,7 @@ bool SubPointInHitbox(Vec2 *subPoint, Sprite *otherSprite)
 // e.g. when moving right we check currentPos.x + velo.x
 // for where we'll be, rather than where we are
 // Used for for collision and for ground checks
-void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull, const char *src)
+void GetHitInfo(HitInfo * rVal, Sprite * spr, Direction dir, Vec2 * subOffsetOrNull, const char *src)
 {
 
   rVal->whereWasCollision = dir;
@@ -2148,7 +2269,7 @@ void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull
   } // for i to 3 (sprites)
 }
 
-void PrintHitInfo(HitInfo *info)
+void PrintHitInfo(HitInfo * info)
 {
 
   printf("HitInfo dir %d hit = 0x%lx\n", info->whereWasCollision, (uint32_t)info->hitMask);
@@ -2160,7 +2281,7 @@ void PrintHitInfo(HitInfo *info)
 }
 
 // Perform the ejection part after collecting hit info
-void GetEjectionInfo(Sprite *spr, HitInfo *info, bool horz)
+void GetEjectionInfo(Sprite * spr, HitInfo * info, bool horz)
 {
 
   // simple early exit
@@ -2320,7 +2441,7 @@ void GetEjectionInfo(Sprite *spr, HitInfo *info, bool horz)
 // returns the sign of the movement direction
 // e.g. -1 for jump, 1 for ground
 // e.g. -1 for left, 1 for right
-int GetHitInfoAndEjectionInfo(HitInfo *info, Sprite *spr, bool horz)
+int GetHitInfoAndEjectionInfo(HitInfo * info, Sprite * spr, bool horz)
 {
 
   memset(info, 0, sizeof(HitInfo));
@@ -2389,7 +2510,7 @@ int GetHitInfoAndEjectionInfo(HitInfo *info, Sprite *spr, bool horz)
 // Apply an offset to check for stuff ahead, behind, above, below, etc
 // Note: for a ground check, add 1 to y, since the hitbox ends on the last
 //       subpixel before the next ground tile
-Solidity CheckSpriteCollision(Sprite *spr, Direction dir, Vec2 *subOffset, const char *src)
+Solidity CheckSpriteCollision(Sprite * spr, Direction dir, Vec2 * subOffset, const char *src)
 {
 
   HitInfo nhi;
@@ -2399,7 +2520,7 @@ Solidity CheckSpriteCollision(Sprite *spr, Direction dir, Vec2 *subOffset, const
   return nhi.hitMask;
 }
 
-Solidity CheckGrounded(Sprite *spr)
+Solidity CheckGrounded(Sprite * spr)
 {
   // hitbox ends on the very last subpixel
   // so adding one takes you into the next tile
@@ -2411,7 +2532,7 @@ Solidity CheckGrounded(Sprite *spr)
 }
 
 // the first part of the jump, triggering it
-void TryJump(Sprite *spr)
+void TryJump(Sprite * spr)
 {
 
   if (!spr->input.jump)
@@ -2433,7 +2554,7 @@ void TryJump(Sprite *spr)
 }
 
 // prevent the jump button applying further up force
-void StopJumpBoost(Sprite *spr, const char *src)
+void StopJumpBoost(Sprite * spr, const char *src)
 {
   if (spr->jumpFrameNum < spr->profile.max_jump_boost_frames)
   {
@@ -2442,7 +2563,7 @@ void StopJumpBoost(Sprite *spr, const char *src)
   }
 }
 
-void TryContinueJump(Sprite *spr)
+void TryContinueJump(Sprite * spr)
 {
 
   if (!SpriteJumping(spr))
@@ -2472,7 +2593,7 @@ void TryContinueJump(Sprite *spr)
 }
 
 // e.g. walking off an edge
-void CheckFallen(Sprite *spr)
+void CheckFallen(Sprite * spr)
 {
 
   // we were walking/running on the ground
@@ -2504,7 +2625,7 @@ void CheckFallen(Sprite *spr)
   SetMoveMode(spr, MM_FALL);
 }
 
-void CheckLanded(Sprite *spr)
+void CheckLanded(Sprite * spr)
 {
 
   if (!spr->isGrounded)
@@ -2548,7 +2669,7 @@ void CheckLanded(Sprite *spr)
 // - double check that x/y ejection hasn't caused another collision
 // - check ground state
 // - check landing, etc
-void SolveMovement(Sprite *spr)
+void SolveMovement(Sprite * spr)
 {
 
   if (spr == NULL)
@@ -2895,7 +3016,7 @@ void MoveAllSprites()
 }
 
 // TODO: not very efficient
-bool IsSpriteOnScreen(Sprite *spr)
+bool IsSpriteOnScreen(Sprite * spr)
 {
 
   if (spr == NULL)
@@ -2922,7 +3043,7 @@ bool IsSpriteOnScreen(Sprite *spr)
   return false;
 }
 
-void DrawSprite(Sprite *spr)
+void DrawSprite(Sprite * spr)
 {
 
   if (spr == NULL)
@@ -2987,7 +3108,7 @@ void DrawSprite(Sprite *spr)
 
   // update the img pointer, in case it's changed due to anims
   const Img *img = GetActiveImage(spr);
-  uint8_t * imgData = ImgData(img);
+  uint8_t *imgData = ImgData(img);
 
   vmupro_drawflags_t flags = (!spr->facingRight * VMUPRO_DRAWFLAGS_FLIP_H);
   uint16_t mask = *(uint16_t *)&imgData[0];
@@ -3045,7 +3166,7 @@ void GotoGameState(GameState inState)
 void DrawUIElementCenteredWithVelo(const Img *img)
 {
 
-  uint8_t * imgData = ImgData(img);
+  uint8_t *imgData = ImgData(img);
 
   vmupro_drawflags_t flags = VMUPRO_DRAWFLAGS_NORMAL;
   uint16_t mask = *(uint16_t *)&imgData[0];
