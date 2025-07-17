@@ -99,7 +99,7 @@ def GenerateHeader(stems):
     index = 0
     for info in stems:
 
-        hSrc += f"    const uint8_t {info.name}_start[];\n"
+        hSrc += f"    const uint8_t _{info.name}_compressed_data[];\n"
         
         # best break this up for readability        
         hSrc += f"    const Img img_{info.name} = {{ "        
@@ -110,7 +110,7 @@ def GenerateHeader(stems):
         hSrc += f"{info.rawLength}, "
         hSrc += f"{hex(info.rawChecksum)}, "
         hSrc += f"{info.compressedLength}, "
-        hSrc += f"{info.name}_start, "
+        hSrc += f"_{info.name}_compressed_data, "
         hSrc += f"}};"
         hSrc += "\n"
 
@@ -139,7 +139,7 @@ def GenerateHeader(stems):
     # then put the actual hex data at the bottom
     for info in stems:
                 
-        hSrc += "    const uint8_t {}_start[] =".format( info.name)
+        hSrc += "    const uint8_t _{}_compressed_data[] =".format( info.name)
         hSrc += """{"""
         hSrc += "\n"
 
