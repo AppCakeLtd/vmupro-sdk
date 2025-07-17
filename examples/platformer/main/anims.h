@@ -62,53 +62,53 @@ typedef struct
 
 // pad it out a bit with some delays
 const Img *imgs_player_idle[] = {
-    &img_player_idle_0_raw,
-    &img_player_idle_0_raw,
-    &img_player_idle_0_raw,
-    &img_player_idle_1_raw,
-    &img_player_idle_0_raw,
-    &img_player_idle_0_raw,
-    &img_player_idle_0_raw,
-    &img_player_idle_2_raw,
-    &img_player_idle_3_raw,
-    &img_player_idle_3_raw,
-    &img_player_idle_4_raw,
-    &img_player_idle_3_raw,
-    &img_player_idle_4_raw,
-    &img_player_idle_3_raw,
+    &img_player_idle_0,
+    &img_player_idle_0,
+    &img_player_idle_0,
+    &img_player_idle_1,
+    &img_player_idle_0,
+    &img_player_idle_0,
+    &img_player_idle_0,
+    &img_player_idle_2,
+    &img_player_idle_3,
+    &img_player_idle_3,
+    &img_player_idle_4,
+    &img_player_idle_3,
+    &img_player_idle_4,
+    &img_player_idle_3,
 };
 
 const Img *imgs_player_fall[] = {
-    &img_player_fall_0_raw, &img_player_fall_1_raw, &img_player_fall_2_raw, &img_player_fall_1_raw};
+    &img_player_fall_0, &img_player_fall_1, &img_player_fall_2, &img_player_fall_1};
 
 const Img *imgs_player_walk[] = {
-    &img_player_walk_0_raw,
-    &img_player_walk_1_raw,
-    &img_player_walk_2_raw,
-    &img_player_walk_3_raw,
-    &img_player_walk_4_raw,
-    &img_player_walk_5_raw,
-    &img_player_walk_6_raw,
-    &img_player_walk_7_raw,
+    &img_player_walk_0,
+    &img_player_walk_1,
+    &img_player_walk_2,
+    &img_player_walk_3,
+    &img_player_walk_4,
+    &img_player_walk_5,
+    &img_player_walk_6,
+    &img_player_walk_7,
 };
 
 const Img *imgs_player_jump[] = {
-    &img_player_jump_0_raw, &img_player_jump_1_raw};
+    &img_player_jump_0, &img_player_jump_1};
 
 const Img *imgs_player_dash[] = {
-    &img_player_dash_0_raw};
+    &img_player_dash_0};
 
 const Img *imgs_player_buttstomp[] = {
-    &img_player_buttstomp_0_raw};
+    &img_player_buttstomp_0};
 
 const Img *imgs_player_knockback[] = {
-    &img_player_knockback_0_raw};
+    &img_player_knockback_0};
 
 const Img *imgs_player_stun[] = {
-    &img_player_stun_0_raw};
+    &img_player_stun_0};
 
 const Img *imgs_player_die[] = {
-    &img_player_die_0_raw};
+    &img_player_die_0};
 
 // e.g.
 /*

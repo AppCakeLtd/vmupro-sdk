@@ -32,11 +32,11 @@ thresh = 128
 @dataclass
 class ImgInfo:
     name: str    
-    compressedLength: int
+    width: int
+    height: int    
     rawLength: int
     rawChecksum : int
-    width: int
-    height: int
+    compressedLength: int
     compressedBytes: bytes
 
 
@@ -64,7 +64,7 @@ def SaveFile(stem, inBytes, inExt):
     outFile.close
 
 
-def GenerateHeaderAndMakeFile(stems):
+def GenerateHeader(stems):
     # type: (list[ImgInfo]) -> None
     
     iconsPath = GetHeaderPath()
@@ -84,38 +84,33 @@ def GenerateHeaderAndMakeFile(stems):
     typedef struct {
         const char * name;
         const uint32_t index;
-        const uint8_t* compressedData;
-        const uint32_t compressedSize;
-        const uint32_t rawSize; // in bytes (so w * h * uint16_t for raw images)        
-        const uint32_t rawChecksum;
         const uint32_t width;
-        const uint32_t height;        
+        const uint32_t height;
+        const uint32_t rawSize; // in bytes (so w * h * uint16_t for raw images)        
+        const uint32_t rawChecksum;           
+        const uint32_t compressedSize;
+        const uint8_t* compressedData;
     } Img;
 
     """
 
     # TODO: well worth changing now that it's not raw
-    typeString = "raw"
-
+    
     index = 0
     for info in stems:
 
-        baseString = '    const uint8_t {}_{}_start[];'.format(
-            info.name, typeString)
-
-        hSrc += baseString
-        hSrc += "\n"
-
+        hSrc += f"    const uint8_t {info.name}_start[];\n"
+        
         # best break this up for readability        
-        hSrc += f"    const Img img_{info.name}_{typeString} = {{ "        
+        hSrc += f"    const Img img_{info.name} = {{ "        
         hSrc += f"\"{info.name}\", "
         hSrc += f"{index}, "
-        hSrc += f"{info.name}_{typeString}_start, "
-        hSrc += f"{info.compressedLength}, "
+        hSrc += f"{info.width}, "
+        hSrc += f"{info.height}, "
         hSrc += f"{info.rawLength}, "
         hSrc += f"{hex(info.rawChecksum)}, "
-        hSrc += f"{info.width}, "
-        hSrc += f"{info.height}"
+        hSrc += f"{info.compressedLength}, "
+        hSrc += f"{info.name}_start, "
         hSrc += f"}};"
         hSrc += "\n"
 
@@ -134,10 +129,8 @@ def GenerateHeaderAndMakeFile(stems):
     hSrc += "const Img * allImages[] = {\n"
 
     # Generate a little pointer list to make it easier to decompress everything
-    for info in stems:
-        # TODO: i don't like the duplication here
-        imgString = "img_{}_{}".format(info.name, typeString)
-        
+    for info in stems:        
+        imgString = "img_{}".format(info.name)        
         hSrc+= "  &" + imgString + ",\n"
 
     hSrc += "};"
@@ -145,15 +138,12 @@ def GenerateHeaderAndMakeFile(stems):
 
     # then put the actual hex data at the bottom
     for info in stems:
-        
-        baseString = '    const uint8_t {}_{}_start[] __attribute__((aligned(4))) ='.format(
-            info.name, typeString)
-        
-        hSrc += baseString
+                
+        hSrc += "    const uint8_t {}_start[] =".format( info.name)
         hSrc += """{"""
         hSrc += "\n"
 
-        hexVal = ', '.join(f'0x{b:02X}' for b in info.compressedBytes)
+        hexVal = ", ".join(f'0x{b:02X}' for b in info.compressedBytes)
         hSrc += hexVal
 
         hSrc += """};"""
@@ -304,7 +294,7 @@ def ProcessFile(fName):
     print(f"Checksum: {hex(rawChecksum)}")
     
     # Debug: switch the last param to regular bytes for raw testing
-    return ImgInfo(stem, compressedLength, rawLength, rawChecksum, width, height, compressedBytes)
+    return ImgInfo(stem, width, height, rawLength, rawChecksum, compressedLength, compressedBytes)
 
 
 if len(sys.argv) < 2 or sys.argv[1] == ".":
@@ -329,10 +319,10 @@ if len(sys.argv) < 2 or sys.argv[1] == ".":
         stemsAndLengths.append(info)
 
         # don't spam the console with bytes, lol        
-        printable = (info.name, info.compressedLength, info.rawLength, info.rawChecksum, info.width, info.height)
+        printable = (info.name, info.width, info.height, info.rawLength, info.rawChecksum, info.compressedLength)
         print("Added: {}".format(printable))
 
-    GenerateHeaderAndMakeFile(stemsAndLengths)
+    GenerateHeader(stemsAndLengths)
 
 else:
 

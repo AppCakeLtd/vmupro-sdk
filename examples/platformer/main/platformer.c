@@ -447,7 +447,7 @@ const Img *GetActiveImage(Sprite *spr)
 
   if (!ValidateAnim(spr))
   {
-    return &img_player_idle_0_raw;
+    return &img_player_idle_0;
   }
 
   const Img *returnVal = spr->activeFrameSet->images[spr->animIndex];
@@ -1379,7 +1379,7 @@ void DrawLevelBlock(int x, int y, int layer)
   uint32_t pixTargX = x * TILE_SIZE_PX;
   uint32_t pixTargY = y * TILE_SIZE_PX;
 
-  const Img *sheet = &img_tilemap_raw;
+  const Img *sheet = &img_tilemap;
   vmupro_drawflags_t flags = VMUPRO_DRAWFLAGS_NORMAL;
   vmupro_color_t transColor = VMUPRO_COLOR_BLACK;
   // vmupro_blit_tile(sheet->data, pixTargX - camX, pixTargY - camY, pixSrcX, pixSrcY, TILE_SIZE_PX, TILE_SIZE_PX, sheet->width);
@@ -1487,7 +1487,7 @@ void SolveCamera()
 void DrawBackground()
 {
 
-  Img *img = &img_bg_1_raw;
+  Img *img = &img_bg_1;
 
   int bgScrollX = (camX * 4) / 5;
   int bgScrollY = (camY * 4) / 5;
@@ -3069,7 +3069,7 @@ void DrawUI()
 
     // TODO: very temporary code
     // Draw the temporary "start" graphic
-    const Img *img = &img_ui_temp_start_raw;
+    const Img *img = &img_ui_temp_start;
     DrawUIElementCenteredWithVelo(img);
 
     vmupro_btn_read();
@@ -3086,7 +3086,7 @@ void DrawUI()
   if (gState == GSTATE_INTROFADE)
   {
 
-    const Img *img = &img_ui_temp_start_raw;
+    const Img *img = &img_ui_temp_start;
     DrawUIElementCenteredWithVelo(img);
 
     uiAnimOffset.y += uiAnimVelo.y;
@@ -3103,7 +3103,7 @@ void DrawUI()
   if (gState == GSTATE_DED)
   {
 
-    const Img *img = &img_ui_temp_dead_raw;
+    const Img *img = &img_ui_temp_dead;
     DrawUIElementCenteredWithVelo(img);
 
     if (uiStateFrameCounter >= POST_DEATH_FRAME_DELAY)
@@ -3119,7 +3119,7 @@ void DrawUI()
   if (gState == GSTATE_GAMEOVER)
   {
 
-    const Img *img = &img_ui_temp_gameover_raw;
+    const Img *img = &img_ui_temp_gameover;
     DrawUIElementCenteredWithVelo(img);
 
     if (uiStateFrameCounter >= POST_DEATH_FRAME_DELAY)
