@@ -1748,7 +1748,7 @@ void DrawCamScrollZone()
 
 // Return the bounds of the current room, based on the top left/bottom right
 // if none is found, default to the whole map
-BBox GetRoomBounds(Vec2 *playerWorldPos)
+BBox GetRoomBoundsWorld(Vec2 *playerWorldPos)
 {
 
   BBox rVal;
@@ -1856,7 +1856,7 @@ void SolveCamera()
   // Bounds Check
   //
 
-  BBox roomBounds = GetRoomBounds(&playerWorldPos);
+  BBox roomBounds = GetRoomBoundsWorld(&playerWorldPos);
 
   // check if cam's going off left of the level
   int camLeft = snapWorldPos.x;
@@ -1877,17 +1877,18 @@ void SolveCamera()
   // check if cam's going off the top of the level
   // player's about 3/4 of the way down the screen
   int camTop = snapWorldPos.y - (SCREEN_WIDTH / 2);
-  if (camTop < 0)
+  if (camTop < roomBounds.y)
   {
-    camTop = 0;
+    camTop = roomBounds.y;
   }
 
   // check if cam's going off the bottom of the level
   int camBottom = camTop + SCREEN_HEIGHT;
-  if (camBottom >= MAP_HEIGHT_PIXELS)
+  int roomBottom = roomBounds.y + roomBounds.height;
+  if (camBottom >= roomBottom)
   {
-    int delta = camBottom - MAP_HEIGHT_PIXELS;
-    camTop -= delta;
+    int howFarOver = camBottom - roomBottom;
+    camTop -= howFarOver;
   }
 
   camX = camLeft;
