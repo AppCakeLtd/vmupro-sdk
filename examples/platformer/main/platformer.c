@@ -61,6 +61,7 @@ const bool DEBUG_ONLY_MOVE_PLAYER = false;
 #define TILEMAP_ONEWAY_PLATFORM_ROW_11 11
 #define TILEMAP_TRANSPARENT_ROW_11 11
 #define TILEMAP_TRANSPARENT_ROW_12 12
+#define TILEMAP_SPAWNDATA_ROW_13 13
 
 #define BLOCK_NULL 0xFF
 
@@ -210,10 +211,8 @@ typedef enum
   STYPE_RESERVED_15,
   // second row of sprites in tilemap
   STYPE_AREA_TOPLEFT,
-  STYPE_AREA_TOPRIGHT,
-  STYPE_AREA_BOTTOMLEFT,
-  STYPE_AREA_BOTTOMRIGHT
-
+  STYPE_AREA_BOTTOMRIGHT,
+  STYPE_MAX
 } SpriteType;
 
 typedef enum
@@ -265,25 +264,32 @@ typedef struct
 } SpriteProfile;
 // TODO: rename to spriteblueprint?
 
+#define MAX_ROOMS 6
+Vec2 roomTopLeftPositions[MAX_ROOMS];
+int numTopLeftRoomPositions = 0;
+
+Vec2 roomBottomRightPositions[MAX_ROOMS];
+int numBottomRightRoomPositions = 0;
+
 typedef struct
 {
   const char *name;
   TileLayer *bgLayer;
   TileLayer *colLayer;
-
+  TileLayer *sparseSpawnData;
 } Level;
 
 Level level0 = {
     "Duck Fails",
     &tl_level_0_layer_0,
     &tl_level_0_layer_1,
-};
+    &tl_level_0_layer_2};
 
 Level level1 = {
     "Duck & Cover",
     &tl_level_1_layer_0,
     &tl_level_1_layer_1,
-};
+    &tl_level_1_layer_2};
 
 Level *allLevels[] = {
     &level0,
@@ -1002,12 +1008,65 @@ void ResetSprite(Sprite *spr)
   OnSpriteMoved(spr);
 }
 
+bool IsTypeSpawnable(SpriteType inType)
+{
+  return inType <= STYPE_RESERVED_15;
+}
+
+void HandleSpecialSpriteType(SpriteType inType, Vec2 worldStartPos)
+{
+
+  switch (inType)
+  {
+
+  case STYPE_AREA_TOPLEFT:
+
+    if (numTopLeftRoomPositions >= MAX_ROOMS)
+    {
+      vmupro_log(VMUPRO_LOG_ERROR, TAG, "Max top left room markers reached");
+      return;
+    }
+    roomTopLeftPositions[numTopLeftRoomPositions] = worldStartPos;
+    numTopLeftRoomPositions++;
+
+    break;
+
+  case STYPE_AREA_BOTTOMRIGHT:
+
+    if (numBottomRightRoomPositions >= MAX_ROOMS)
+    {
+      vmupro_log(VMUPRO_LOG_ERROR, TAG, "Max bottom right room markers reached");
+      return;
+    }
+    roomBottomRightPositions[numBottomRightRoomPositions] = worldStartPos;
+    numBottomRightRoomPositions++;
+
+    break;
+
+  default:
+    vmupro_log(VMUPRO_LOG_WARN, TAG, "Unhandled special sprite type %d", inType);
+    break;
+  }
+}
+
 Sprite *CreateSprite(SpriteType inType, Vec2 worldStartPos, const char *inName)
 {
 
   if (numSprites == MAX_SPRITES)
   {
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Out of sprite slots");
+    return NULL;
+  }
+
+  if (inType < 0 || inType >= STYPE_MAX)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite index %d is invalid!", inType);
+    return NULL;
+  }
+
+  if (!IsTypeSpawnable(inType))
+  {
+    HandleSpecialSpriteType(inType, worldStartPos);
     return NULL;
   }
 
@@ -1046,6 +1105,11 @@ Sprite *CreateSprite(SpriteType inType, Vec2 worldStartPos, const char *inName)
   sprites[numSprites] = returnVal;
   numSprites++;
 
+  if (inType == STYPE_PLAYER)
+  {
+    player = returnVal;
+  }
+
   return returnVal;
 }
 
@@ -1073,6 +1137,15 @@ void UnloadSprites()
   numSprites = 0;
 }
 
+void UnloadRoomMarkers(){
+
+  numTopLeftRoomPositions = 0;
+  numBottomRightRoomPositions = 0;
+  memset(roomTopLeftPositions, 0, sizeof(roomTopLeftPositions) / sizeof(roomTopLeftPositions[0]));
+  memset(roomBottomRightPositions, 0, sizeof(roomBottomRightPositions) / sizeof(roomBottomRightPositions[0]));
+
+}
+
 // - Unload sprites
 // - clear the player pointer
 // - restore default blocks
@@ -1093,8 +1166,57 @@ void UnloadLevel()
   player = NULL;
 
   UnloadSprites();
+  UnloadRoomMarkers();
 
   vmupro_log(VMUPRO_LOG_INFO, TAG, "Unloaded level & sprites");
+}
+
+// Spawn the player and other sprites from the third layer
+// this one's sparsely encoded so doesn't need compressed
+void ReadSpawnLayer(Level *inLevel, PersistentData *inData)
+{
+
+  uint16_t *sparseData = (uint16_t *)inLevel->sparseSpawnData->compressedData;
+
+  // switched to 16 bit, so half the length
+  int readLen = inLevel->sparseSpawnData->rawSize / 2;
+
+  for (int i = 0; i < readLen; i += 3)
+  {
+
+    uint16_t xPos = sparseData[i + 0];
+    uint16_t yPos = sparseData[i + 1];
+    int id = sparseData[i + 2];
+
+    // we need to adjust the block id a bit
+    // starting from the 13th row of the tilemap
+    // we'll go 0, 1, 2, corresponding to sprite type IDs
+
+    int startBlock = TILEMAP_WIDTH_TILES * TILEMAP_SPAWNDATA_ROW_13;
+    int newID = id - startBlock;
+    if (newID < 0)
+    {
+      // something else from the tilemap has snuck into this layer
+      // i.e. something that isn't a spawn marker
+      vmupro_log(VMUPRO_LOG_ERROR, TAG, "Encountered block ID %d/%d, BELOW the max sprite ID range", id, newID);
+      return;
+    }
+    if (newID > 48)
+    {
+      // there are 48 possible positions for sprites
+      // at the bottom of the tilemap
+      // we could calc this magic number, but i think
+      // this description clears it up better
+      vmupro_log(VMUPRO_LOG_ERROR, TAG, "Encountered block ID %d/%d, BEYOND the max sprite ID range", id, newID);
+      return;
+    }
+
+    Vec2 worldPos = {xPos * TILE_SIZE_PX, yPos * TILE_SIZE_PX};
+
+    vmupro_log(VMUPRO_LOG_INFO, TAG, "Found spawn marker block ID %d at tile: %ld, %ld world: %d, %d \n", newID, xPos, yPos, worldPos.x, worldPos.y);
+
+    CreateSprite(newID, worldPos, "spawned");
+  }
 }
 
 void LoadLevel(int inLevelNum)
@@ -1108,7 +1230,10 @@ void LoadLevel(int inLevelNum)
 
   pData.levelNum = inLevelNum;
   DecompressAllTileLayers(currentLevel, &pData);
+  ReadSpawnLayer(currentLevel, &pData);
 
+  //__TEST__
+  /*
   player = CreateSprite(STYPE_PLAYER, GetPlayerWorldStartPos(), "player");
 
   if (!DEBUG_ONLY_SPAWN_PLAYER)
@@ -1123,6 +1248,7 @@ void LoadLevel(int inLevelNum)
     testPos.y -= TILE_SIZE_PX * 1;
     CreateSprite(STYPE_TESTMOB, testPos, "testmob2");
   }
+  */
 }
 
 void InitPersistentData()
@@ -1286,6 +1412,9 @@ void DecompressAllImages()
   }
 }
 
+// used for layer 0 and 1 - background and collision
+// which are RLE encoded
+// the spawn layer is sparesely encoded
 uint8_t *DecompressTileLayer(TileLayer *inLayer)
 {
 
@@ -1310,6 +1439,7 @@ uint8_t *DecompressTileLayer(TileLayer *inLayer)
   return newData;
 }
 
+// Only required for layers 0 & 1 (background & collision)
 void UnloadTileLayers()
 {
 
@@ -1338,8 +1468,12 @@ void DecompressAllTileLayers(Level *inLevel, PersistentData *inData)
   }
   didDecompressImages = true;
 
+  // Background
   decompressedTileLayerTable[0] = DecompressTileLayer(inLevel->bgLayer);
+  // Collision
   decompressedTileLayerTable[1] = DecompressTileLayer(inLevel->colLayer);
+  // Spawn layer:
+  // spawned as part of the level load routine
 }
 
 void InitGame()

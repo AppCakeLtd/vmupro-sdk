@@ -12,6 +12,7 @@ class TileInfo:
     compressedLength: int
     compressedBytes: bytes
 
+
 def RLE8BitEncode(inData):
     # type: (bytes) -> bytes
 
@@ -73,6 +74,39 @@ def ChecksumDJB2(bytes):
 
     return returnVal
 
+# Scan the sprite layer and encode it as
+# uint16_t: x tile index
+# uint16_t: y tile index
+# uint16_t: tileID   <-- could be 8, but let's leave it open for special flags?
+def SparseEncodeLayer(widthIntiles, heightInTiles, inBytes):
+    # type (int, int, bytes) -> int
+
+    outBytes = bytearray()
+
+    idx = 0
+    for y in range(heightInTiles):
+        for x in range(widthIntiles):
+
+            blockID = inBytes[idx]
+
+            # ignore empty tiles
+            if blockID == 0xFF:
+                idx += 1
+                continue
+
+            print("Found special block {} at {}/{}".format(blockID, x, y))
+
+            # we found something, encode the x, y, id
+            xBytes = struct.pack("<H", x)
+            yBytes = struct.pack("<H", y)
+            idBytes = struct.pack("<H", blockID)
+
+            outBytes.extend(xBytes)
+            outBytes.extend(yBytes)
+            outBytes.extend(idBytes)
+
+            idx += 1
+    return outBytes
 
 def ProcessFile(inPath):
     
@@ -97,27 +131,50 @@ def ProcessFile(inPath):
     # in that case, use this
     # tileData = bytearray(tileData[i] for i in range(0, len(tileData), 4))
 
+    # eeh sorry
+    isSpawnLayer = inPath.find("_layer_2") > -1
     
-    # compress, then validate the compression
-    compressedData = RLE8BitEncode(tileData)
-    decompressedData = RLE8BitDecode(compressedData)
+    if isSpawnLayer:
 
-    sizeBefore = len(tileData)
-    sizeAfter = len(decompressedData)
-    sizeCompressed = len(compressedData)
-    checksumBefore = ChecksumDJB2(tileData)
-    checksumAfter = ChecksumDJB2(decompressedData)
+        #
+        # Spawn layer, we'll use sparse encodding
+        #
 
-    if sizeAfter != sizeBefore:
-        raise Exception(f"Compression failed, expected decompressed size of {sizeBefore}, got {sizeAfter}")
+        sparseData = SparseEncodeLayer(width, height, tileData)
+        sparseSize = len(sparseData)        
+        sparseChecksum = ChecksumDJB2(sparseData)
 
-    if checksumAfter != checksumBefore:
-        raise Exception(f"Compression failed, expected decompressed checksum of {checksumBefore}, got {checksumAfter}")
+        print(f"  Encoded {sparseSize} sparsely encoded bytes w/ csum: {hex(sparseChecksum)}")
 
-    print(f"  Compressed {sizeBefore} bytes to {sizeCompressed}, checksum: {hex(checksumAfter)}")
+        returnVal = TileInfo(name, width, height, sparseSize, sparseChecksum, sparseSize, sparseData)
+        return returnVal
 
-    returnVal = TileInfo(name, width, height, sizeBefore, checksumBefore, sizeCompressed, compressedData)
-    return returnVal;
+    else:
+
+        #
+        # Not a spawn layer, regular tiles
+        #
+        
+        # compress, then validate the compression
+        compressedData = RLE8BitEncode(tileData)
+        decompressedData = RLE8BitDecode(compressedData)
+
+        sizeBefore = len(tileData)
+        sizeAfter = len(decompressedData)
+        sizeCompressed = len(compressedData)
+        checksumBefore = ChecksumDJB2(tileData)
+        checksumAfter = ChecksumDJB2(decompressedData)
+
+        if sizeAfter != sizeBefore:
+            raise Exception(f"Compression failed, expected decompressed size of {sizeBefore}, got {sizeAfter}")
+
+        if checksumAfter != checksumBefore:
+            raise Exception(f"Compression failed, expected decompressed checksum of {checksumBefore}, got {checksumAfter}")
+
+        print(f"  Compressed {sizeBefore} bytes to {sizeCompressed}, checksum: {hex(checksumAfter)}")
+
+        returnVal = TileInfo(name, width, height, sizeBefore, checksumBefore, sizeCompressed, compressedData)
+        return returnVal;
 
 def GenerateHeader(inLayers):
 
