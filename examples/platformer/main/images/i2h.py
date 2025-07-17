@@ -82,13 +82,14 @@ def GenerateHeaderAndMakeFile(stems):
     // height not required but reduces calcs required
     // for image positioning
     typedef struct {
-        char * name;
-        uint8_t* data;
-        uint32_t compressedSize;
-        uint32_t rawSize; // in bytes (so w * h * uint16_t for raw images)        
-        uint32_t rawChecksum;
-        uint32_t width;
-        uint32_t height;        
+        const char * name;
+        const uint32_t index;
+        const uint8_t* compressedData;
+        const uint32_t compressedSize;
+        const uint32_t rawSize; // in bytes (so w * h * uint16_t for raw images)        
+        const uint32_t rawChecksum;
+        const uint32_t width;
+        const uint32_t height;        
     } Img;
 
     """
@@ -96,11 +97,10 @@ def GenerateHeaderAndMakeFile(stems):
     # TODO: well worth changing now that it's not raw
     typeString = "raw"
 
-    hSrc += "\n    // Start with protos\n\n"
-
+    index = 0
     for info in stems:
 
-        baseString = '    uint8_t {}_{}_start[];'.format(
+        baseString = '    const uint8_t {}_{}_start[];'.format(
             info.name, typeString)
 
         hSrc += baseString
@@ -109,6 +109,7 @@ def GenerateHeaderAndMakeFile(stems):
         # best break this up for readability        
         hSrc += f"    const Img img_{info.name}_{typeString} = {{ "        
         hSrc += f"\"{info.name}\", "
+        hSrc += f"{index}, "
         hSrc += f"{info.name}_{typeString}_start, "
         hSrc += f"{info.compressedLength}, "
         hSrc += f"{info.rawLength}, "
@@ -121,14 +122,15 @@ def GenerateHeaderAndMakeFile(stems):
         # wee space would be nice
         hSrc += "\n"
 
-
+        index+=1;
 
     # make a list of all known images
     # so we can unpack them
     #for info in stems:
 
     hSrc += "\n\n\n"
-    hSrc += f"const int allImagesLength = {len(stems)};\n"
+    hSrc += "// force a compile time const without #define\n"
+    hSrc += f"enum{{ allImagesLength = {len(stems)}}};\n"    
     hSrc += "const Img * allImages[] = {\n"
 
     # Generate a little pointer list to make it easier to decompress everything
@@ -141,10 +143,10 @@ def GenerateHeaderAndMakeFile(stems):
     hSrc += "};"
     hSrc += "\n\n\n"
 
-    # then put the actual data at the bottom
+    # then put the actual hex data at the bottom
     for info in stems:
         
-        baseString = '    uint8_t {}_{}_start[] ='.format(
+        baseString = '    const uint8_t {}_{}_start[] __attribute__((aligned(4))) ='.format(
             info.name, typeString)
         
         hSrc += baseString

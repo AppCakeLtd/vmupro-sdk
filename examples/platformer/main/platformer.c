@@ -16,6 +16,7 @@
 #include "esp_heap_caps.h"
 #include "vmupro_utils.h"
 
+
 const char *TAG = "[Platformer]";
 
 // could un-const these for debugging
@@ -77,7 +78,11 @@ PersistentData pData;
 int camX = 0;
 int camY = 0;
 int frameCounter = 0;
+
 bool didDecompressImages = false;
+uint8_t * decompressedImageDataTable[allImagesLength];
+
+
 
 // prevent rubber banding, move the camera within a scrolling
 // area which allows you to see further ahead than behind
@@ -1086,10 +1091,10 @@ uint32_t CalcDJB2(uint8_t *inBytes, uint32_t inLength)
   return returnVal;
 }
 
-bool RLE16BitDecode(uint8_t *inBytes, uint32_t inLength, uint16_t *outBytes, uint32_t outLength)
+
+bool RLE16BitDecode(uint8_t *inBytes, uint32_t inLength, uint8_t *outBytes, uint32_t outLength, bool test)
 {
 
-  uint32_t readPos = 0;
   uint32_t writePos = 0;
 
   for (int i = 0; i < inLength; i += 3)
@@ -1102,15 +1107,16 @@ bool RLE16BitDecode(uint8_t *inBytes, uint32_t inLength, uint16_t *outBytes, uin
     {
       if (writePos >= outLength)
       {
-        vmupro_log(VMUPRO_LOG_ERROR, TAG, "Writing beyond 16 bit decmpression length");
+        vmupro_log(VMUPRO_LOG_ERROR, TAG, "Writing beyond 16 bit decompression length");
         return false;
       }
-      outBytes[writePos] = pix;
-      writePos++;
+      outBytes[writePos+0] = pix & 0xFF;
+      outBytes[writePos+1] = (pix >> 8) & 0xFF;
+      writePos+=2;
     }
   }
 
-  uint32_t bytesWritten = writePos * 2;
+  uint32_t bytesWritten = writePos;
 
   if (bytesWritten != outLength)
   {
@@ -1121,26 +1127,38 @@ bool RLE16BitDecode(uint8_t *inBytes, uint32_t inLength, uint16_t *outBytes, uin
     vmupro_log(VMUPRO_LOG_INFO, TAG, "...Decompressed %ld bytes to %ld", inLength, bytesWritten);
   }
 
-  // PrintBytes("com", inBytes, 60);
-  // PrintBytes("raw", (uint8_t *)outBytes, 60);
-
   return false;
 }
+
+
 
 void DecompressImage(Img *img)
 {
 
+  bool isTest = false;
+    if (strcmp(img->name, "bg_1") == 0)
+    {
+      isTest = true;
+    }
+
   vmupro_log(VMUPRO_LOG_INFO, TAG, "Decompressing %s...", img->name);
 
-  uint16_t *newData = malloc(img->rawSize);
+  int index = img->index;
+  int rawSize = img->rawSize;
+
+  uint8_t *newData = malloc(rawSize);
+  decompressedImageDataTable[index] = newData;
   if (newData == NULL)
   {
-    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Failed to allocate %ld bytes!", img->rawSize);
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Failed to allocate %ld bytes!", rawSize);
     return;
   }
-  RLE16BitDecode(img->data, img->compressedSize, newData, img->rawSize);
 
-  uint32_t checksumCalced = CalcDJB2((uint8_t*)newData, img->rawSize);
+  
+  RLE16BitDecode(img->compressedData, img->compressedSize, newData, rawSize, false);
+
+
+  uint32_t checksumCalced = CalcDJB2((uint8_t*)newData, rawSize);
   uint32_t checksumExpected = img->rawChecksum;
 
   if (checksumCalced != checksumExpected)
@@ -1150,16 +1168,16 @@ void DecompressImage(Img *img)
     vmupro_log(VMUPRO_LOG_INFO, TAG, "Img %s checksum: 0x%lx (success)", img->name, checksumCalced, checksumExpected);
   }
 
-  // NASTY HACK!
-  // Temporary solution during development
-  // since we know the ELF is running from PSRAM
-  // we an cast the const * Img to a normal * img
-  // and patch its data
+}
 
-  //__TEST__
-  ((Img *)img)->data = (uint8_t *)newData;
-  // uint32_t addr = (uint32_t)&img->data;
-  //*(uint32_t *)addr = (uint32_t)newData;
+// Return the decompressed img data
+// from a runtime-generated table
+// involves a little pointer hopping
+uint8_t * ImgData(Img * img){
+
+  int index = img->index;
+  return decompressedImageDataTable[index];
+
 }
 
 void DecompressAllImages()
@@ -1169,10 +1187,11 @@ void DecompressAllImages()
     return;
   }
   didDecompressImages = true;
+  memset(decompressedImageDataTable, 0, sizeof(uint8_t*) * allImagesLength);
+
   for (int i = 0; i < allImagesLength; i++)
   {
     const Img *img = allImages[i];
-
     DecompressImage(img);
   }
 }
@@ -1365,14 +1384,17 @@ void DrawLevelBlock(int x, int y, int layer)
   vmupro_color_t transColor = VMUPRO_COLOR_BLACK;
   // vmupro_blit_tile(sheet->data, pixTargX - camX, pixTargY - camY, pixSrcX, pixSrcY, TILE_SIZE_PX, TILE_SIZE_PX, sheet->width);
 
+  uint8_t * imgData = ImgData(sheet);
+
   // bit of a hack, but hey, everything at or below row 18 in the tilemap is transparent
   if (pixSrcY >= 18 * TILE_SIZE_PX)
   {
-    vmupro_blit_tile_advanced(sheet->data, pixTargX - camX, pixTargY - camY, pixSrcX, pixSrcY, TILE_SIZE_PX, TILE_SIZE_PX, sheet->width, transColor, flags);
+    
+    vmupro_blit_tile_advanced(imgData, pixTargX - camX, pixTargY - camY, pixSrcX, pixSrcY, TILE_SIZE_PX, TILE_SIZE_PX, sheet->width, transColor, flags);
   }
   else
   {
-    vmupro_blit_tile(sheet->data, pixTargX - camX, pixTargY - camY, pixSrcX, pixSrcY, TILE_SIZE_PX, TILE_SIZE_PX, sheet->width);
+    vmupro_blit_tile(imgData, pixTargX - camX, pixTargY - camY, pixSrcX, pixSrcY, TILE_SIZE_PX, TILE_SIZE_PX, sheet->width);
   }
 }
 
@@ -1470,7 +1492,7 @@ void DrawBackground()
   int bgScrollX = (camX * 4) / 5;
   int bgScrollY = (camY * 4) / 5;
 
-  vmupro_blit_scrolling_background(img->data, img->width, img->height, bgScrollX, bgScrollY, SCREEN_WIDTH, SCREEN_HEIGHT);
+  vmupro_blit_scrolling_background(ImgData(img), img->width, img->height, bgScrollX, bgScrollY, SCREEN_WIDTH, SCREEN_HEIGHT);
 }
 
 void DrawGroundtiles(int layer)
@@ -2965,10 +2987,11 @@ void DrawSprite(Sprite *spr)
 
   // update the img pointer, in case it's changed due to anims
   const Img *img = GetActiveImage(spr);
+  uint8_t * imgData = ImgData(img);
 
   vmupro_drawflags_t flags = (!spr->facingRight * VMUPRO_DRAWFLAGS_FLIP_H);
-  uint16_t mask = *(uint16_t *)&img->data[0];
-  vmupro_blit_buffer_transparent(img->data, screenBoxPos.x, screenBoxPos.y, img->width, img->height, mask, flags);
+  uint16_t mask = *(uint16_t *)&imgData[0];
+  vmupro_blit_buffer_transparent(imgData, screenBoxPos.x, screenBoxPos.y, img->width, img->height, mask, flags);
 }
 
 void DrawAllSprites()
@@ -3022,13 +3045,15 @@ void GotoGameState(GameState inState)
 void DrawUIElementCenteredWithVelo(const Img *img)
 {
 
+  uint8_t * imgData = ImgData(img);
+
   vmupro_drawflags_t flags = VMUPRO_DRAWFLAGS_NORMAL;
-  uint16_t mask = *(uint16_t *)&img->data[0];
+  uint16_t mask = *(uint16_t *)&imgData[0];
   int x = SCREEN_WIDTH / 2 - img->width / 2;
   x += uiAnimOffset.x;
   int y = SCREEN_HEIGHT / 2 - img->height / 2;
   y += uiAnimOffset.y;
-  vmupro_blit_buffer_transparent(img->data, x, y, img->width, img->height, mask, flags);
+  vmupro_blit_buffer_transparent(imgData, x, y, img->width, img->height, mask, flags);
 }
 
 void DrawUI()
