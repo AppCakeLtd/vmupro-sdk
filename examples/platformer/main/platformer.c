@@ -1514,6 +1514,38 @@ void InputAllSprites()
   }
 }
 
+bool IsBlockOneWay(int blockId)
+{
+
+  int rowNum = blockId / TILEMAP_WIDTH_TILES;
+
+  // Top row of the tilemap are one-way platforms
+  if (rowNum == TILEMAP_ONEWAY_PLATFORM_ROW_0)
+  {
+    return true;
+  }
+
+  // as is row 11
+  if (rowNum == TILEMAP_ONEWAY_PLATFORM_ROW_11)
+  {
+    return true;
+  }
+
+  return false;
+}
+
+bool IsBlockTransparent(int blockID)
+{
+
+  int rowNum = blockID / TILEMAP_WIDTH_TILES;
+
+  if (rowNum == TILEMAP_TRANSPARENT_ROW_11 || rowNum == TILEMAP_TRANSPARENT_ROW_12)
+  {
+    return true;
+  }
+  return false;
+}
+
 void DrawLevelBlock(int inBlockCol, int inBlockRow, int layer)
 {
 
@@ -1541,8 +1573,10 @@ void DrawLevelBlock(int inBlockCol, int inBlockRow, int layer)
 
   uint8_t *imgData = ImgData(sheet);
 
+  bool trans = IsBlockTransparent(blockId);
+
   // bit of a hack, but hey, everything on rowss 11 and 12 are transparent
-  if (inBlockRow == TILEMAP_TRANSPARENT_ROW_11 || inBlockRow == TILEMAP_TRANSPARENT_ROW_12)
+  if (trans)
   {
 
     vmupro_blit_tile_advanced(imgData, pixTargX - camX, pixTargY - camY, pixSrcX, pixSrcY, TILE_SIZE_PX, TILE_SIZE_PX, sheet->width, transColor, flags);
@@ -1959,26 +1993,6 @@ Vec2 GetTileSubPosFromRowAndCol(Vec2 *rowAndcol)
   returnVal.x = rowAndcol->x * TILE_SIZE_SUB;
   returnVal.y = rowAndcol->y * TILE_SIZE_SUB;
   return returnVal;
-}
-
-bool IsBlockOneWay(int blockId)
-{
-
-  int rowNum = blockId / TILEMAP_WIDTH_TILES;
-
-  // Top row of the tilemap are one-way platforms
-  if (rowNum == TILEMAP_ONEWAY_PLATFORM_ROW_0)
-  {
-    return true;
-  }
-
-  // as is row 11
-  if (rowNum == TILEMAP_ONEWAY_PLATFORM_ROW_11)
-  {
-    return true;
-  }
-
-  return false;
 }
 
 bool Ignore2SidedBlock(int blockId, int layer, Sprite *spr, Vec2 *tileSubPos)
