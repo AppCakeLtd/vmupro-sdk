@@ -1765,7 +1765,6 @@ BBox GetRoomBoundsWorld(Vec2 *playerWorldPos)
     return rVal;
   }
 
-  printf("Player at position %d %d\n", playerWorldPos->x, playerWorldPos->y);
   int foundIndex = -1;
   for (int i = 0; i < MAX_ROOMS; i++)
   {
@@ -1775,7 +1774,7 @@ BBox GetRoomBoundsWorld(Vec2 *playerWorldPos)
     Vec2 *tl = &roomTopLeftPositions[i];
     Vec2 *br = &roomBottomRightPositions[i];
 
-    printf("Checking index %d of %d  for xrange: %d-%d yrange: %d %d\n", i, MAX_ROOMS, tl->x, br->x, tl->y, br->y);
+    //printf("Checking index %d of %d  for xrange: %d-%d yrange: %d %d\n", i, MAX_ROOMS, tl->x, br->x, tl->y, br->y);
 
     if (playerWorldPos->x < tl->x)
       continue;
@@ -1795,7 +1794,7 @@ BBox GetRoomBoundsWorld(Vec2 *playerWorldPos)
     // not inside a room, throw a warning and just use the whole level
     rVal.width = currentLevel->bgLayer->width * TILE_SIZE_PX;
     rVal.height = currentLevel->bgLayer->height * TILE_SIZE_PX;
-    vmupro_log(VMUPRO_LOG_WARN, TAG, "Couldn't match a room index, free cam!");
+    //vmupro_log(VMUPRO_LOG_WARN, TAG, "Couldn't match a room index, free cam!");
     return rVal;
   }
 
