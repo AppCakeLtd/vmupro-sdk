@@ -3623,8 +3623,14 @@ void DrawAllSprites()
   for (int i = 0; i < numSprites; i++)
   {
     Sprite *spr = sprites[i];
+    // draw the player last so 
+    // - you don't end up stuck behind stuff
+    // - any platform you're riding can update before you
+    if ( spr == player) continue;;
     DrawSprite(spr);
   }
+  DrawSprite(player);
+
 }
 
 void DrawDebugAllSprites()
