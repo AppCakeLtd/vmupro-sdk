@@ -183,8 +183,29 @@ typedef enum
 
 typedef enum
 {
+  // first row of sprites in tilemap
   STYPE_PLAYER,
-  STYPE_TESTMOB
+  STYPE_TESTMOB,
+  STYPE_RESERVED_2,
+  STYPE_RESERVED_3,
+  STYPE_RESERVED_4,
+  STYPE_RESERVED_5,
+  STYPE_RESERVED_6,
+  STYPE_RESERVED_7,
+  STYPE_RESERVED_8,
+  STYPE_RESERVED_9,
+  STYPE_RESERVED_10,
+  STYPE_RESERVED_11,
+  STYPE_RESERVED_12,
+  STYPE_RESERVED_13,
+  STYPE_RESERVED_14,
+  STYPE_RESERVED_15,
+  // second row of sprites in tilemap
+  STYPE_AREA_TOPLEFT,
+  STYPE_AREA_TOPRIGHT,
+  STYPE_AREA_BOTTOMLEFT,
+  STYPE_AREA_BOTTOMRIGHT
+
 } SpriteType;
 
 typedef enum
@@ -1370,6 +1391,13 @@ uint32_t GetBlockIDAtColRow(int blockCol, int blockRow, int layer)
 
   uint32_t block = tileData[offset];
   return block - 1;
+}
+
+// __TEST__
+bool IsSpecialBlock(int blockID){
+
+  return false;
+
 }
 
 void UpdatePatrollInputs(Sprite * spr)

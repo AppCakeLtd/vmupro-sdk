@@ -16,6 +16,10 @@ function writeIntLSB ( file, number )
  file:write ( num_to_char( number / 16777216 )) -- x>>24
 end
 
+function writeu8 ( file, number )
+ file:write ( num_to_char( number )) -- x>>0
+end
+
 function stripExtension(filename)
     local length = string.len(filename)
     for i = length, 1, -1 do
@@ -69,7 +73,7 @@ function main ()
       if mapval < 0 then
        mapval = 0
       end
-      writeIntLSB (outas, mapval)
+      writeu8 (outas, mapval)
       x = x + 1
      end
      y = y + 1

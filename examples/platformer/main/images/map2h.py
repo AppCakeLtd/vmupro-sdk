@@ -93,12 +93,12 @@ def ProcessFile(inPath):
     # then slice that away for clarity
     tileData = rawData[8:]
 
-    # our map files are 32 bit values
-    # we just need a byte per tile
-    tileData = bytearray(tileData[i] for i in range(0, len(tileData), 4))
+    # the default mappy export script is uint32_t
+    # in that case, use this
+    # tileData = bytearray(tileData[i] for i in range(0, len(tileData), 4))
 
-    # validate the compression
-
+    
+    # compress, then validate the compression
     compressedData = RLE8BitEncode(tileData)
     decompressedData = RLE8BitDecode(compressedData)
 
