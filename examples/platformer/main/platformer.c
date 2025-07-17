@@ -1026,6 +1026,7 @@ void HandleSpecialSpriteType(SpriteType inType, Vec2 worldStartPos)
       vmupro_log(VMUPRO_LOG_ERROR, TAG, "Max top left room markers reached");
       return;
     }
+    vmupro_log(VMUPRO_LOG_INFO, TAG, "Add top left room position: %d, %d", worldStartPos.x, worldStartPos.y);
     roomTopLeftPositions[numTopLeftRoomPositions] = worldStartPos;
     numTopLeftRoomPositions++;
 
@@ -1038,6 +1039,9 @@ void HandleSpecialSpriteType(SpriteType inType, Vec2 worldStartPos)
       vmupro_log(VMUPRO_LOG_ERROR, TAG, "Max bottom right room markers reached");
       return;
     }
+    vmupro_log(VMUPRO_LOG_INFO, TAG, "Add bottom right room position: %d, %d", worldStartPos.x, worldStartPos.y);
+    // use the bottom right
+    AddVecInts(&worldStartPos, TILE_SIZE_PX, TILE_SIZE_PX);
     roomBottomRightPositions[numBottomRightRoomPositions] = worldStartPos;
     numBottomRightRoomPositions++;
 
@@ -1137,13 +1141,13 @@ void UnloadSprites()
   numSprites = 0;
 }
 
-void UnloadRoomMarkers(){
+void UnloadRoomMarkers()
+{
 
   numTopLeftRoomPositions = 0;
   numBottomRightRoomPositions = 0;
   memset(roomTopLeftPositions, 0, sizeof(roomTopLeftPositions) / sizeof(roomTopLeftPositions[0]));
   memset(roomBottomRightPositions, 0, sizeof(roomBottomRightPositions) / sizeof(roomBottomRightPositions[0]));
-
 }
 
 // - Unload sprites
@@ -1728,6 +1732,68 @@ void DrawCamScrollZone()
   DrawBBoxWorld(&scrollBox, VMUPRO_COLOR_WHITE);
 }
 
+// Return the bounds of the current room, based on the top left/bottom right
+// if none is found, default to the whole map
+BBox GetRoomBounds(Vec2 *playerWorldPos)
+{
+
+  BBox rVal;
+  rVal.x = 0;
+  rVal.y = 0;
+  rVal.width = 256;
+  rVal.height = 256;
+
+  if (currentLevel == NULL)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "No level to find room bounds!");
+    rVal.width = 256;
+    rVal.height = 256;
+    return rVal;
+  }
+
+  printf("Player at position %d %d\n", playerWorldPos->x, playerWorldPos->y);
+  int foundIndex = -1;
+  for (int i = 0; i < numTopLeftRoomPositions; i++)
+  {
+    Vec2 *tl = &roomTopLeftPositions[i];
+    Vec2 *br = &roomBottomRightPositions[i];
+
+    
+    printf("Checking index %d of %d  for xrange: %d-%d yrange: %d %d\n", i, numTopLeftRoomPositions, tl->x, br->x, tl->y, br->y);
+
+    if (playerWorldPos->x < tl->x)
+      continue;
+    if (playerWorldPos->y < tl->y)
+      continue;
+    if (playerWorldPos->x > br->x)
+      continue;
+    if (playerWorldPos->y > br->y)
+      continue;
+
+    foundIndex = i;
+    break;
+  }
+
+  if (foundIndex == -1)
+  {
+    // not inside a room, throw a warning and just use the whole level
+    rVal.width = currentLevel->bgLayer->width * TILE_SIZE_PX;
+    rVal.height = currentLevel->bgLayer->height * TILE_SIZE_PX;
+    vmupro_log(VMUPRO_LOG_WARN, TAG, "Couldn't match a room index, free cam!");
+    return rVal;
+  }
+
+  // inside a room, use that
+  Vec2 *tl = &roomTopLeftPositions[foundIndex];
+  Vec2 *br = &roomBottomRightPositions[foundIndex];
+
+  rVal.x = tl->x;
+  rVal.y = tl->y;
+  rVal.width = br->x - tl->x;
+  rVal.height = br->y - tl->y;
+  return rVal;
+}
+
 // center the camera on the player
 void SolveCamera()
 {
@@ -1774,17 +1840,21 @@ void SolveCamera()
   // Bounds Check
   //
 
+  BBox roomBounds = GetRoomBounds(&playerWorldPos);
+
   // check if cam's going off left of the level
-  int camLeft = snapWorldPos.x; // - (SCREEN_WIDTH / 2);
-  if (camLeft < 0)
-    camLeft = 0;
+  int camLeft = snapWorldPos.x;
+  if (camLeft < roomBounds.x){
+    camLeft = roomBounds.x;
+  }
 
   // check if cam's going off right of the level
   int camRight = camLeft + SCREEN_WIDTH;
-  if (camRight >= MAP_WIDTH_PIXELS)
+  int roomRight = roomBounds.x + roomBounds.width;
+  if (camRight >= roomRight)
   {
-    int delta = camRight - MAP_WIDTH_PIXELS;
-    camLeft -= delta;
+    int howFarOver = camRight - roomRight;
+    camLeft -= howFarOver;
   }
 
   // check if cam's going off the top of the level
