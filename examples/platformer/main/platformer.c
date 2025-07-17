@@ -194,14 +194,14 @@ typedef enum
 {
   // first row of sprites in tilemap
   STYPE_PLAYER,
-  STYPE_TESTMOB,
-  STYPE_RESERVED_2,
+  STYPE_CHECKPOINT,
+  STYPE_FIN,
   STYPE_RESERVED_3,
-  STYPE_RESERVED_4,
-  STYPE_RESERVED_5,
-  STYPE_RESERVED_6,
-  STYPE_RESERVED_7,
-  STYPE_RESERVED_8,
+  STYPE_DOOR_0,
+  STYPE_DOOR_1,
+  STYPE_DOOR_2,
+  STYPE_DOOR_3,
+  STYPE_DOOR_4,
   STYPE_RESERVED_9,
   STYPE_RESERVED_10,
   STYPE_RESERVED_11,
@@ -217,16 +217,29 @@ typedef enum
   STYPE_ROOM_MARKER_4,
   STYPE_ROOM_MARKER_5,
   STYPE_ROOM_MARKER_6,
+  STYPE_ROW2_7,
+  STYPE_ROW2_8,
+  STYPE_ROW2_9,
+  STYPE_ROW2_10,
+  STYPE_ROW2_11,
+  STYPE_ROW2_12,
+  STYPE_ROW2_13,
+  STYPE_ROW2_14,
+  STYPE_ROW2_15,
+  // third row of sprites in the tilemap
+  STYPE_TESTMOB,
   STYPE_MAX
 } SpriteType;
 
+// Note: we do some >= on these, be careful changing them
 typedef enum
 {
-  SOLIDMASK_NONE,     // non solid
-  SOLIDMASK_TILE,     // solid: tile
-  SOLIDMASK_SOLID,    // solid: other creature
-  SOLIDMASK_ONESIDED, // solid: one-way platform
-  SOLIDMASK_PLATFORM  // solid: moving platform
+  SOLIDMASK_NONE = 0x0,      // non solid
+  SOLIDMASK_TRIGGER = 0x01,  // we can touch it, but doesn't block us (door, pickup, etc)
+  SOLIDMASK_TILE = 0x02,     // solid: tile
+  SOLIDMASK_SOLID = 0x04,    // solid: other creature
+  SOLIDMASK_ONESIDED = 0x08, // solid: one-way platform
+  SOLIDMASK_PLATFORM = 0x10  // solid: moving platform
 } Solidity;
 
 // profile of spite behaviour
@@ -236,6 +249,9 @@ typedef enum
 // prefix "world" means regular world space 1:1 pixels
 typedef struct
 {
+
+  // e.g. doors n stuff
+  bool skipMovement;
 
   // maximum speed (in subpixels) while
   // walking or running (per frame)
@@ -265,6 +281,8 @@ typedef struct
   int default_health;
 
   Solidity solid;
+
+  AnimGroup *defaultAnimGroup;
 
 } SpriteProfile;
 // TODO: rename to spriteblueprint?
@@ -314,6 +332,8 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
   // fill in player defaults
   // then tweak anything we need from there
   SpriteProfile *p = inProfile;
+
+  p->skipMovement = false;
   p->max_subspeed_walk = 80;
   p->max_subspeed_run = 140;
 
@@ -333,6 +353,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
   p->solid = SOLIDMASK_SOLID;
 
   p->default_health = 3;
+  p->defaultAnimGroup = &animgroup_player;
 
   if (inType == STYPE_PLAYER)
   {
@@ -345,6 +366,12 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->subdamping_walk = 0;
     p->solid = SOLIDMASK_PLATFORM;
     p->default_health = 1;
+  }
+  else if (inType >= STYPE_DOOR_0 && inType <= STYPE_DOOR_4)
+  {
+    p->solid = SOLIDMASK_TRIGGER;
+    p->defaultAnimGroup = &animgroup_door;
+    p->skipMovement = true;
   }
   else
   {
@@ -995,26 +1022,35 @@ void ResetSprite(Sprite *spr)
   spr->anchorH = ANCHOR_VTOP;
   spr->anchorV = ANCHOR_HLEFT;
 
-  spr->anims = &animgroup_player;
-  spr->activeFrameSet = &spr->anims->idleFrames;
-  spr->animIndex = 0;
-  spr->animReversing = false;
-  spr->lastGameframe = frameCounter;
-  spr->animID = ANIMTYPE_IDLE;
-
   // Reset/create the movement profile
   CreateProfile(&spr->profile, spr->sType);
 
   // And apply anything that's determined from the profile
   spr->health = spr->profile.default_health;
 
+  spr->anims = spr->profile.defaultAnimGroup;
+  spr->activeFrameSet = &spr->anims->idleFrames;
+  spr->animIndex = 0;
+  spr->animReversing = false;
+  spr->lastGameframe = frameCounter;
+  spr->animID = ANIMTYPE_IDLE;
+
   // update the hitbox, bounding box, etc
   OnSpriteMoved(spr);
 }
 
+// Some stuff is spawnable: doors, players, mobs, etc
+// Some stuff isn't: e.g. markers to denote room boundaries
 bool IsTypeSpawnable(SpriteType inType)
 {
-  return inType <= STYPE_RESERVED_15;
+  // could've handled this better, my bad
+  if (inType >= STYPE_PLAYER && inType <= STYPE_DOOR_4)
+    return true;
+
+  if (inType >= STYPE_TESTMOB)
+    return true;
+
+  return false;
 }
 
 void HandleSpecialSpriteType(SpriteType inType, Vec2 worldStartPos)
@@ -1062,7 +1098,7 @@ void HandleSpecialSpriteType(SpriteType inType, Vec2 worldStartPos)
     break;
 
   default:
-    vmupro_log(VMUPRO_LOG_WARN, TAG, "Unhandled special sprite type %d", inType);
+    vmupro_log(VMUPRO_LOG_WARN, TAG, "Unhandled spawn special sprite type %d", inType);
     break;
   }
 }
@@ -1647,9 +1683,13 @@ void UpdateSpriteInputs(Sprite *spr)
 
     UpdatePatrollInputs(spr);
   }
+  else if (spr->sType >= STYPE_DOOR_0 && spr->sType <= STYPE_DOOR_1)
+  {
+    // legit do nothing.
+  }
   else
   {
-    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Unhandled sprite type in UpdateSpriteInputs");
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Unhandled sprite type %d in UpdateSpriteInputs", spr->sType);
     return;
   }
 }
@@ -1769,12 +1809,13 @@ BBox GetRoomBoundsWorld(Vec2 *playerWorldPos)
   for (int i = 0; i < MAX_ROOMS; i++)
   {
     // this one isn't filled in
-    if ( !hasBottomRightRoomPositions[i] ) continue;
+    if (!hasBottomRightRoomPositions[i])
+      continue;
 
     Vec2 *tl = &roomTopLeftPositions[i];
     Vec2 *br = &roomBottomRightPositions[i];
 
-    //printf("Checking index %d of %d  for xrange: %d-%d yrange: %d %d\n", i, MAX_ROOMS, tl->x, br->x, tl->y, br->y);
+    // printf("Checking index %d of %d  for xrange: %d-%d yrange: %d %d\n", i, MAX_ROOMS, tl->x, br->x, tl->y, br->y);
 
     if (playerWorldPos->x < tl->x)
       continue;
@@ -1794,7 +1835,7 @@ BBox GetRoomBoundsWorld(Vec2 *playerWorldPos)
     // not inside a room, throw a warning and just use the whole level
     rVal.width = currentLevel->bgLayer->width * TILE_SIZE_PX;
     rVal.height = currentLevel->bgLayer->height * TILE_SIZE_PX;
-    //vmupro_log(VMUPRO_LOG_WARN, TAG, "Couldn't match a room index, free cam!");
+    // vmupro_log(VMUPRO_LOG_WARN, TAG, "Couldn't match a room index, free cam!");
     return rVal;
   }
 
@@ -1897,7 +1938,7 @@ void SolveCamera()
 void DrawBackground()
 {
 
-  Img *img = &img_bg_1;
+  Img *img = &img_bg_0;
 
   int bgScrollX = (camX * 4) / 5;
   int bgScrollY = (camY * 4) / 5;
@@ -2181,7 +2222,10 @@ typedef struct
   // Shared hit info (blocks/sprites)
   //
 
+  // mask of e.g. TRIGGER | SOLID | ONE_WAY
   Solidity hitMask;
+  // e.g. not a trigger
+  bool hitMaskIsSolid;
   Vec2 snapPoint;
 
 } HitInfo;
@@ -2275,10 +2319,41 @@ bool SubPointInHitbox(Vec2 *subPoint, Sprite *otherSprite)
   return IsPointInsideBox(subPoint, &otherSprite->subHitBox);
 }
 
+bool IsBlockingCollision(Solidity inSolid)
+{
+
+  switch (inSolid)
+  {
+  case SOLIDMASK_NONE:
+  case SOLIDMASK_TRIGGER:
+    return false;
+    break;
+
+  case SOLIDMASK_ONESIDED:
+  case SOLIDMASK_PLATFORM:
+  case SOLIDMASK_SOLID:
+  case SOLIDMASK_TILE:
+    return true;
+    break;
+
+  default:
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Unhandled solidity: %d\n", (int)inSolid);
+    return false;
+    break;
+  }
+}
+
+//
+// The basic collision check, without any ejection routine
+// useful e.g.
+// - to know if something is ahead
+// - to know if you're on the ground
+//
+// Note:
 // subOffsetOrNull adds an offset to where we check for collisions
 // e.g. when moving right we check currentPos.x + velo.x
-// for where we'll be, rather than where we are
-// Used for for collision and for ground checks
+// for where we'll be, rather than where we are, or for a lookahead
+//
 void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull, const char *src)
 {
 
@@ -2288,6 +2363,7 @@ void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull
 
   // get a list of points to check for
   // whatever direction we're moving
+  // TODO: could be optimised
   switch (dir)
   {
   case DIR_UP:
@@ -2401,8 +2477,12 @@ void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull
   // and clear the collision return vals
 
   rVal->hitMask = SOLIDMASK_NONE;
+  rVal->hitMaskIsSolid = false;
 
-  // finally run some tile collision checks:
+  //
+  // 1/2 - Check collisions against tiles
+  //
+
   for (int i = 0; i < 3; i++)
   {
 
@@ -2428,6 +2508,7 @@ void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull
       }
 
       rVal->hitMask |= SOLIDMASK_TILE;
+      rVal->hitMaskIsSolid = true;
 
       rVal->blockID[i] = blockId;
       rVal->lastBlockHitIndex = i;
@@ -2465,10 +2546,10 @@ void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull
   } // for i to 3 (blocks)
 
   //
-  // Check sprite/sprite collisions
-  // separate loop to simplify logic
-  // (early continues, etc)
+  // 2/2 Check collisions against sprites
   //
+
+  // (separate loop simplifies logic)
 
   for (int i = 0; i < 3; i++)
   {
@@ -2500,6 +2581,7 @@ void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull
 
       // mask it so we know we hit something
       rVal->hitMask |= otherSolid;
+      rVal->hitMaskIsSolid = IsBlockingCollision(otherSolid);
       rVal->lastSpriteHitIndex = i;
 
       rVal->otherSprites[i] = otherSprite;
@@ -2713,7 +2795,7 @@ void GetEjectionInfo(Sprite *spr, HitInfo *info, bool horz)
 // returns the sign of the movement direction
 // e.g. -1 for jump, 1 for ground
 // e.g. -1 for left, 1 for right
-int GetHitInfoAndEjectionInfo(HitInfo *info, Sprite *spr, bool horz)
+int CheckCollisionsAndEject(HitInfo *info, Sprite *spr, bool horz)
 {
 
   memset(info, 0, sizeof(HitInfo));
@@ -2930,6 +3012,8 @@ void CheckLanded(Sprite *spr)
   }
 }
 
+
+
 // basic order of operations
 // - use state from previous frame, since it's fully resolved
 // - check inputs
@@ -2947,6 +3031,12 @@ void SolveMovement(Sprite *spr)
   if (spr == NULL)
   {
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Null sprite passed to SolveMovement");
+    return;
+  }
+
+  // skip the whole loop if it's a door or something
+  if (spr->profile.skipMovement)
+  {
     return;
   }
 
@@ -3121,7 +3211,7 @@ void SolveMovement(Sprite *spr)
     AddSubPos2(spr, spr->subVelo.x, 0);
 
     // Eject from any X Collisions
-    hBonk = GetHitInfoAndEjectionInfo(&xHitInfo, spr, true);
+    hBonk = CheckCollisionsAndEject(&xHitInfo, spr, true);
 
   } // DEBUG_NO_X
 
@@ -3185,34 +3275,34 @@ void SolveMovement(Sprite *spr)
     AddSubPos2(spr, 0, spr->subVelo.y);
 
     // Eject from any Y collisions
-    vBonk = GetHitInfoAndEjectionInfo(&yHitInfo, spr, false);
+    vBonk = CheckCollisionsAndEject(&yHitInfo, spr, false);
 
   } // DEBUG_NO_Y
 
   // if we always eject from X first
   // then we can land slightly in the ground from a high jump
-  // then start ejecting left/right
+  // which would then start ejecting left/right (not good)
   // if we always do Y first, then we can jump against a wall
-  // and start ejecting up and down
+  // and start ejecting up and down (also not good)
   // solution: if we're overlapping both at once
   // then eject in the direction that gives us the shortest exit
   // remember: only update x or y where appropriate
   // else you could push against a wall and smush against it indefinitely.
 
   // snap to x and y
-  if (xHitInfo.hitMask && !yHitInfo.hitMask)
+  if (xHitInfo.hitMaskIsSolid && !yHitInfo.hitMaskIsSolid)
   {
     // printf("Frame %d hit on X only\n", frameCounter);
     SetSubPosX(spr, xHitInfo.snapPoint.x);
     spr->subVelo.x = 0;
   }
-  else if (!xHitInfo.hitMask && yHitInfo.hitMask)
+  else if (!xHitInfo.hitMaskIsSolid && yHitInfo.hitMaskIsSolid)
   {
-    printf("Frame %d hit on Y only\n", frameCounter);
+    // printf("Frame %d hit on Y only\n", frameCounter);
     SetSubPosY(spr, yHitInfo.snapPoint.y);
     spr->subVelo.y = 0;
   }
-  else if (xHitInfo.hitMask && yHitInfo.hitMask)
+  else if (xHitInfo.hitMaskIsSolid && yHitInfo.hitMaskIsSolid)
   {
 
     int xDist = Abs(xHitInfo.snapPoint.x - spr->subPos.x);
@@ -3221,13 +3311,15 @@ void SolveMovement(Sprite *spr)
 
     if (xDist < yDist)
     {
+      // we're less horizontally inside the wall than vertically
+
       printf("....Snapped on Y to: %d/%d , %d/%d\n", spr->subPos.x, spr->subPos.x >> SHIFT, spr->subPos.x, spr->subPos.x >> SHIFT);
       SetSubPosX(spr, xHitInfo.snapPoint.x);
       spr->subVelo.x = 0;
 
       // re-run the Y hit
-      vBonk = GetHitInfoAndEjectionInfo(&yHitInfo, spr, false);
-      if (yHitInfo.hitMask)
+      vBonk = CheckCollisionsAndEject(&yHitInfo, spr, false);
+      if (yHitInfo.hitMaskIsSolid)
       {
         printf("....Still got a Y collision to resolve: %d\n", yHitInfo.snapPoint.y);
         SetSubPosY(spr, yHitInfo.snapPoint.y);
@@ -3240,13 +3332,16 @@ void SolveMovement(Sprite *spr)
     }
     else
     {
+
+      // we're less vertically inside the wall than horizontally
+
       SetSubPosY(spr, yHitInfo.snapPoint.y);
       printf("....Snapped on Y to: %d/%d , %d/%d\n", spr->subPos.x, spr->subPos.x >> SHIFT, spr->subPos.x, spr->subPos.x >> SHIFT);
       spr->subVelo.y = 0;
 
       // re-run the X hit
-      hBonk = GetHitInfoAndEjectionInfo(&xHitInfo, spr, true);
-      if (xHitInfo.hitMask)
+      hBonk = CheckCollisionsAndEject(&xHitInfo, spr, true);
+      if (xHitInfo.hitMaskIsSolid)
       {
         printf("....Still got a X collision to resolve: %d\n", xHitInfo.snapPoint.x);
         SetSubPosX(spr, xHitInfo.snapPoint.x);
@@ -3259,7 +3354,7 @@ void SolveMovement(Sprite *spr)
     }
   }
 
-  spr->isGrounded = CheckGrounded(spr) != SOLIDMASK_NONE;
+  spr->isGrounded = CheckGrounded(spr) > SOLIDMASK_TRIGGER;
   // printf("Frame %d is grounded %d yVel = %d\n", frameCounter, spr->isGrounded, spr->subVelo.y);
   spr->isOnWall = (vBonk != 0);
 

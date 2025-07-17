@@ -122,10 +122,7 @@ AnimFrames frames_player_idle = {
 // C++ would be nice here
 AnimGroup animgroup_player = {
 
-    .idleFrames = {
-        .frameSpeed = 20,
-        .numImages = ARRAYSIZE(imgs_player_idle),
-        .images = imgs_player_idle},
+    .idleFrames = {.frameSpeed = 20, .numImages = ARRAYSIZE(imgs_player_idle), .images = imgs_player_idle},
     .fallFrames = {.frameSpeed = 4, .numImages = ARRAYSIZE(imgs_player_fall), .images = imgs_player_fall},
     .walkFrames = {.frameSpeed = 3, .numImages = ARRAYSIZE(imgs_player_walk), .images = imgs_player_walk},
     .jumpFrames = {.frameSpeed = 7, .numImages = ARRAYSIZE(imgs_player_jump), .images = imgs_player_jump},
@@ -135,11 +132,17 @@ AnimGroup animgroup_player = {
     .stunFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_player_stun), .images = imgs_player_stun},
     .dieFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_player_die), .images = imgs_player_die}};
 
-//__TEST__
-/*
-Anim Anims_Player = {
-    .grp = NULL,
-    .activeFrames = NULL,
-    .lastFrame = 0,
-};
-*/
+const Img *imgs_door_all[] = {
+    &img_door_0};
+
+AnimGroup animgroup_door = {
+
+    .idleFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_door_all), .images = imgs_door_all},
+    .fallFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_door_all), .images = imgs_door_all},
+    .walkFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_door_all), .images = imgs_door_all},
+    .jumpFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_door_all), .images = imgs_door_all},
+    .dashFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_door_all), .images = imgs_door_all},
+    .buttstompFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_door_all), .images = imgs_door_all},
+    .knockbackFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_door_all), .images = imgs_door_all},
+    .stunFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_door_all), .images = imgs_door_all},
+    .dieFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_door_all), .images = imgs_door_all}};
