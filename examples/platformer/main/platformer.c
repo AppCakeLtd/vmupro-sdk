@@ -65,12 +65,14 @@ const bool DEBUG_ONLY_MOVE_PLAYER = false;
 
 #define BLOCK_NULL 0xFF
 
+// TODO: const a bunch of this
 const int DEFAULT_LIFE_COUNT = 3;
 // give it a few frames before you can continue
 const int POST_DEATH_FRAME_DELAY = 60;
 const int TRANSITION_FRAME_DELAY = 20;
 const int DOOR_THRESH_FRAMES = 15;
 const int DOOR_THRESH_SPEED = 30;
+const uint32_t COYOTE_TIME_FRAME_THRESH = 10;
 
 // not stored on the sprite
 // since we may despawn/respawn
@@ -414,6 +416,8 @@ typedef struct
   Vec2 subVelo;
   Vec2 lastSubVelo;
 
+  // for coyote time
+  uint32_t lastGroundedFrame;
   bool isGrounded;
   bool isOnWall;
 
@@ -1020,6 +1024,7 @@ void ResetSprite(Sprite *spr)
 
   SetMoveMode(spr, MM_FALL);
 
+  spr->lastGroundedFrame = 0;
   spr->isGrounded = false;
   spr->isOnWall = false;
   spr->onGroundLastFrame = false;
@@ -2998,7 +3003,10 @@ void TryJump(Sprite *spr)
   {
     return;
   }
-  if (!spr->isGrounded)
+
+  bool grounded = spr->isGrounded || (frameCounter - spr->lastGroundedFrame) < COYOTE_TIME_FRAME_THRESH;
+
+  if (!grounded)
   {
     return;
   }
@@ -3546,7 +3554,19 @@ void SolveMovement(Sprite *spr)
     }
   }
 
-  spr->isGrounded = CheckGrounded(spr) > SOLIDMASK_TRIGGER;
+  // we don't need to re-run the grounded check
+  // if we already collided with something below us this frame
+  if (vBonk > 0 ){
+    spr->isGrounded = true;    
+  } else {
+    // let's re-run it
+    spr->isGrounded = CheckGrounded(spr) > SOLIDMASK_TRIGGER;    
+  }
+
+  if (spr->isGrounded){
+    spr->lastGroundedFrame = frameCounter;
+  }
+
   // printf("Frame %d is grounded %d yVel = %d\n", frameCounter, spr->isGrounded, spr->subVelo.y);
   spr->isOnWall = (vBonk != 0);
 
@@ -3561,12 +3581,10 @@ void SolveMovement(Sprite *spr)
     StopJumpBoost(spr, "LandedOrHeadBonk");
   }
 
-  // When doing one way platforms, we don't care if
-  // - moving up
-  // - moving horizontal
-  // When moving *down* though we want to check that the player has
-  // - been above the platform since jumping
-  // - landed on/in it
+  // Keep track of our jump height
+  // so we can check if we jumped higher than a one-way platform
+  // (or landed on it from above)
+  // if not, we don't land on it
   Vec2 feetPos = GetPointOnSprite(spr, true, ANCHOR_HMID, ANCHOR_VMID);
   if (spr->isGrounded)
   {
