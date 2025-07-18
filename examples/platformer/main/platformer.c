@@ -441,6 +441,11 @@ typedef struct
 
   int health;
 
+  // to simplify one-way platforms
+  // we'll make sure the player
+  int highestYSubPosInJump;
+  int lastgroundedYSubPos;
+
 } Sprite;
 
 #define MAX_SPRITES 20
@@ -1023,6 +1028,9 @@ void ResetSprite(Sprite *spr)
   spr->isPlayer = true;
   spr->anchorH = ANCHOR_VTOP;
   spr->anchorV = ANCHOR_HLEFT;
+
+  spr->highestYSubPosInJump = 0;
+  spr->lastgroundedYSubPos = 0;
 
   // Reset/create the movement profile
   CreateProfile(&spr->profile, spr->sType);
@@ -2250,7 +2258,7 @@ typedef struct
   // Shared hit info (blocks/sprites)
   //
 
-  // mask of e.g. TRIGGER | SOLID | ONE_WAY
+  // mask of e.g. | SOLID | ONE_WAY
   Solidity hitMask;
   // e.g. not a trigger
   bool hitMaskIsSolid;
@@ -2288,41 +2296,44 @@ Vec2 GetTileSubPosFromRowAndCol(Vec2 *rowAndcol)
   return returnVal;
 }
 
-bool Ignore2SidedBlock(int blockId, int layer, Sprite *spr, Vec2 *tileSubPos)
+// Solid one-way platform or not?
+bool IsOneWayPlatformSolid(int blockId, int layer, Sprite *spr, Vec2 *tileSubPos)
 {
 
   // if it's not 2-sideable, just early exit
   if (!IsBlockOneWay(blockId))
-    return false;
+    return true;
 
+  
   bool movingUp = spr->subVelo.y < 0;
+  bool movingDown = spr->subVelo.y > 0;
   bool movingHorz = spr->subVelo.x != 0;
   bool movingVert = spr->subVelo.y != 0;
 
-  // Opt 1:
-  // We've moving horizointally through one
-  // e.g. we're on the ground, and it's around head height
-  // we pass through it as long as it's *above* our feet
-  // so the ground is unaffected
-  // tldr; walking through it horizontally
-
   Vec2 subFootPos = GetPointOnSprite(spr, true, ANCHOR_HMID, ANCHOR_VBOTTOM);
-  bool higher = tileSubPos->y < subFootPos.y;
+  bool playerHigher = subFootPos.y < tileSubPos->y;
 
-  if (movingHorz && !movingVert && higher)
-  {
+  // Walking along the top
+  if ( playerHigher && !movingVert){
+    // it's solid
+
     return true;
   }
 
-  // Opt2:
-  // We're just jumping through it
+  // else, we only care if moving down
+  if (movingUp || !movingVert){
+    return false;
+  }
 
-  if (movingUp)
-  {
+  // so we're moving down
+  // it's only solid as long as we've been higher than it during the last/current jump
+  bool playerHasBeenHigher = spr->highestYSubPosInJump < tileSubPos->y;
+  if (playerHasBeenHigher){
     return true;
   }
 
-  // if (movingDown) return false;
+  // else, we might be walking into it sideways
+  // i.e. it's halfway up the sprite's body
 
   return false;
 }
@@ -2371,11 +2382,51 @@ bool IsBlockingCollision(Solidity inSolid)
   }
 }
 
+Sprite *GetTriggerOverlaps(Sprite *srcSprite)
+{
+
+  if (srcSprite == NULL)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Null sprite passed to GetTriggerOverlaps");
+    return NULL;
+  }
+
+  for (int i = 0; i < numSprites; i++)
+  {
+
+    Sprite *spr = sprites[i];
+
+    if (spr == NULL)
+      continue;
+
+    if (spr == srcSprite)
+      continue;
+    
+    if (spr->profile.solid != SOLIDMASK_TRIGGER)
+      continue;
+
+    Vec2 *srcSubPos = &srcSprite->subPos;
+
+    bool inside = IsPointInsideBox(srcSubPos, &srcSprite->subHitBox);
+
+    if ( inside ){
+      return spr;
+    }
+
+  }
+
+  return NULL;
+}
+
 //
 // The basic collision check, without any ejection routine
 // useful e.g.
 // - to know if something is ahead
 // - to know if you're on the ground
+//
+// Note: doesn't find trigger type overlaps
+//       since that would interfere with collisions
+//       and this func is completely overkill for that
 //
 // Note:
 // subOffsetOrNull adds an offset to where we check for collisions
@@ -2506,7 +2557,7 @@ void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull
 
   rVal->hitMask = SOLIDMASK_NONE;
   rVal->hitMaskIsSolid = false;
-
+  
   //
   // 1/2 - Check collisions against tiles
   //
@@ -2527,7 +2578,7 @@ void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull
       // to an exact tile ID
       Vec2 tileSubPos = GetTileSubPosFromRowAndCol(&tileRowAndCol);
 
-      bool ignore = Ignore2SidedBlock(blockId, LAYER_COLS, spr, &tileSubPos);
+      bool ignore = !IsOneWayPlatformSolid(blockId, LAYER_COLS, spr, &tileSubPos);
 
       if (ignore)
       {
@@ -2596,14 +2647,15 @@ void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull
 
       Solidity otherSolid = otherSprite->profile.solid;
 
-      // ignore nonsolid stuff
-      if (otherSolid == SOLIDMASK_NONE)
+      // It's non solid, and not a trigger/no collision
+      if (!IsBlockingCollision(otherSolid))
         continue;
 
       bool inside = SubPointInHitbox(&rVal->subCheckPos[i], otherSprite);
 
       if (!inside)
         continue;
+
 
       // printf("Sprite %s is inside %s\n", spr->name, otherSprite->name);
 
@@ -2828,6 +2880,9 @@ int CheckCollisionsAndEject(HitInfo *info, Sprite *spr, bool horz)
 
   memset(info, 0, sizeof(HitInfo));
 
+  // BUG: including x >= 0 or y >= 0 causes
+  // one-way platforms to eject sideways
+  // when they're normally ignored
   bool movingRight = spr->subVelo.x >= 0;
   bool movingLeft = spr->subVelo.x < 0;
   bool movingDown = spr->subVelo.y >= 0;
@@ -2850,8 +2905,6 @@ int CheckCollisionsAndEject(HitInfo *info, Sprite *spr, bool horz)
     }
     else
     {
-      // we could cut these off
-      // but we miss trigger collisions like doors
       return 0;
     }
   }
@@ -3042,16 +3095,19 @@ void CheckLanded(Sprite *spr)
   }
 }
 
-Sprite * FindSpriteOfType(SpriteType inType, Sprite * excludeOrNull){
+Sprite *FindSpriteOfType(SpriteType inType, Sprite *excludeOrNull)
+{
 
-  for( int i = 0; i < numSprites; i++ ){
-    Sprite * spr = sprites[i];
-    if ( spr == excludeOrNull ) continue;
-    if ( spr->sType == inType ) return spr;
+  for (int i = 0; i < numSprites; i++)
+  {
+    Sprite *spr = sprites[i];
+    if (spr == excludeOrNull)
+      continue;
+    if (spr->sType == inType)
+      return spr;
   }
 
   return NULL;
-
 }
 
 void HandleDoorTransition(Sprite *activator, Sprite *door)
@@ -3066,9 +3122,10 @@ void HandleDoorTransition(Sprite *activator, Sprite *door)
   // let's do the door thing!
 
   // find the other door with the same ID
-  Sprite * connectedDoor = FindSpriteOfType(door->sType, door);
+  Sprite *connectedDoor = FindSpriteOfType(door->sType, door);
 
-  if ( connectedDoor == NULL){
+  if (connectedDoor == NULL)
+  {
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Couldn't find a matching door!\n");
     return;
   }
@@ -3080,38 +3137,31 @@ void HandleDoorTransition(Sprite *activator, Sprite *door)
   Vec2 playerCenterSub = GetPointOnSprite(player, true, ANCHOR_HMID, ANCHOR_VMID);
 
   Vec2 delta = {doorCenterSub.x - playerCenterSub.x, doorCenterSub.y - playerCenterSub.y};
-  
+
   Vec2 newPos = {player->subPos.x + delta.x, player->subPos.y + delta.y};
-  
+
   SetSubPos(player, &newPos);
   player->subVelo = ZeroVec();
   GotoGameState(GSTATE_TRANSITION);
-
-
 }
 
 void HandleTriggers(Sprite *srcSprite, HitInfo *info)
 {
-
+  //__TEST__
+  /*
   if (srcSprite == NULL || info == NULL)
   {
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "HandleTriggers got a null sprite ref or info ref");
     return;
   }
 
-  if (info->lastSpriteHitIndex == -1)
+  if (info->triggerHitOrNull == -1)
   {
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "HandleTriggers got an info with no sprite->sprite hits");
     return;
   }
 
-  Sprite *otherSprite = info->otherSprites[info->lastSpriteHitIndex];
-  if (otherSprite == NULL)
-  {
-    vmupro_log(VMUPRO_LOG_ERROR, TAG, "HandleTriggers got an info with null other sprite");
-    return;
-  }
-
+  Sprite *otherSprite = info->triggerHitOrNull;
   SpriteType sType = otherSprite->sType;
 
   switch (sType)
@@ -3123,6 +3173,11 @@ void HandleTriggers(Sprite *srcSprite, HitInfo *info)
   case STYPE_DOOR_3:
   case STYPE_DOOR_4:
 
+    if (srcSprite == player)
+    {
+      printf("player touching door... somehow\n");
+    }
+
     // it's a door, if they're pushing up, let's warp
     HandleDoorTransition(srcSprite, otherSprite);
     break;
@@ -3132,7 +3187,9 @@ void HandleTriggers(Sprite *srcSprite, HitInfo *info)
     return;
     break;
   }
+  */
 }
+
 
 // basic order of operations
 // - use state from previous frame, since it's fully resolved
@@ -3473,22 +3530,6 @@ void SolveMovement(Sprite *spr)
       }
     }
   }
-  else
-  {
-
-    // finally check triggers
-    // let's not allow both on the same frame
-    // to avoid e.g. double door transitions
-
-    if (xHitInfo.hitMask && !xHitInfo.hitMaskIsSolid)
-    {
-      HandleTriggers(spr, &xHitInfo);
-    }
-    else if (yHitInfo.hitMask && !yHitInfo.hitMaskIsSolid)
-    {
-      HandleTriggers(spr, &yHitInfo);
-    }
-  }
 
   spr->isGrounded = CheckGrounded(spr) > SOLIDMASK_TRIGGER;
   // printf("Frame %d is grounded %d yVel = %d\n", frameCounter, spr->isGrounded, spr->subVelo.y);
@@ -3504,6 +3545,38 @@ void SolveMovement(Sprite *spr)
   {
     StopJumpBoost(spr, "LandedOrHeadBonk");
   }
+
+  // When doing one way platforms, we don't care if
+  // - moving up
+  // - moving horizontal
+  // When moving *down* though we want to check that the player has
+  // - been above the platform since jumping
+  // - landed on/in it
+  Vec2 feetPos = GetPointOnSprite(spr, true, ANCHOR_HMID, ANCHOR_VMID);
+  if ( spr->isGrounded ){
+    // grab the feet pos
+    spr->lastgroundedYSubPos = feetPos.y;
+    spr->highestYSubPosInJump = spr->lastgroundedYSubPos;
+  } else {
+    if ( feetPos.y < spr->highestYSubPosInJump ){
+      spr->highestYSubPosInJump = feetPos.y;
+    }
+  }
+
+  // check triggers
+  // let's not allow both on the same frame
+  // to avoid e.g. double door transitions
+
+  //__TEST__
+  /*
+  Sprite * trigger = GetTriggerOverlaps(spr);
+
+  if (trigger != NULL)
+  {
+    HandleTriggers(spr, &xHitInfo);
+  }
+  */
+  
 }
 
 void MoveAllSprites()
@@ -3623,14 +3696,15 @@ void DrawAllSprites()
   for (int i = 0; i < numSprites; i++)
   {
     Sprite *spr = sprites[i];
-    // draw the player last so 
+    // draw the player last so
     // - you don't end up stuck behind stuff
     // - any platform you're riding can update before you
-    if ( spr == player) continue;;
+    if (spr == player)
+      continue;
+    ;
     DrawSprite(spr);
   }
   DrawSprite(player);
-
 }
 
 void DrawDebugAllSprites()
@@ -3746,14 +3820,15 @@ void DrawUI()
     }
   }
 
-  if(gState == GSTATE_TRANSITION ){
-    const Img * img = &img_ui_temp_transition;
+  if (gState == GSTATE_TRANSITION)
+  {
+    const Img *img = &img_ui_temp_transition;
     DrawUIElementCenteredWithVelo(img);
 
-    if ( uiStateFrameCounter >= TRANSITION_FRAME_DELAY ){
+    if (uiStateFrameCounter >= TRANSITION_FRAME_DELAY)
+    {
       GotoGameState(GSTATE_INGAME);
     }
-
   }
 
   if (gState == GSTATE_GAMEOVER)
