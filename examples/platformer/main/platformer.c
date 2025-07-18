@@ -2897,12 +2897,12 @@ int CheckCollisionsAndEject(HitInfo *info, Sprite *spr, bool horz)
 
   memset(info, 0, sizeof(HitInfo));
 
-  // BUG: including x >= 0 or y >= 0 causes
-  // one-way platforms to eject sideways
-  // when they're normally ignored
-  bool movingRight = spr->subVelo.x >= 0;
+  // Could include nonzero values
+  // but would need to prevent warping up when
+  // approaching sprites from the left
+  bool movingRight = spr->subVelo.x > 0;
   bool movingLeft = spr->subVelo.x < 0;
-  bool movingDown = spr->subVelo.y >= 0;
+  bool movingDown = spr->subVelo.y > 0;
   bool movingUp = spr->subVelo.y < 0;
 
   // We're not using prediction by default
@@ -3505,7 +3505,7 @@ void SolveMovement(Sprite *spr)
     {
       // we're less horizontally inside the wall than vertically
 
-      printf("....Snapped on Y to: %d/%d , %d/%d\n", spr->subPos.x, spr->subPos.x >> SHIFT, spr->subPos.x, spr->subPos.x >> SHIFT);
+      printf("....Snapped on X to: %d/%d , %d/%d\n", spr->subPos.x, spr->subPos.x >> SHIFT, spr->subPos.x, spr->subPos.x >> SHIFT);
       SetSubPosX(spr, xHitInfo.snapPoint.x);
       spr->subVelo.x = 0;
 
@@ -3602,9 +3602,10 @@ void MoveAllSprites()
 
   for (int i = 0; i < numSprites; i++)
   {
-    if (i > 0 && DEBUG_ONLY_MOVE_PLAYER)
-      continue;
     Sprite *spr = sprites[i];
+    if (spr != player && DEBUG_ONLY_MOVE_PLAYER){
+      continue;
+    }
     SolveMovement(spr);
   }
 }
