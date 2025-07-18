@@ -4074,6 +4074,14 @@ void DrawUI()
   }
 }
 
+void SpawnDuckAboveMe(Sprite * srcSprite){
+
+  Vec2 srcHeadWorld = GetPointOnSprite(srcSprite, false, ANCHOR_HMID, ANCHOR_VTOP);
+  srcHeadWorld.y -= TILE_SIZE_PX * 3;
+  CreateSprite( STYPE_TESTMOB, srcHeadWorld, "TEST DUCK");
+
+}
+
 void app_main(void)
 {
   vmupro_log(VMUPRO_LOG_INFO, TAG, "8BM Platformer Example");
@@ -4121,14 +4129,8 @@ void app_main(void)
       // printf("PlayerX world:%d sub: %d \n", GetWorldPos(player).x, GetSubPos(player).x);
       // printf("PlayerY world:%d sub: %d \n", GetWorldPos(player).y, GetSubPos(player).y);
       // printf("Player grounded? %d\n", (int)player->isGrounded);
-      LoadLevel(1);
-    }
-
-    if (vmupro_btn_pressed(Btn_B))
-    {
-      // player->anchorV = (player->anchorV + 1) % (3);
-      //  player->anchorH = (player->anchorH + 1) % (3);
-      // OnSpriteMoved(player);
+      // LoadLevel(1);
+      // SpawnDuckAboveMe(player);
     }
 
     frameCounter++;
