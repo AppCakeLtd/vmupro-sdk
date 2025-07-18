@@ -291,6 +291,9 @@ typedef struct
 
   AnimGroup *defaultAnimGroup;
 
+  bool canRideStuff;
+  bool canBeRidden;
+
 } SpriteProfile;
 // TODO: rename to spriteblueprint?
 
@@ -362,6 +365,9 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
   p->default_health = 3;
   p->defaultAnimGroup = &animgroup_player;
 
+  p->canBeRidden = true;
+  p->canRideStuff = true;
+
   if (inType == STYPE_PLAYER)
   {
     // default
@@ -379,6 +385,8 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->solid = SOLIDMASK_TRIGGER;
     p->defaultAnimGroup = &animgroup_door;
     p->skipMovement = true;
+    p->canBeRidden = false;
+    p->canRideStuff = false;
   }
   else
   {
@@ -391,6 +399,12 @@ typedef struct Sprite Sprite;
 
 typedef struct Sprite
 {
+
+  // sentinel value
+  // since sprites are zero'd on unload
+  // if something references a sprite with a false
+  // sentinel value, we've got a stale ref bug
+  bool sentinel;
 
   // Config options
   // from which the rest of the struct is calculated
@@ -422,9 +436,9 @@ typedef struct Sprite
   // for coyote time
   uint32_t lastGroundedFrame;
   // see usage
-  Sprite * swapIndexWithThisSprite;
+  Sprite *thingImRiding;
   bool isGrounded;
-  bool isOnWall;  
+  bool isOnWall;
   bool onGroundLastFrame;
   bool onWallLastFrame;
   int jumpFrameNum;
@@ -681,16 +695,17 @@ BBox CameraBBoxWorld()
 
 Sprite *player = NULL;
 
-typedef struct{
+typedef struct
+{
   Solidity solidMask;
-  Sprite * otherSpriteOrNull;
+  Sprite *otherSpriteOrNull;
 } GroundHitInfo;
 
 //
 // Protos
 //
 //__TEST__ This can be scrubbed when things are moved to headers
-bool CheckGrounded(Sprite *spr, GroundHitInfo * groundHitInfoOrNull);
+bool CheckGrounded(Sprite *spr, GroundHitInfo *groundHitInfoOrNull);
 Vec2 GetPointOnSprite(Sprite *spr, bool hitBox, Anchor_H anchorH, Anchor_V anchorV);
 Solidity CheckSpriteCollision(Sprite *spr, Direction dir, Vec2 *subOffset, const char *src);
 void GotoGameState(GameState inState);
@@ -835,6 +850,28 @@ void AddVec(Vec2 *targ, Vec2 *delta)
 {
   targ->x += delta->x;
   targ->y += delta->y;
+}
+
+Vec2 AddNewVec(Vec2 *a, Vec2 *b)
+{
+  Vec2 rVal;
+  rVal.x = a->x + b->x;
+  rVal.y = a->y + b->y;
+  return rVal;
+}
+
+void SubVec(Vec2 *targ, Vec2 *delta)
+{
+  targ->x -= delta->x;
+  targ->y -= delta->y;
+}
+
+Vec2 SubNewVec(Vec2 *a, Vec2 *b)
+{
+  Vec2 rVal;
+  rVal.x = a->x - b->x;
+  rVal.y = a->y - b->y;
+  return rVal;
 }
 
 void AddVecInts(Vec2 *targ, int x, int y)
@@ -1021,6 +1058,9 @@ void CheckFellOffMap(Sprite *spr)
 void ResetSprite(Sprite *spr)
 {
 
+  // cleared on unload
+  spr->sentinel = true;
+
   // update other struct vals
   spr->facingRight = true;
   spr->wasRunningLastTimeWasOnGround = false;
@@ -1034,7 +1074,7 @@ void ResetSprite(Sprite *spr)
   SetMoveMode(spr, MM_FALL);
 
   spr->lastGroundedFrame = 0;
-  spr->swapIndexWithThisSprite = NULL;
+  spr->thingImRiding = NULL;
   spr->isGrounded = false;
   spr->isOnWall = false;
   spr->onGroundLastFrame = false;
@@ -1198,7 +1238,8 @@ Sprite *CreateSprite(SpriteType inType, Vec2 worldStartPos, const char *inName)
 // let's not cache this, 'cause it's not
 // 1985 and we don't want stale ref issues
 // -1 if not found
-int GetIndexOfSprite(Sprite * spr){
+int GetIndexOfSprite(Sprite *spr)
+{
 
   if (spr == NULL)
   {
@@ -1207,19 +1248,21 @@ int GetIndexOfSprite(Sprite * spr){
   }
 
   int myIndex = -1;
-  for(int i = 0; i < numSprites; i++ ){
-    Sprite * check = sprites[i];
-    if ( check == NULL ){
+  for (int i = 0; i < numSprites; i++)
+  {
+    Sprite *check = sprites[i];
+    if (check == NULL)
+    {
       continue;
     }
-    if ( check == spr ){
-       myIndex = i;
-       break;
+    if (check == spr)
+    {
+      myIndex = i;
+      break;
     }
   }
 
   return myIndex;
-
 }
 
 // TODO: placeholder for anything malloced
@@ -1235,14 +1278,15 @@ void UnloadSprite(Sprite *spr)
 
   // couldn't find the index of this sprite in the sprite list
   // got a logic bug somewhere
-  if (myIndex == -1){
-    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Frame %d Sprite %s is NOT in the sprite list.", frameCounter, spr->name);  
+  if (myIndex == -1)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Frame %d Sprite %s is NOT in the sprite list.", frameCounter, spr->name);
     return;
   }
 
   vmupro_log(VMUPRO_LOG_WARN, TAG, "Frame %d Sprite %s unloading", frameCounter, spr->name);
   // wipe the mem before freeing it
-  memset(spr, 0, sizeof(Sprite));  
+  memset(spr, 0, sizeof(Sprite));
   free(spr);
 }
 
@@ -1352,7 +1396,6 @@ void LoadLevel(int inLevelNum)
   pData.levelNum = inLevelNum;
   DecompressAllTileLayers(currentLevel, &pData);
   ReadSpawnLayer(currentLevel, &pData);
-
 }
 
 void InitPersistentData()
@@ -3011,9 +3054,7 @@ Solidity CheckSpriteCollision(Sprite *spr, Direction dir, Vec2 *subOffset, const
   return nhi.hitMask;
 }
 
-
-
-bool CheckGrounded(Sprite *spr, GroundHitInfo * groundHitInfoOrNull)
+bool CheckGrounded(Sprite *spr, GroundHitInfo *groundHitInfoOrNull)
 {
   // hitbox ends on the very last subpixel
   // so adding one takes you into the next tile
@@ -3022,15 +3063,16 @@ bool CheckGrounded(Sprite *spr, GroundHitInfo * groundHitInfoOrNull)
   memset(&nhi, 0, sizeof(HitInfo));
   GetHitInfo(&nhi, spr, DIR_DOWN, &offset, "checkgrounded");
 
-  if ( groundHitInfoOrNull != NULL ){
+  if (groundHitInfoOrNull != NULL)
+  {
     // ensure it's clear
     memset(groundHitInfoOrNull, 0, sizeof(GroundHitInfo));
     groundHitInfoOrNull->solidMask = nhi.hitMask;
-    
-    if (nhi.lastSpriteHitIndex > -1){
+
+    if (nhi.lastSpriteHitIndex > -1)
+    {
       groundHitInfoOrNull->otherSpriteOrNull = nhi.otherSprites[nhi.lastSpriteHitIndex];
     }
-
   }
 
   return nhi.hitMask != SOLIDMASK_NONE;
@@ -3260,6 +3302,25 @@ void HandleTriggers(Sprite *srcSprite, Sprite *trigger)
   }
 }
 
+bool SpriteCanRideSprite(Sprite * rider, Sprite * thingImRiding){
+
+  if ( rider == NULL || thingImRiding == NULL){
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Null rider or thing to ride");
+    return false;
+  }
+
+  // only allow a small set of valid anims, states
+  // err on the side of caution
+  if ( !rider->sentinel || !thingImRiding->sentinel) return false;
+  if ( !AllowSpriteInput(rider) || !AllowSpriteInput(thingImRiding) ) return false;
+  
+  if ( !rider->profile.canRideStuff ) return false;
+  if ( !thingImRiding->profile.canBeRidden ) return false;
+
+  return true;
+
+}
+
 // basic order of operations
 // - use state from previous frame, since it's fully resolved
 // - check inputs
@@ -3384,6 +3445,31 @@ void SolveMovement(Sprite *spr)
   Vec2 subAccel = {subAccelX, subAccelY};
   AddVec(&spr->subVelo, &subAccel);
 
+  //
+  // And then add the delta of anything we're riding
+  //
+
+  Vec2 ridingPlatformDelta = ZeroVec();
+  if (spr->thingImRiding != NULL)
+  {
+    if (SpriteCanRideSprite(spr, spr->thingImRiding))
+    {
+      // add however far the thing we're riding moved to our velo
+      // this way its movement is bundled into our own
+      // movement calcs and helps preven glitching into stuff
+      ridingPlatformDelta = SubNewVec(&spr->thingImRiding->subPos, &spr->thingImRiding->lastSubPos);
+    }
+    else
+    {
+      spr->thingImRiding = NULL;
+      vmupro_log(VMUPRO_LOG_ERROR, TAG, "Frame %d, Sprite %s is riding a sprite with a stale ref!", frameCounter, spr->name);
+    }
+  }
+  // clear immediately to avoid stale references
+  // the ground check will later re-set the value
+  spr->thingImRiding = NULL;
+  
+
   HitInfo xHitInfo;
   memset(&xHitInfo, 0, sizeof(HitInfo));
   HitInfo yHitInfo;
@@ -3454,7 +3540,7 @@ void SolveMovement(Sprite *spr)
   if (!DEBUG_NO_X)
   {
     // Apply X velo to X movement + update bounding boxes
-    AddSubPos2(spr, spr->subVelo.x, 0);
+    AddSubPos2(spr, spr->subVelo.x + ridingPlatformDelta.x, 0);
 
     // Eject from any X Collisions
     hBonk = CheckCollisionsAndEject(&xHitInfo, spr, true);
@@ -3518,7 +3604,7 @@ void SolveMovement(Sprite *spr)
   if (!DEBUG_NO_Y)
   {
     // Apply Y velo to Y movement + update bounding boxes
-    AddSubPos2(spr, 0, spr->subVelo.y);
+    AddSubPos2(spr, 0, spr->subVelo.y + ridingPlatformDelta.y);
 
     // Eject from any Y collisions
     vBonk = CheckCollisionsAndEject(&yHitInfo, spr, false);
@@ -3600,26 +3686,21 @@ void SolveMovement(Sprite *spr)
     }
   }
 
-  
-
   GroundHitInfo ghi;
   spr->isGrounded = CheckGrounded(spr, &ghi);
 
-  
   // Are we riding anything?
-  
-  Sprite * spriteImRiding = ghi.otherSpriteOrNull;
-  if ( spriteImRiding != NULL ){
-    // flag it for one frame (or more) to ensure
-    // the correct indices order
-    spr->swapIndexWithThisSprite = spriteImRiding;    
-    Vec2 delta = {spriteImRiding->subPos.x - spriteImRiding->lastSubPos.x, spriteImRiding->subPos.y - spriteImRiding->lastSubPos.y};    
-    AddSubPos(spr, &delta);
+
+  Sprite *spriteImRiding = ghi.otherSpriteOrNull;
+  if (spriteImRiding != NULL)
+  {
+    spr->thingImRiding = spriteImRiding;
   }
 
   // For coyote time
 
-  if (spr->isGrounded){    
+  if (spr->isGrounded)
+  {
     spr->lastGroundedFrame = frameCounter;
   }
 
@@ -3662,32 +3743,29 @@ void SolveMovement(Sprite *spr)
   Sprite *trigger = GetTriggerOverlaps(spr);
 
   if (trigger != NULL)
-  {    
+  {
     HandleTriggers(spr, trigger);
   }
 }
 
-// Set when riding another sprite
-// so that this sprite's index and that sprite's index
-// are swapped
-// meaning the other sprite can update first
-// and we can move based on its move delta
-// Note: this is cleared at the end of the frame
-// to avoid mario style stale reference glitches
-// i.e. literally anything with yoshi
-// TLDR; we're throwing CPU at it
-void FixSpriteIndices(Sprite * rider, Sprite * thingBeingRidden){
+// When riding another sprite, we want its movement to be processed first
+// so that we can move by however much it moved
+// else we might do our own move tick, then the thing we're riding moves after
+void FixSpriteIndices(Sprite *rider, Sprite *thingBeingRidden)
+{
 
   int riderIndex = GetIndexOfSprite(rider);
   int thingBeingRiddenIndex = GetIndexOfSprite(thingBeingRidden);
 
-  if ( riderIndex == -1 || thingBeingRidden == -1 ){
+  if (riderIndex == -1 || thingBeingRidden == -1)
+  {
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Can't find sprite indices to swap!");
     return;
   }
 
   // the rider index must be higher
-  if (riderIndex > thingBeingRiddenIndex){
+  if (riderIndex > thingBeingRiddenIndex)
+  {
     // already higher, all good
     return;
   }
@@ -3695,8 +3773,8 @@ void FixSpriteIndices(Sprite * rider, Sprite * thingBeingRidden){
   vmupro_log(VMUPRO_LOG_INFO, TAG, "Swapping sprite indices %d and %d\n", riderIndex, thingBeingRiddenIndex);
   sprites[riderIndex] = thingBeingRidden;
   sprites[thingBeingRiddenIndex] = rider;
-
 }
+
 
 void MoveAllSprites()
 {
@@ -3704,23 +3782,21 @@ void MoveAllSprites()
   for (int i = 0; i < numSprites; i++)
   {
     Sprite *spr = sprites[i];
-    if (spr != player && DEBUG_ONLY_MOVE_PLAYER){
+    if (spr != player && DEBUG_ONLY_MOVE_PLAYER)
+    {
       continue;
     }
     SolveMovement(spr);
   }
 
-  for( int i = 0; i < numSprites; i++ ){
-    Sprite * spr = sprites[i];
-    Sprite * thingBeingRidden = spr->swapIndexWithThisSprite;
-    if ( thingBeingRidden != NULL ){      
-      // Clear immediately to avoid stale refs
-      spr->swapIndexWithThisSprite = NULL;
-      FixSpriteIndices(spr, thingBeingRidden);
+  for (int i = 0; i < numSprites; i++)
+  {
+    Sprite *spr = sprites[i];    
+    if (spr->thingImRiding != NULL)
+    {      
+      FixSpriteIndices(spr, spr->thingImRiding);
     }
   }
-
-
 }
 
 // TODO: not very efficient
@@ -3831,10 +3907,11 @@ void DrawAllSprites()
     // draw the player last so
     // - you don't end up stuck behind stuff
     // - any platform you're riding can update before you
-    if (spr == player){
+    if (spr == player)
+    {
       continue;
     }
-    
+
     DrawSprite(spr);
   }
   DrawSprite(player);
