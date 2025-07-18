@@ -3302,23 +3302,41 @@ void HandleTriggers(Sprite *srcSprite, Sprite *trigger)
   }
 }
 
-bool SpriteCanRideSprite(Sprite * rider, Sprite * thingImRiding){
+bool SpriteCanRideSprite(Sprite *rider, Sprite *thingImRiding)
+{
 
-  if ( rider == NULL || thingImRiding == NULL){
+  if (rider == NULL || thingImRiding == NULL)
+  {
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Null rider or thing to ride");
     return false;
   }
 
   // only allow a small set of valid anims, states
   // err on the side of caution
-  if ( !rider->sentinel || !thingImRiding->sentinel) return false;
-  if ( !AllowSpriteInput(rider) || !AllowSpriteInput(thingImRiding) ) return false;
-  
-  if ( !rider->profile.canRideStuff ) return false;
-  if ( !thingImRiding->profile.canBeRidden ) return false;
+  if (!thingImRiding->sentinel)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Frame %d, Sprite %s is riding a sprite with a stale ref!", frameCounter, rider->name);
+    return false;
+  }
+  if (!AllowSpriteInput(rider) || !AllowSpriteInput(thingImRiding))
+    return false;
+
+  if (!rider->profile.canRideStuff)
+    return false;
+  if (!thingImRiding->profile.canBeRidden)
+    return false;
+
+  // make sure we're on top of it
+  // TODO: could prob simplify with regular scalar maffs
+  Vec2 riderFeetPos = GetPointOnSprite(rider, true, ANCHOR_HMID, ANCHOR_VBOTTOM);
+  Vec2 thingImRidingHeadPos = GetPointOnSprite(rider, true, ANCHOR_HMID, ANCHOR_VTOP);
+  // give a little wiggle room
+  if (riderFeetPos.y < thingImRidingHeadPos.y + 4)
+  {
+    return false;
+  }
 
   return true;
-
 }
 
 // basic order of operations
@@ -3468,7 +3486,6 @@ void SolveMovement(Sprite *spr)
   // clear immediately to avoid stale references
   // the ground check will later re-set the value
   spr->thingImRiding = NULL;
-  
 
   HitInfo xHitInfo;
   memset(&xHitInfo, 0, sizeof(HitInfo));
@@ -3775,7 +3792,6 @@ void FixSpriteIndices(Sprite *rider, Sprite *thingBeingRidden)
   sprites[thingBeingRiddenIndex] = rider;
 }
 
-
 void MoveAllSprites()
 {
 
@@ -3791,9 +3807,9 @@ void MoveAllSprites()
 
   for (int i = 0; i < numSprites; i++)
   {
-    Sprite *spr = sprites[i];    
+    Sprite *spr = sprites[i];
     if (spr->thingImRiding != NULL)
-    {      
+    {
       FixSpriteIndices(spr, spr->thingImRiding);
     }
   }
