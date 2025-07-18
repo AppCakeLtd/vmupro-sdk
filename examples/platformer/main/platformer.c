@@ -3145,24 +3145,16 @@ void HandleDoorTransition(Sprite *activator, Sprite *door)
   GotoGameState(GSTATE_TRANSITION);
 }
 
-void HandleTriggers(Sprite *srcSprite, HitInfo *info)
+void HandleTriggers(Sprite *srcSprite, Sprite * trigger)
 {
-  //__TEST__
-  /*
-  if (srcSprite == NULL || info == NULL)
+    
+  if (srcSprite == NULL || trigger == NULL)
   {
-    vmupro_log(VMUPRO_LOG_ERROR, TAG, "HandleTriggers got a null sprite ref or info ref");
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "HandleTriggers got a null sprite ref or trigger ref");
     return;
   }
 
-  if (info->triggerHitOrNull == -1)
-  {
-    vmupro_log(VMUPRO_LOG_ERROR, TAG, "HandleTriggers got an info with no sprite->sprite hits");
-    return;
-  }
-
-  Sprite *otherSprite = info->triggerHitOrNull;
-  SpriteType sType = otherSprite->sType;
+  SpriteType sType = trigger->sType;
 
   switch (sType)
   {
@@ -3173,13 +3165,8 @@ void HandleTriggers(Sprite *srcSprite, HitInfo *info)
   case STYPE_DOOR_3:
   case STYPE_DOOR_4:
 
-    if (srcSprite == player)
-    {
-      printf("player touching door... somehow\n");
-    }
-
     // it's a door, if they're pushing up, let's warp
-    HandleDoorTransition(srcSprite, otherSprite);
+    HandleDoorTransition(srcSprite, trigger);
     break;
 
   default:
@@ -3187,7 +3174,7 @@ void HandleTriggers(Sprite *srcSprite, HitInfo *info)
     return;
     break;
   }
-  */
+  
 }
 
 
@@ -3568,14 +3555,14 @@ void SolveMovement(Sprite *spr)
   // to avoid e.g. double door transitions
 
   //__TEST__
-  /*
+  
   Sprite * trigger = GetTriggerOverlaps(spr);
 
   if (trigger != NULL)
   {
-    HandleTriggers(spr, &xHitInfo);
+    HandleTriggers(spr, trigger);
   }
-  */
+  
   
 }
 
