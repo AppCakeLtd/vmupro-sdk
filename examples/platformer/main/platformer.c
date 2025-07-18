@@ -386,7 +386,10 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
   }
 }
 
-typedef struct
+// forward decl for internal references
+typedef struct Sprite Sprite;
+
+typedef struct Sprite
 {
 
   // Config options
@@ -418,9 +421,10 @@ typedef struct
 
   // for coyote time
   uint32_t lastGroundedFrame;
+  // see usage
+  Sprite * swapIndexWithThisSprite;
   bool isGrounded;
-  bool isOnWall;
-
+  bool isOnWall;  
   bool onGroundLastFrame;
   bool onWallLastFrame;
   int jumpFrameNum;
@@ -677,11 +681,16 @@ BBox CameraBBoxWorld()
 
 Sprite *player = NULL;
 
+typedef struct{
+  Solidity solidMask;
+  Sprite * otherSpriteOrNull;
+} GroundHitInfo;
+
 //
 // Protos
 //
 //__TEST__ This can be scrubbed when things are moved to headers
-Solidity CheckGrounded(Sprite *spr);
+bool CheckGrounded(Sprite *spr, GroundHitInfo * groundHitInfoOrNull);
 Vec2 GetPointOnSprite(Sprite *spr, bool hitBox, Anchor_H anchorH, Anchor_V anchorV);
 Solidity CheckSpriteCollision(Sprite *spr, Direction dir, Vec2 *subOffset, const char *src);
 void GotoGameState(GameState inState);
@@ -1025,6 +1034,7 @@ void ResetSprite(Sprite *spr)
   SetMoveMode(spr, MM_FALL);
 
   spr->lastGroundedFrame = 0;
+  spr->swapIndexWithThisSprite = NULL;
   spr->isGrounded = false;
   spr->isOnWall = false;
   spr->onGroundLastFrame = false;
@@ -1185,6 +1195,33 @@ Sprite *CreateSprite(SpriteType inType, Vec2 worldStartPos, const char *inName)
   return returnVal;
 }
 
+// let's not cache this, 'cause it's not
+// 1985 and we don't want stale ref issues
+// -1 if not found
+int GetIndexOfSprite(Sprite * spr){
+
+  if (spr == NULL)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Attempt to get index of null sprite");
+    return -1;
+  }
+
+  int myIndex = -1;
+  for(int i = 0; i < numSprites; i++ ){
+    Sprite * check = sprites[i];
+    if ( check == NULL ){
+      continue;
+    }
+    if ( check == spr ){
+       myIndex = i;
+       break;
+    }
+  }
+
+  return myIndex;
+
+}
+
 // TODO: placeholder for anything malloced
 void UnloadSprite(Sprite *spr)
 {
@@ -1193,7 +1230,19 @@ void UnloadSprite(Sprite *spr)
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Attempt to unload a null sprite!");
     return;
   }
-  vmupro_log(VMUPRO_LOG_ERROR, TAG, "Frame %d Sprite %s unloading", frameCounter, spr->name);
+
+  int myIndex = GetIndexOfSprite(spr);
+
+  // couldn't find the index of this sprite in the sprite list
+  // got a logic bug somewhere
+  if (myIndex == -1){
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Frame %d Sprite %s is NOT in the sprite list.", frameCounter, spr->name);  
+    return;
+  }
+
+  vmupro_log(VMUPRO_LOG_WARN, TAG, "Frame %d Sprite %s unloading", frameCounter, spr->name);
+  // wipe the mem before freeing it
+  memset(spr, 0, sizeof(Sprite));  
   free(spr);
 }
 
@@ -1304,23 +1353,6 @@ void LoadLevel(int inLevelNum)
   DecompressAllTileLayers(currentLevel, &pData);
   ReadSpawnLayer(currentLevel, &pData);
 
-  //__TEST__
-  /*
-  player = CreateSprite(STYPE_PLAYER, GetPlayerWorldStartPos(), "player");
-
-  if (!DEBUG_ONLY_SPAWN_PLAYER)
-  {
-    Vec2 testPos = GetPlayerWorldPos();
-    testPos.x += TILE_SIZE_PX * 10;
-    testPos.y -= TILE_SIZE_PX * 4;
-    CreateSprite(STYPE_TESTMOB, testPos, "testmob1");
-
-    testPos = GetPlayerWorldPos();
-    testPos.x += TILE_SIZE_PX * 4;
-    testPos.y -= TILE_SIZE_PX * 1;
-    CreateSprite(STYPE_TESTMOB, testPos, "testmob2");
-  }
-  */
 }
 
 void InitPersistentData()
@@ -2884,7 +2916,7 @@ void GetEjectionInfo(Sprite *spr, HitInfo *info, bool horz)
     // To double check your collision logics
     if (whereWasCollision == DIR_DOWN)
     {
-      bool groundedNow = CheckGrounded(spr);
+      bool groundedNow = CheckGrounded(spr, NULL);
       if (!groundedNow)
       {
         vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite %s ejected from a down type collision, but still not grounded!", spr->name);
@@ -2979,7 +3011,9 @@ Solidity CheckSpriteCollision(Sprite *spr, Direction dir, Vec2 *subOffset, const
   return nhi.hitMask;
 }
 
-Solidity CheckGrounded(Sprite *spr)
+
+
+bool CheckGrounded(Sprite *spr, GroundHitInfo * groundHitInfoOrNull)
 {
   // hitbox ends on the very last subpixel
   // so adding one takes you into the next tile
@@ -2987,7 +3021,19 @@ Solidity CheckGrounded(Sprite *spr)
   HitInfo nhi;
   memset(&nhi, 0, sizeof(HitInfo));
   GetHitInfo(&nhi, spr, DIR_DOWN, &offset, "checkgrounded");
-  return nhi.hitMask;
+
+  if ( groundHitInfoOrNull != NULL ){
+    // ensure it's clear
+    memset(groundHitInfoOrNull, 0, sizeof(GroundHitInfo));
+    groundHitInfoOrNull->solidMask = nhi.hitMask;
+    
+    if (nhi.lastSpriteHitIndex > -1){
+      groundHitInfoOrNull->otherSpriteOrNull = nhi.otherSprites[nhi.lastSpriteHitIndex];
+    }
+
+  }
+
+  return nhi.hitMask != SOLIDMASK_NONE;
 }
 
 // the first part of the jump, triggering it
@@ -3554,16 +3600,26 @@ void SolveMovement(Sprite *spr)
     }
   }
 
-  // we don't need to re-run the grounded check
-  // if we already collided with something below us this frame
-  if (vBonk > 0 ){
-    spr->isGrounded = true;    
-  } else {
-    // let's re-run it
-    spr->isGrounded = CheckGrounded(spr) > SOLIDMASK_TRIGGER;    
+  
+
+  GroundHitInfo ghi;
+  spr->isGrounded = CheckGrounded(spr, &ghi);
+
+  
+  // Are we riding anything?
+  
+  Sprite * spriteImRiding = ghi.otherSpriteOrNull;
+  if ( spriteImRiding != NULL ){
+    // flag it for one frame (or more) to ensure
+    // the correct indices order
+    spr->swapIndexWithThisSprite = spriteImRiding;    
+    Vec2 delta = {spriteImRiding->subPos.x - spriteImRiding->lastSubPos.x, spriteImRiding->subPos.y - spriteImRiding->lastSubPos.y};    
+    AddSubPos(spr, &delta);
   }
 
-  if (spr->isGrounded){
+  // For coyote time
+
+  if (spr->isGrounded){    
     spr->lastGroundedFrame = frameCounter;
   }
 
@@ -3606,13 +3662,40 @@ void SolveMovement(Sprite *spr)
   Sprite *trigger = GetTriggerOverlaps(spr);
 
   if (trigger != NULL)
-  {
-    if (spr == player)
-    {
-      printf("__TEST__touching a trigger\n");
-    }
+  {    
     HandleTriggers(spr, trigger);
   }
+}
+
+// Set when riding another sprite
+// so that this sprite's index and that sprite's index
+// are swapped
+// meaning the other sprite can update first
+// and we can move based on its move delta
+// Note: this is cleared at the end of the frame
+// to avoid mario style stale reference glitches
+// i.e. literally anything with yoshi
+// TLDR; we're throwing CPU at it
+void FixSpriteIndices(Sprite * rider, Sprite * thingBeingRidden){
+
+  int riderIndex = GetIndexOfSprite(rider);
+  int thingBeingRiddenIndex = GetIndexOfSprite(thingBeingRidden);
+
+  if ( riderIndex == -1 || thingBeingRidden == -1 ){
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Can't find sprite indices to swap!");
+    return;
+  }
+
+  // the rider index must be higher
+  if (riderIndex > thingBeingRiddenIndex){
+    // already higher, all good
+    return;
+  }
+
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Swapping sprite indices %d and %d\n", riderIndex, thingBeingRiddenIndex);
+  sprites[riderIndex] = thingBeingRidden;
+  sprites[thingBeingRiddenIndex] = rider;
+
 }
 
 void MoveAllSprites()
@@ -3626,6 +3709,18 @@ void MoveAllSprites()
     }
     SolveMovement(spr);
   }
+
+  for( int i = 0; i < numSprites; i++ ){
+    Sprite * spr = sprites[i];
+    Sprite * thingBeingRidden = spr->swapIndexWithThisSprite;
+    if ( thingBeingRidden != NULL ){      
+      // Clear immediately to avoid stale refs
+      spr->swapIndexWithThisSprite = NULL;
+      FixSpriteIndices(spr, thingBeingRidden);
+    }
+  }
+
+
 }
 
 // TODO: not very efficient
@@ -3736,9 +3831,10 @@ void DrawAllSprites()
     // draw the player last so
     // - you don't end up stuck behind stuff
     // - any platform you're riding can update before you
-    if (spr == player)
+    if (spr == player){
       continue;
-    ;
+    }
+    
     DrawSprite(spr);
   }
   DrawSprite(player);
