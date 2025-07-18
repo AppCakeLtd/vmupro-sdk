@@ -69,6 +69,8 @@ const int DEFAULT_LIFE_COUNT = 3;
 // give it a few frames before you can continue
 const int POST_DEATH_FRAME_DELAY = 60;
 const int TRANSITION_FRAME_DELAY = 20;
+const int DOOR_THRESH_FRAMES = 15;
+const int DOOR_THRESH_SPEED = 30;
 
 // not stored on the sprite
 // since we may despawn/respawn
@@ -160,12 +162,13 @@ typedef struct
 
 typedef struct
 {
-  bool up;
-  bool down;
-  bool left;
-  bool right;
-  bool run;
-  bool jump;
+  // val = how many frames held for
+  uint32_t up;
+  uint32_t down;
+  uint32_t left;
+  uint32_t right;
+  uint32_t run;
+  uint32_t jump;
 } Inputs;
 
 typedef enum
@@ -298,9 +301,9 @@ bool hasBottomRightRoomPositions[MAX_ROOMS];
 typedef struct
 {
   const char *name;
-  TileLayer *bgLayer;
-  TileLayer *colLayer;
-  TileLayer *sparseSpawnData;
+  const TileLayer *bgLayer;
+  const TileLayer *colLayer;
+  const TileLayer *sparseSpawnData;
 } Level;
 
 Level level0 = {
@@ -1676,6 +1679,17 @@ bool AllowSpriteInput(Sprite *spr)
   }
 }
 
+void ClearSpriteInputs(Sprite *spr)
+{
+
+  if (spr == NULL)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Null sprite passed to ClearSpriteInputs");
+    return;
+  }
+  memset(&spr->input, 0, sizeof(Inputs));
+}
+
 void UpdateSpriteInputs(Sprite *spr)
 {
 
@@ -1685,14 +1699,12 @@ void UpdateSpriteInputs(Sprite *spr)
     return;
   }
 
-  // Zero out the inputs
-  Inputs *inp = &spr->input;
-  memset(&spr->input, 0, sizeof(Inputs));
-
   // if we're not in a playable state
   // just early exit since the inputs are wiped
   if (!AllowSpriteInput(spr))
   {
+    // wipe and exit
+    ClearSpriteInputs(spr);
     return;
   }
 
@@ -1705,18 +1717,20 @@ void UpdateSpriteInputs(Sprite *spr)
       return;
     }
 
+    Inputs *inp = &spr->input;
     vmupro_btn_read();
 
-    inp->up = vmupro_btn_held(DPad_Up);
-    inp->down = vmupro_btn_held(DPad_Down);
-    inp->left = vmupro_btn_held(DPad_Left);
-    inp->right = vmupro_btn_held(DPad_Right);
-    inp->jump = vmupro_btn_held(Btn_B);
-    inp->run = vmupro_btn_held(Btn_A);
+    // Could use the bools directly, but it feels wrong
+    inp->up = vmupro_btn_held(DPad_Up) ? inp->up + 1 : 0;
+    inp->down = vmupro_btn_held(DPad_Down) ? inp->down + 1 : 0;
+    inp->left = vmupro_btn_held(DPad_Left) ? inp->left + 1 : 0;
+    inp->right = vmupro_btn_held(DPad_Right) ? inp->right + 1 : 0;
+    inp->jump = vmupro_btn_held(Btn_B) ? inp->jump + 1 : 0;
+    inp->run = vmupro_btn_held(Btn_A) ? inp->run + 1 : 0;
   }
   else if (spr->sType == STYPE_TESTMOB)
   {
-
+    ClearSpriteInputs(spr);
     UpdatePatrollInputs(spr);
   }
   else if (spr->sType >= STYPE_DOOR_0 && spr->sType <= STYPE_DOOR_1)
@@ -1725,6 +1739,8 @@ void UpdateSpriteInputs(Sprite *spr)
   }
   else
   {
+    // Zero out the inputs
+    ClearSpriteInputs(spr);
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Unhandled sprite type %d in UpdateSpriteInputs", spr->sType);
     return;
   }
@@ -2304,7 +2320,6 @@ bool IsOneWayPlatformSolid(int blockId, int layer, Sprite *spr, Vec2 *tileSubPos
   if (!IsBlockOneWay(blockId))
     return true;
 
-  
   bool movingUp = spr->subVelo.y < 0;
   bool movingDown = spr->subVelo.y > 0;
   bool movingHorz = spr->subVelo.x != 0;
@@ -2314,21 +2329,24 @@ bool IsOneWayPlatformSolid(int blockId, int layer, Sprite *spr, Vec2 *tileSubPos
   bool playerHigher = subFootPos.y < tileSubPos->y;
 
   // Walking along the top
-  if ( playerHigher && !movingVert){
+  if (playerHigher && !movingVert)
+  {
     // it's solid
 
     return true;
   }
 
   // else, we only care if moving down
-  if (movingUp || !movingVert){
+  if (movingUp || !movingVert)
+  {
     return false;
   }
 
   // so we're moving down
   // it's only solid as long as we've been higher than it during the last/current jump
   bool playerHasBeenHigher = spr->highestYSubPosInJump < tileSubPos->y;
-  if (playerHasBeenHigher){
+  if (playerHasBeenHigher)
+  {
     return true;
   }
 
@@ -2394,25 +2412,25 @@ Sprite *GetTriggerOverlaps(Sprite *srcSprite)
   for (int i = 0; i < numSprites; i++)
   {
 
-    Sprite *spr = sprites[i];
+    Sprite *otherSprite = sprites[i];
 
-    if (spr == NULL)
+    if (otherSprite == NULL)
       continue;
 
-    if (spr == srcSprite)
+    if (otherSprite == srcSprite)
       continue;
-    
-    if (spr->profile.solid != SOLIDMASK_TRIGGER)
+
+    if (otherSprite->profile.solid != SOLIDMASK_TRIGGER)
       continue;
 
     Vec2 *srcSubPos = &srcSprite->subPos;
 
-    bool inside = IsPointInsideBox(srcSubPos, &srcSprite->subHitBox);
+    bool inside = IsPointInsideBox(srcSubPos, &otherSprite->subHitBox);
 
-    if ( inside ){
-      return spr;
+    if (inside)
+    {
+      return otherSprite;
     }
-
   }
 
   return NULL;
@@ -2557,7 +2575,7 @@ void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull
 
   rVal->hitMask = SOLIDMASK_NONE;
   rVal->hitMaskIsSolid = false;
-  
+
   //
   // 1/2 - Check collisions against tiles
   //
@@ -2655,7 +2673,6 @@ void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull
 
       if (!inside)
         continue;
-
 
       // printf("Sprite %s is inside %s\n", spr->name, otherSprite->name);
 
@@ -3113,11 +3130,25 @@ Sprite *FindSpriteOfType(SpriteType inType, Sprite *excludeOrNull)
 void HandleDoorTransition(Sprite *activator, Sprite *door)
 {
 
-  if (!activator->input.up)
-    return;
-
   if (!AllowSpriteInput(activator))
     return;
+
+  // We could add some in-air version of things
+  // but this should do for now
+  // - hold up for a bit
+  // - must have slowed down
+  // - ensure lowish velo
+
+  if (activator->input.up < DOOR_THRESH_FRAMES)
+  {
+    return;
+  }
+
+  int absx = Abs(activator->subVelo.x);
+  if (absx > DOOR_THRESH_SPEED)
+  {
+    return;
+  }
 
   // let's do the door thing!
 
@@ -3145,9 +3176,9 @@ void HandleDoorTransition(Sprite *activator, Sprite *door)
   GotoGameState(GSTATE_TRANSITION);
 }
 
-void HandleTriggers(Sprite *srcSprite, Sprite * trigger)
+void HandleTriggers(Sprite *srcSprite, Sprite *trigger)
 {
-    
+
   if (srcSprite == NULL || trigger == NULL)
   {
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "HandleTriggers got a null sprite ref or trigger ref");
@@ -3165,7 +3196,6 @@ void HandleTriggers(Sprite *srcSprite, Sprite * trigger)
   case STYPE_DOOR_3:
   case STYPE_DOOR_4:
 
-    // it's a door, if they're pushing up, let's warp
     HandleDoorTransition(srcSprite, trigger);
     break;
 
@@ -3174,9 +3204,7 @@ void HandleTriggers(Sprite *srcSprite, Sprite * trigger)
     return;
     break;
   }
-  
 }
-
 
 // basic order of operations
 // - use state from previous frame, since it's fully resolved
@@ -3540,12 +3568,16 @@ void SolveMovement(Sprite *spr)
   // - been above the platform since jumping
   // - landed on/in it
   Vec2 feetPos = GetPointOnSprite(spr, true, ANCHOR_HMID, ANCHOR_VMID);
-  if ( spr->isGrounded ){
+  if (spr->isGrounded)
+  {
     // grab the feet pos
     spr->lastgroundedYSubPos = feetPos.y;
     spr->highestYSubPosInJump = spr->lastgroundedYSubPos;
-  } else {
-    if ( feetPos.y < spr->highestYSubPosInJump ){
+  }
+  else
+  {
+    if (feetPos.y < spr->highestYSubPosInJump)
+    {
       spr->highestYSubPosInJump = feetPos.y;
     }
   }
@@ -3553,17 +3585,16 @@ void SolveMovement(Sprite *spr)
   // check triggers
   // let's not allow both on the same frame
   // to avoid e.g. double door transitions
-
-  //__TEST__
-  
-  Sprite * trigger = GetTriggerOverlaps(spr);
+  Sprite *trigger = GetTriggerOverlaps(spr);
 
   if (trigger != NULL)
   {
+    if (spr == player)
+    {
+      printf("__TEST__touching a trigger\n");
+    }
     HandleTriggers(spr, trigger);
   }
-  
-  
 }
 
 void MoveAllSprites()
