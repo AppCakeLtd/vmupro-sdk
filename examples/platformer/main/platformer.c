@@ -1011,7 +1011,7 @@ void SetMoveMode(Sprite *spr, MoveMode inMode)
   //
 
   // pretty much any change should cancel a dash
-  if (inMode != MM_DASH)
+  if (inMode != MM_DASH && inMode != MM_FALL)
   {
     StopDashBoost(spr, false, "NewMode");
   }
@@ -3138,6 +3138,11 @@ bool IsGroundedOrCoyoteTime(Sprite *spr)
 void TryJump(Sprite *spr)
 {
 
+  if (spr->jumpFrameNum != 0)
+  {
+    return;
+  }
+
   if (!spr->input.jump)
   {
     return;
@@ -3155,8 +3160,7 @@ void TryJump(Sprite *spr)
     return;
   }
 
-  SetMoveMode(spr, MM_JUMP);
-  spr->jumpFrameNum = 0;
+  SetMoveMode(spr, MM_JUMP);  
 }
 
 void TryDash(Sprite *spr)
@@ -3171,6 +3175,11 @@ void TryDash(Sprite *spr)
     {
       vmupro_log(VMUPRO_LOG_INFO, TAG, "Dash counter ready %d", spr->dashFrameNum);
     }
+    return;
+  }
+
+  if (spr->dashFrameNum != 0)
+  {
     return;
   }
 
@@ -3381,6 +3390,7 @@ void CheckLanded(Sprite *spr)
   // we're on the ground
   // we weren't during the last frame
   SetMoveMode(spr, MM_WALK);
+  spr->jumpFrameNum = 0;
 }
 
 Sprite *FindSpriteOfType(SpriteType inType, Sprite *excludeOrNull)
