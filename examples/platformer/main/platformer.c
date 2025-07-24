@@ -257,6 +257,15 @@ typedef enum
   SOLIDMASK_PLATFORM = 0x10  // solid: moving platform
 } Solidity;
 
+typedef enum
+{
+  IMASK_NONE = 0x00,
+  IMASK_HURTS_HORZ = 0x01,
+  IMASK_HURTS_VERT = 0x02,
+  IMASK_CAN_BE_RIDDEN = 0x04,
+  IMASK_CAN_RIDE_STUFF = 0x08,
+} InteractionMask;
+
 // profile of spite behaviour
 // such as runspeed, can it walk
 // off edges, etc
@@ -303,8 +312,7 @@ typedef struct
 
   AnimGroup *defaultAnimGroup;
 
-  bool canRideStuff;
-  bool canBeRidden;
+  InteractionMask iMask;
 
 } SpriteProfile;
 // TODO: rename to spriteblueprint?
@@ -381,8 +389,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
   p->default_health = 3;
   p->defaultAnimGroup = &animgroup_player;
 
-  p->canBeRidden = true;
-  p->canRideStuff = true;
+  p->iMask = IMASK_CAN_BE_RIDDEN | IMASK_CAN_RIDE_STUFF;
 
   if (inType == STYPE_PLAYER)
   {
@@ -395,22 +402,21 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->subdamping_walk = 0;
     p->solid = SOLIDMASK_PLATFORM;
     p->default_health = 1;
+    p->iMask = IMASK_CAN_BE_RIDDEN | IMASK_CAN_RIDE_STUFF;
   }
   else if (inType >= STYPE_DOOR_0 && inType <= STYPE_DOOR_4)
   {
     p->solid = SOLIDMASK_TRIGGER;
     p->defaultAnimGroup = &animgroup_door;
     p->skipMovement = true;
-    p->canBeRidden = false;
-    p->canRideStuff = false;
+    p->iMask = IMASK_NONE;
   }
   else if (inType == STYPE_SPIKEBALL)
   {
     p->solid = SOLIDMASK_SOLID;
     p->defaultAnimGroup = &animgroup_spikeball;
     p->skipMovement = true;
-    p->canBeRidden = false;
-    p->canRideStuff = false;
+    p->iMask = IMASK_HURTS_HORZ | IMASK_HURTS_VERT;
   }
   else
   {
@@ -3563,7 +3569,7 @@ bool SpriteCanRideSprite(Sprite *rider, Sprite *thingImRiding)
     return false;
   }
 
-  if (!thingImRiding->profile.canBeRidden)
+  if (!(thingImRiding->profile.iMask & IMASK_CAN_BE_RIDDEN))
   {
     return false;
   }
@@ -3578,9 +3584,9 @@ bool SpriteCanRideSprite(Sprite *rider, Sprite *thingImRiding)
   if (!AllowSpriteInput(rider) || !AllowSpriteInput(thingImRiding))
     return false;
 
-  if (!rider->profile.canRideStuff)
+  if (!(rider->profile.iMask & IMASK_CAN_RIDE_STUFF))
     return false;
-  if (!thingImRiding->profile.canBeRidden)
+  if (!(thingImRiding->profile.iMask & IMASK_CAN_BE_RIDDEN))
     return false;
 
   // make sure we're on top of it
