@@ -178,11 +178,17 @@ typedef enum
 
   MM_FALL,
   MM_WALK,
-  MM_DASH,  
+  MM_DASH,
   MM_JUMP,
-  MM_KNOCKBACK,  
+  MM_KNOCKBACK,
 
 } MoveMode;
+
+typedef enum
+{
+  KNOCK_SOFT, // dashed into a wall or something
+  KNOCK_HARD, // bumped into something spiky
+} KnockbackStrength;
 
 typedef enum
 {
@@ -441,6 +447,8 @@ typedef struct Sprite
 
   Vec2 subVelo;
   Vec2 lastSubVelo;
+
+  Vec2 subKnockbackAccel;
 
   // for coyote time
   uint32_t lastGroundedFrame;
@@ -1007,8 +1015,6 @@ bool SpriteIsKnockback(Sprite *spr)
   return spr->moveMode == MM_KNOCKBACK;
 }
 
-
-
 void SetMoveMode(Sprite *spr, MoveMode inMode)
 {
 
@@ -1142,6 +1148,8 @@ void ResetSprite(Sprite *spr)
 
   spr->subVelo = ZeroVec();
   spr->lastSubVelo = ZeroVec();
+
+  spr->subKnockbackAccel = ZeroVec();
 
   SetMoveMode(spr, MM_FALL);
 
@@ -1791,7 +1799,7 @@ bool AllowSpriteInput(Sprite *spr)
 {
 
   if (SpriteIsDead(spr))
-    return false;  
+    return false;
   // TODO: some kinda sequence
 
   if (SpriteIsKnockback(spr))
@@ -2192,14 +2200,10 @@ void EndFrameAllSprites()
   }
 }
 
-int GetYSubAccel(Sprite * spr){
-
-  if ( SpriteIsKnockback(spr) ){
-    return -player->profile.sub_gravity /2;
-  }
+int GetYSubAccel(Sprite *spr)
+{
 
   return spr->isGrounded ? 0 : player->profile.sub_gravity;
-
 }
 
 int GetXSubAccel(Sprite *spr)
@@ -2216,12 +2220,9 @@ int GetXSubAccel(Sprite *spr)
     break;
 
   case MM_JUMP:
+  case MM_KNOCKBACK:
   case MM_FALL:
     return prof->subaccel_air;
-    break;
-
-  case MM_KNOCKBACK:
-    return spr->facingRight ? -prof->subaccel_run : prof->subaccel_run;    
     break;
   case MM_WALK:
     return prof->subaccel_walk;
@@ -3358,17 +3359,19 @@ void TryContinueDash(Sprite *spr)
   }
 }
 
-void TryContinueKnockback(Sprite * spr){
+void TryContinueKnockback(Sprite *spr)
+{
 
-  if ( !SpriteIsKnockback(spr) ){
+  if (!SpriteIsKnockback(spr))
+  {
     return;
   }
 
   spr->knockbackFrameNum++;
-  if ( spr->knockbackFrameNum >= spr->profile.max_knockback_frames ){
+  if (spr->knockbackFrameNum >= spr->profile.max_knockback_frames)
+  {
     StopKnockback(spr, true, "ReachedFrameMax");
   }
-
 }
 
 // e.g. walking off an edge
@@ -3572,17 +3575,53 @@ bool SpriteCanRideSprite(Sprite *rider, Sprite *thingImRiding)
   return true;
 }
 
-void TryKnockback(Sprite *spr, const char * cause)
+void TryKnockback(Sprite *spr, KnockbackStrength inStr, const char *cause)
+{
+
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d, Sprite %s knockback! str= %d, cause = '%s'", frameCounter, spr->name, (int)inStr, cause);
+
+  int yKnock = 0;
+  int xKnock = 0;
+  switch (inStr)
+  {
+  default:
+    vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d unhandled knockback strength %d", frameCounter, (int)inStr);
+    break;
+  case KNOCK_SOFT:
+    xKnock = -spr->lastSubVelo.x / 5;
+    yKnock = -spr->profile.sub_gravity / 2;
+    break;
+
+  case KNOCK_HARD:
+    xKnock = -spr->profile.sub_gravity; // TODO: something usable for now
+    yKnock = -spr->profile.sub_gravity / 2;
+    break;
+  }
+  spr->subKnockbackAccel.x = xKnock;
+  spr->subKnockbackAccel.y = yKnock;
+
+  SetMoveMode(spr, MM_KNOCKBACK);
+}
+
+void OnDashBonk(Sprite *spr)
 {
 
   if (!SpriteDashing(spr))
   {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Frame %d, Sprite %s can't dashbonk if not dashing", frameCounter, spr->name);
     return;
   }
 
-  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d, Sprite %s knockback! cause = '%s'", frameCounter, spr->name, cause);
-  // StopKnockback(spr, true, "bonk");
-  SetMoveMode(spr, MM_KNOCKBACK);
+  // TODO: do we want to keep this
+  const int dashBonkThresh = 64;
+  if (Abs(spr->lastSubVelo.x) < dashBonkThresh)
+  {
+    vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d, Sprite %s dashbonk is below thresh %d/%d", frameCounter, spr->name, spr->lastSubVelo.x, dashBonkThresh);
+    return;
+  }
+
+  // we hit something, dash bounce
+  TryKnockback(spr, KNOCK_SOFT, "H or Head bonk");
 }
 
 void StopKnockback(Sprite *spr, bool resetMoveMode, const char *cause)
@@ -3592,7 +3631,7 @@ void StopKnockback(Sprite *spr, bool resetMoveMode, const char *cause)
   {
     return;
   }
-  
+
   spr->knockbackFrameNum = 0;
   vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d, Sprite %s stopping knockback! cause= %s, reset= %d", frameCounter, spr->name, cause, resetMoveMode);
 
@@ -3696,7 +3735,9 @@ void SolveMovement(Sprite *spr)
     {
       // force bounce left/right
       spriteXInput = true;
-      spriteYInput = true;      
+      spriteYInput = true;
+      subAccelX = spr->subKnockbackAccel.x;
+      subAccelY = spr->subKnockbackAccel.y;
     }
   }
 
@@ -4016,23 +4057,23 @@ void SolveMovement(Sprite *spr)
   // head or feet bonked
   // prevent jump boost
   if (spr->isGrounded || vBonk != 0)
-  { 
+  {
     // don't need to change move mode, checklanded will have set that
     StopJumpBoost(spr, false, "LandedOrHeadBonk (v)");
-    StopKnockback(spr,false, "LandedOrHeadBonk (v)");
+    StopKnockback(spr, false, "LandedOrHeadBonk (v)");
   }
   if (hBonk != 0 || vBonk < 0)
   {
-    if (SpriteIsKnockback(spr))
+
+    if (SpriteDashing(spr))
+    {
+      OnDashBonk(spr);
+    }
+    else if (SpriteIsKnockback(spr))
     {
       // we're dash bouncing, but we hit something new
       // stop
       StopKnockback(spr, true, "H or Head bonk");
-    }
-    else
-    {
-      // we hit something, dash bounce
-      TryKnockback(spr, "H or Head bonk");
     }
   }
 
