@@ -178,10 +178,9 @@ typedef enum
 
   MM_FALL,
   MM_WALK,
-  MM_DASH,
-  MM_DASHBOUNCE,
+  MM_DASH,  
   MM_JUMP,
-  MM_KNOCKBACK
+  MM_KNOCKBACK,  
 
 } MoveMode;
 
@@ -282,7 +281,7 @@ typedef struct
   // is applied
   int max_jump_boost_frames;
   int max_dash_frames;
-  int max_dashbounce_frames;
+  int max_knockback_frames;
   int sub_jumpforce;
   int sub_dashforce;
   int dashDelayFrames;
@@ -363,7 +362,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
 
   p->max_jump_boost_frames = 16;
   p->max_dash_frames = 16;
-  p->max_dashbounce_frames = 12;
+  p->max_knockback_frames = 12;
   p->sub_jumpforce = 14;
   p->sub_dashforce = 14;
   p->dashDelayFrames = 50;
@@ -453,7 +452,7 @@ typedef struct Sprite
   bool onWallLastFrame;
   int jumpFrameNum;
   int dashFrameNum;
-  int dashBounceFrameNum;
+  int knockbackFrameNum;
 
   // config options
   bool isPlayer;
@@ -528,8 +527,8 @@ void SetAnim(Sprite *spr, AnimTypes inType)
   case ANIMTYPE_DASH:
     spr->activeFrameSet = &spr->anims->dashFrames;
     break;
-  case ANIMTYPE_DASHBOUNCE:
-    spr->activeFrameSet = &spr->anims->dashBounceFrames;
+  case ANIMTYPE_KNOCKBACK:
+    spr->activeFrameSet = &spr->anims->knockbackFrames;
     break;
   default:
     // we'll patch this in a sec
@@ -732,7 +731,7 @@ void UnloadTileLayers();
 void DecompressAllTileLayers(Level *currentLevel, PersistentData *inData);
 void StopJumpBoost(Sprite *spr, bool resetMoveMode, const char *src);
 void StopDashBoost(Sprite *spr, bool resetMovemode, const char *src);
-void StopDashBounce(Sprite *spr, bool resetMoveMode, const char *cause);
+void StopKnockback(Sprite *spr, bool resetMoveMode, const char *cause);
 
 void DrawBBoxScreen(BBox *box, uint16_t inCol)
 {
@@ -1003,15 +1002,12 @@ bool SpriteIsDead(Sprite *spr)
   return spr->animID == ANIIMTYPE_DIE;
 }
 
-bool SpriteIsDashBounce(Sprite *spr)
-{
-  return spr->moveMode == MM_DASHBOUNCE;
-}
-
 bool SpriteIsKnockback(Sprite *spr)
 {
   return spr->moveMode == MM_KNOCKBACK;
 }
+
+
 
 void SetMoveMode(Sprite *spr, MoveMode inMode)
 {
@@ -1035,9 +1031,9 @@ void SetMoveMode(Sprite *spr, MoveMode inMode)
   {
     StopJumpBoost(spr, false, "NewMode");
   }
-  if (inMode != MM_DASHBOUNCE)
+  if (inMode != MM_KNOCKBACK)
   {
-    StopDashBoost(spr, false, "NewMode");
+    StopKnockback(spr, false, "NewMode");
   }
 
   //
@@ -1157,7 +1153,7 @@ void ResetSprite(Sprite *spr)
   spr->onWallLastFrame = false;
   spr->jumpFrameNum = 0;
   spr->dashFrameNum = 0;
-  spr->dashBounceFrameNum = 0;
+  spr->knockbackFrameNum = 0;
 
   // temporary config stuff
   spr->subPos = spr->subSpawnPos;
@@ -1795,14 +1791,10 @@ bool AllowSpriteInput(Sprite *spr)
 {
 
   if (SpriteIsDead(spr))
-    return false;
-  // TODO: knockback
+    return false;  
   // TODO: some kinda sequence
 
   if (SpriteIsKnockback(spr))
-    return false;
-
-  if (SpriteIsDashBounce(spr))
     return false;
 
   switch (gState)
@@ -2218,7 +2210,7 @@ int GetXSubAccel(Sprite *spr)
     return prof->subaccel_air;
     break;
 
-  case MM_DASHBOUNCE:
+  case MM_KNOCKBACK:
   case MM_WALK:
     return prof->subaccel_walk;
     break;
@@ -2255,7 +2247,7 @@ int GetMaxXSubSpeed(Sprite *spr)
 
     break;
 
-  case MM_DASHBOUNCE:
+  case MM_KNOCKBACK:
   case MM_WALK:
     return prof->max_subspeed_walk;
     break;
@@ -2293,7 +2285,7 @@ int GetXDamping(Sprite *spr)
 
     break;
 
-  case MM_DASHBOUNCE:
+  case MM_KNOCKBACK:
   case MM_WALK:
     return prof->subdamping_walk;
     break;
@@ -3354,15 +3346,15 @@ void TryContinueDash(Sprite *spr)
   }
 }
 
-void TryContinueDashBounce(Sprite * spr){
+void TryContinueKnockback(Sprite * spr){
 
-  if ( !SpriteIsDashBounce(spr) ){
+  if ( !SpriteIsKnockback(spr) ){
     return;
   }
 
-  spr->dashBounceFrameNum++;
-  if ( spr->dashBounceFrameNum >= spr->profile.max_dashbounce_frames ){
-    StopDashBounce(spr, true, "ReachedFrameMax");
+  spr->knockbackFrameNum++;
+  if ( spr->knockbackFrameNum >= spr->profile.max_knockback_frames ){
+    StopKnockback(spr, true, "ReachedFrameMax");
   }
 
 }
@@ -3568,7 +3560,7 @@ bool SpriteCanRideSprite(Sprite *rider, Sprite *thingImRiding)
   return true;
 }
 
-void TryDashBounce(Sprite *spr)
+void TryKnockback(Sprite *spr, const char * cause)
 {
 
   if (!SpriteDashing(spr))
@@ -3576,21 +3568,21 @@ void TryDashBounce(Sprite *spr)
     return;
   }
 
-  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d, Sprite %s dashbounce!", frameCounter, spr->name);
-  // StopDashBoost(spr, true, "bonk");
-  SetMoveMode(spr, MM_DASHBOUNCE);
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d, Sprite %s knockback! cause = '%s'", frameCounter, spr->name, cause);
+  // StopKnockback(spr, true, "bonk");
+  SetMoveMode(spr, MM_KNOCKBACK);
 }
 
-void StopDashBounce(Sprite *spr, bool resetMoveMode, const char *cause)
+void StopKnockback(Sprite *spr, bool resetMoveMode, const char *cause)
 {
 
-  if (!SpriteIsDashBounce(spr))
+  if (!SpriteIsKnockback(spr))
   {
     return;
   }
   
-  spr->dashBounceFrameNum = 0;
-  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d, Sprite %s stopping dashbounce! cause= %s, reset= %d", frameCounter, spr->name, cause, resetMoveMode);
+  spr->knockbackFrameNum = 0;
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d, Sprite %s stopping knockback! cause= %s, reset= %d", frameCounter, spr->name, cause, resetMoveMode);
 
   if (resetMoveMode)
   {
@@ -3659,7 +3651,7 @@ void SolveMovement(Sprite *spr)
   TryContinueJump(spr);
   TryDash(spr);
   TryContinueDash(spr);
-  TryContinueDashBounce(spr);
+  TryContinueKnockback(spr);
 
   bool spriteXInput = false;
   bool spriteYInput = false;
@@ -3688,7 +3680,7 @@ void SolveMovement(Sprite *spr)
   else
   {
 
-    if (SpriteIsKnockback(spr) || SpriteIsDashBounce(spr))
+    if (SpriteIsKnockback(spr))
     {
       // force bounce left/right
       spriteXInput = true;
@@ -4017,20 +4009,20 @@ void SolveMovement(Sprite *spr)
   { 
     // don't need to change move mode, checklanded will have set that
     StopJumpBoost(spr, false, "LandedOrHeadBonk (v)");
-    StopDashBounce(spr,false, "LandedOrHeadBonk (v)");
+    StopKnockback(spr,false, "LandedOrHeadBonk (v)");
   }
   if (hBonk != 0 || vBonk < 0)
   {
-    if (SpriteIsDashBounce(spr))
+    if (SpriteIsKnockback(spr))
     {
       // we're dash bouncing, but we hit something new
       // stop
-      StopDashBounce(spr, true, "LandedOrHeadBonk (h)");
+      StopKnockback(spr, true, "H or Head bonk");
     }
     else
     {
       // we hit something, dash bounce
-      TryDashBounce(spr);
+      TryKnockback(spr, "H or Head bonk");
     }
   }
 
@@ -4176,9 +4168,9 @@ void DrawSprite(Sprite *spr)
   {
     SetAnim(spr, ANIMTYPE_DASH);
   }
-  else if (spr->moveMode == MM_DASHBOUNCE)
+  else if (spr->moveMode == MM_KNOCKBACK)
   {
-    SetAnim(spr, ANIMTYPE_DASHBOUNCE);
+    SetAnim(spr, ANIMTYPE_KNOCKBACK);
   }
   else if (spr->moveMode == MM_WALK)
   {
