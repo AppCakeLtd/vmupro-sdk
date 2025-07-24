@@ -1005,13 +1005,10 @@ void SetMoveMode(Sprite *spr, MoveMode inMode)
     vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %d set movemode to %d while dead!", frameCounter, spr, (int)inMode);
   }
 
-  MoveMode oldMode = spr->moveMode;
-  spr->moveMode = inMode;
-
-  if (oldMode != inMode)
-  {
-    vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s MoveMode %d", frameCounter, spr->name, (int)inMode);
-  }
+  //
+  // Cancel any ongoing anims *before* we switch modes
+  // since they won't cancel unless we're in the right mode
+  //
 
   // pretty much any change should cancel a dash
   if (inMode != MM_DASH)
@@ -1021,6 +1018,18 @@ void SetMoveMode(Sprite *spr, MoveMode inMode)
   if (inMode != MM_JUMP)
   {
     StopJumpBoost(spr, false, "NewMode");
+  }
+
+  //
+  // Finally, apply the new mode
+  //
+
+  MoveMode oldMode = spr->moveMode;
+  spr->moveMode = inMode;
+
+  if (oldMode != inMode)
+  {
+    vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s MoveMode %d", frameCounter, spr->name, (int)inMode);
   }
 }
 
@@ -3158,7 +3167,8 @@ void TryDash(Sprite *spr)
   if (spr->dashFrameNum < 0)
   {
     spr->dashFrameNum++;
-    if ( spr->dashFrameNum == 0 ){
+    if (spr->dashFrameNum == 0)
+    {
       vmupro_log(VMUPRO_LOG_INFO, TAG, "Dash counter ready %d", spr->dashFrameNum);
     }
     return;
@@ -3185,7 +3195,7 @@ void TryDash(Sprite *spr)
     return;
   }
 
-  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d sprite %s, starting dash", frameCounter, spr->name);  
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d sprite %s, starting dash", frameCounter, spr->name);
   SetMoveMode(spr, MM_DASH);
   spr->dashFrameNum = 0;
 }
@@ -3301,13 +3311,13 @@ void TryContinueDash(Sprite *spr)
     spr->dashFrameNum++;
     if (spr->dashFrameNum >= spr->profile.max_dash_frames)
     {
-      StopDashBoost(spr, true, "ReachedFrameMax");      
+      StopDashBoost(spr, true, "ReachedFrameMax");
     }
   }
   else
   {
     // user released dash early, prevent a re-dash
-    StopDashBoost(spr, true, "Released");    
+    StopDashBoost(spr, true, "Released");
   }
 }
 
@@ -3324,14 +3334,17 @@ void CheckFallen(Sprite *spr)
   {
     return;
   }
+
   if (!spr->onGroundLastFrame)
   {
     return;
   }
+
   if (spr->isGrounded)
   {
     return;
   }
+
   if (SpriteJumping(spr))
   {
     return;
@@ -3900,7 +3913,7 @@ void SolveMovement(Sprite *spr)
   }
   if (hBonk != 0 || vBonk < 0)
   {
-    StopDashBoost(spr, true, "bonk");    
+    StopDashBoost(spr, true, "bonk");
   }
 
   // Keep track of our jump height
