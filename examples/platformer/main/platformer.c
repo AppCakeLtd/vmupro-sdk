@@ -72,7 +72,7 @@ const int POST_DEATH_FRAME_DELAY = 60;
 const int TRANSITION_FRAME_DELAY = 20;
 const int DOOR_THRESH_FRAMES = 15;
 const int DOOR_THRESH_SPEED = 30;
-const uint32_t COYOTE_TIME_FRAME_THRESH = 10;
+const uint32_t COYOTE_TIME_FRAME_THRESH = 3;
 
 // not stored on the sprite
 // since we may despawn/respawn
@@ -725,6 +725,8 @@ Solidity CheckSpriteCollision(Sprite *spr, Direction dir, Vec2 *subOffset, const
 void GotoGameState(GameState inState);
 void UnloadTileLayers();
 void DecompressAllTileLayers(Level *currentLevel, PersistentData *inData);
+void StopJumpBoost(Sprite *spr, bool resetMoveMode, const char *src);
+void StopDashBoost(Sprite *spr, bool resetMovemode, const char *src);
 
 void DrawBBoxScreen(BBox *box, uint16_t inCol)
 {
@@ -1009,6 +1011,16 @@ void SetMoveMode(Sprite *spr, MoveMode inMode)
   if (oldMode != inMode)
   {
     vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s MoveMode %d", frameCounter, spr->name, (int)inMode);
+  }
+
+  // pretty much any change should cancel a dash
+  if (inMode != MM_DASH)
+  {
+    StopDashBoost(spr, false, "NewMode");
+  }
+  if (inMode != MM_JUMP)
+  {
+    StopJumpBoost(spr, false, "NewMode");
   }
 }
 
@@ -3146,7 +3158,9 @@ void TryDash(Sprite *spr)
   if (spr->dashFrameNum < 0)
   {
     spr->dashFrameNum++;
-    vmupro_log(VMUPRO_LOG_ERROR, TAG, "__TEST__ dash counter %d", spr->dashFrameNum);
+    if ( spr->dashFrameNum == 0 ){
+      vmupro_log(VMUPRO_LOG_INFO, TAG, "Dash counter ready %d", spr->dashFrameNum);
+    }
     return;
   }
 
@@ -3171,25 +3185,41 @@ void TryDash(Sprite *spr)
     return;
   }
 
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d sprite %s, starting dash", frameCounter, spr->name);  
   SetMoveMode(spr, MM_DASH);
   spr->dashFrameNum = 0;
 }
 
 // prevent the jump button applying further up force
-void StopJumpBoost(Sprite *spr, const char *src)
+// doesn't change move state!
+// possible causes:
+// - bonked head          (remain in jump, stop applying force)
+// - out of boost frames  (remain in jump, stop applying force)
+// - landed on ground     (will return to walking movestate)
+// - took damage          (will handle switc move states)
+void StopJumpBoost(Sprite *spr, bool resetMoveMode, const char *src)
 {
   if (!SpriteJumping(spr))
   {
     return;
   }
 
-  printf("__DBG__ jump boost canceled, src='%s'\n", src);
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s, jumpboost canceled, src= '%s' resetMoveMode = %d\n", frameCounter, spr->name, src, resetMoveMode);
   spr->jumpFrameNum = spr->profile.max_jump_boost_frames;
+
+  if (resetMoveMode)
+  {
+    SetMoveMode(spr, MM_WALK);
+  }
 }
 
-// if we hit something, we knockback
-// if we didn't, we go back to walk
-void StopDashBoost(Sprite *spr, bool bounced, const char *src)
+// prevent the dash button applying further force
+// doesn't change move state!
+// possible causes:
+// - bonked wall/sprite   (caller should apply knockback state)
+// - out of dash frames   (caller should return to walk state)
+// - jumped/fell          (caller should return to appropriate state)
+void StopDashBoost(Sprite *spr, bool resetMovemode, const char *src)
 {
 
   if (!SpriteDashing(spr))
@@ -3200,17 +3230,12 @@ void StopDashBoost(Sprite *spr, bool bounced, const char *src)
 
   if (spr->dashFrameNum < spr->profile.max_dash_frames)
   {
-    vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s, dash boost canceled, src= '%s' dashbounce = %d\n", frameCounter, spr->name, src, bounced);
+    vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s, dashboost canceled, src= '%s' resetMoveMode = %d\n", frameCounter, spr->name, src, resetMovemode);
     spr->dashFrameNum = -spr->profile.dashDelayFrames;
   }
 
-  if (bounced)
+  if (resetMovemode)
   {
-    SetMoveMode(spr, MM_DASHBOUNCE);
-  }
-  else
-  {
-    // TODO: should we check the grounded status?
     SetMoveMode(spr, MM_WALK);
   }
 }
@@ -3237,14 +3262,14 @@ void TryContinueJump(Sprite *spr)
 
     if (spr->jumpFrameNum >= spr->profile.max_jump_boost_frames)
     {
-      StopJumpBoost(spr, "ReachedFrameMax");
+      StopJumpBoost(spr, false, "ReachedFrameMax");
     }
   }
   else
   {
     // user has released jump, prevent further re-presses
     // until we land
-    StopJumpBoost(spr, "released");
+    StopJumpBoost(spr, false, "released");
   }
 }
 
@@ -3276,13 +3301,13 @@ void TryContinueDash(Sprite *spr)
     spr->dashFrameNum++;
     if (spr->dashFrameNum >= spr->profile.max_dash_frames)
     {
-      StopDashBoost(spr, false, "ReachedFrameMax");
+      StopDashBoost(spr, true, "ReachedFrameMax");      
     }
   }
   else
   {
     // user released dash early, prevent a re-dash
-    StopDashBoost(spr, false, "Released");
+    StopDashBoost(spr, true, "Released");    
   }
 }
 
@@ -3871,11 +3896,11 @@ void SolveMovement(Sprite *spr)
   // prevent jump boost
   if (spr->isGrounded || vBonk != 0)
   {
-    StopJumpBoost(spr, "LandedOrHeadBonk");
+    StopJumpBoost(spr, false, "LandedOrHeadBonk");
   }
   if (hBonk != 0 || vBonk < 0)
   {
-    StopDashBoost(spr, true, "bonk");
+    StopDashBoost(spr, true, "bonk");    
   }
 
   // Keep track of our jump height
