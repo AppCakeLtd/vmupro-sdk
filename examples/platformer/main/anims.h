@@ -34,7 +34,9 @@ typedef enum
     ANIMTYPE_WALK,
     ANIMTYPE_JUMP,
     ANIMTYPE_DASH,
+    ANIMTYPE_DASHBOUNCE,
     ANIMTYPE_BUTTSTOMP,
+    ANIMTYPE_BUTTBOUNCE,
     ANIMTYPE_KNOCKBACK,
     ANIMTYPE_STUNNED,
     ANIIMTYPE_DIE,
@@ -47,7 +49,9 @@ typedef struct
     AnimFrames walkFrames;
     AnimFrames jumpFrames;
     AnimFrames dashFrames;
+    AnimFrames dashBounceFrames;
     AnimFrames buttstompFrames;
+    AnimFrames buttBounceFrames;
     AnimFrames knockbackFrames;
     AnimFrames stunFrames;
     AnimFrames dieFrames;
@@ -98,8 +102,14 @@ const Img *imgs_player_jump[] = {
 const Img *imgs_player_dash[] = {
     &img_player_dash_0};
 
+const Img *imgs_player_dashbounce[] = {
+    &img_player_dashbounce_0};
+
 const Img *imgs_player_buttstomp[] = {
     &img_player_buttstomp_0};
+
+const Img *imgs_player_buttbounce[] = {
+    &img_player_buttbounce_0};
 
 const Img *imgs_player_knockback[] = {
     &img_player_knockback_0};
@@ -127,7 +137,9 @@ AnimGroup animgroup_player = {
     .walkFrames = {.frameSpeed = 3, .numImages = ARRAYSIZE(imgs_player_walk), .images = imgs_player_walk},
     .jumpFrames = {.frameSpeed = 7, .numImages = ARRAYSIZE(imgs_player_jump), .images = imgs_player_jump},
     .dashFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_player_dash), .images = imgs_player_dash},
+    .dashBounceFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_player_dashbounce), .images = imgs_player_dashbounce},
     .buttstompFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_player_buttstomp), .images = imgs_player_buttstomp},
+    .buttBounceFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_player_buttbounce), .images = imgs_player_buttbounce},
     .knockbackFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_player_knockback), .images = imgs_player_knockback},
     .stunFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_player_stun), .images = imgs_player_stun},
     .dieFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_player_die), .images = imgs_player_die}};
@@ -142,7 +154,9 @@ AnimGroup animgroup_door = {
     .walkFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_door_all), .images = imgs_door_all},
     .jumpFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_door_all), .images = imgs_door_all},
     .dashFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_door_all), .images = imgs_door_all},
+    .dashBounceFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_door_all), .images = imgs_door_all},
     .buttstompFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_door_all), .images = imgs_door_all},
+    .buttBounceFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_door_all), .images = imgs_door_all},
     .knockbackFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_door_all), .images = imgs_door_all},
     .stunFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_door_all), .images = imgs_door_all},
     .dieFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_door_all), .images = imgs_door_all}};

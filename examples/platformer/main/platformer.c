@@ -178,7 +178,8 @@ typedef enum
 
   MM_FALL,
   MM_WALK,
-  MM_RUN,
+  MM_DASH,
+  MM_DASHBOUNCE,
   MM_JUMP,
 
 } MoveMode;
@@ -279,7 +280,10 @@ typedef struct
   // max frames for which the up force
   // is applied
   int max_jump_boost_frames;
+  int max_dash_frames;
   int sub_jumpforce;
+  int sub_dashforce;
+  int dashDelayFrames;
   int sub_gravity;
   // max of like 256 since that's
   // bigger than a tile in subpixels
@@ -356,7 +360,10 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
   p->subdamping_air = 4;
 
   p->max_jump_boost_frames = 16;
+  p->max_dash_frames = 16;
   p->sub_jumpforce = 14;
+  p->sub_dashforce = 14;
+  p->dashDelayFrames = 240;
   p->sub_gravity = 9;
   p->max_subfallspeed = 120;
 
@@ -442,6 +449,7 @@ typedef struct Sprite
   bool onGroundLastFrame;
   bool onWallLastFrame;
   int jumpFrameNum;
+  int dashFrameNum;
 
   // config options
   bool isPlayer;
@@ -495,6 +503,7 @@ void SetAnim(Sprite *spr, AnimTypes inType)
 
   vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s Anim ID %d", frameCounter, spr->name, (int)inType);
 
+  // TODO: could move this to a table
   switch (inType)
   {
   case ANIMTYPE_IDLE:
@@ -512,6 +521,11 @@ void SetAnim(Sprite *spr, AnimTypes inType)
   case ANIIMTYPE_DIE:
     spr->activeFrameSet = &spr->anims->dieFrames;
     break;
+  case ANIMTYPE_DASH:
+    spr->activeFrameSet = &spr->anims->dashFrames;
+    break;
+  case ANIMTYPE_DASHBOUNCE:
+    spr->activeFrameSet = &spr->anims->dashBounceFrames;
   default:
     // we'll patch this in a sec
     spr->activeFrameSet = NULL;
@@ -952,7 +966,7 @@ bool MoveModeOnGround(Sprite *spr)
 {
 
   MoveMode mm = spr->moveMode;
-  if (mm == MM_RUN || mm == MM_WALK)
+  if (mm == MM_DASH || mm == MM_WALK)
   {
     return true;
   }
@@ -965,15 +979,36 @@ bool SpriteJumping(Sprite *spr)
   return spr->moveMode == MM_JUMP;
 }
 
+bool SpriteDashing(Sprite *spr)
+{
+  return spr->moveMode == MM_DASH;
+}
+
+bool SpriteIsMoving(Sprite *spr)
+{
+
+  return (spr->subVelo.x != 0) || (spr->subVelo.y != 0);
+}
+
+bool SpriteIsDead(Sprite *spr)
+{
+  return spr->animID == ANIIMTYPE_DIE;
+}
+
 void SetMoveMode(Sprite *spr, MoveMode inMode)
 {
 
-  MoveMode oldMode = inMode;
+  if (SpriteIsDead(spr))
+  {
+    vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %d set movemode to %d while dead!", frameCounter, spr, (int)inMode);
+  }
+
+  MoveMode oldMode = spr->moveMode;
   spr->moveMode = inMode;
 
   if (oldMode != inMode)
   {
-    vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Move mode %d", frameCounter, (int)inMode);
+    vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s MoveMode %d", frameCounter, spr->name, (int)inMode);
   }
 }
 
@@ -1080,6 +1115,7 @@ void ResetSprite(Sprite *spr)
   spr->onGroundLastFrame = false;
   spr->onWallLastFrame = false;
   spr->jumpFrameNum = 0;
+  spr->dashFrameNum = 0;
 
   // temporary config stuff
   spr->subPos = spr->subSpawnPos;
@@ -1380,7 +1416,8 @@ void ReadSpawnLayer(Level *inLevel, PersistentData *inData)
 
     vmupro_log(VMUPRO_LOG_INFO, TAG, "Found spawn marker block ID %d at tile: %ld, %ld world: %d, %d \n", newID, xPos, yPos, worldPos.x, worldPos.y);
 
-    CreateSprite(newID, worldPos, "spawned");
+    const char *tag = newID == STYPE_PLAYER ? "Player" : "Mob";
+    CreateSprite(newID, worldPos, tag);
   }
 }
 
@@ -1710,17 +1747,6 @@ void UpdatePatrollInputs(Sprite *spr)
 
   spr->input.right = spr->facingRight;
   spr->input.left = !spr->facingRight;
-}
-
-bool SpriteIsMoving(Sprite *spr)
-{
-
-  return (spr->subVelo.x != 0) || (spr->subVelo.y != 0);
-}
-
-bool SpriteIsDead(Sprite *spr)
-{
-  return spr->animID == ANIIMTYPE_DIE;
 }
 
 bool AllowSpriteInput(Sprite *spr)
@@ -2144,10 +2170,11 @@ int GetXSubAccel(Sprite *spr)
     return prof->subaccel_air;
     break;
 
+  case MM_DASHBOUNCE:
   case MM_WALK:
     return prof->subaccel_walk;
     break;
-  case MM_RUN:
+  case MM_DASH:
     return prof->subaccel_run;
     break;
   }
@@ -2180,11 +2207,12 @@ int GetMaxXSubSpeed(Sprite *spr)
 
     break;
 
+  case MM_DASHBOUNCE:
   case MM_WALK:
     return prof->max_subspeed_walk;
     break;
 
-  case MM_RUN:
+  case MM_DASH:
     return prof->max_subspeed_run;
     break;
   }
@@ -2217,11 +2245,12 @@ int GetXDamping(Sprite *spr)
 
     break;
 
+  case MM_DASHBOUNCE:
   case MM_WALK:
     return prof->subdamping_walk;
     break;
 
-  case MM_RUN:
+  case MM_DASH:
     return prof->subdamping_run;
     break;
   }
@@ -3078,6 +3107,12 @@ bool CheckGrounded(Sprite *spr, GroundHitInfo *groundHitInfoOrNull)
   return nhi.hitMask != SOLIDMASK_NONE;
 }
 
+bool IsGroundedOrCoyoteTime(Sprite *spr)
+{
+  bool rVal = spr->isGrounded || (frameCounter - spr->lastGroundedFrame) < COYOTE_TIME_FRAME_THRESH;
+  return rVal;
+}
+
 // the first part of the jump, triggering it
 void TryJump(Sprite *spr)
 {
@@ -3092,7 +3127,7 @@ void TryJump(Sprite *spr)
     return;
   }
 
-  bool grounded = spr->isGrounded || (frameCounter - spr->lastGroundedFrame) < COYOTE_TIME_FRAME_THRESH;
+  bool grounded = IsGroundedOrCoyoteTime(spr);
 
   if (!grounded)
   {
@@ -3103,13 +3138,80 @@ void TryJump(Sprite *spr)
   spr->jumpFrameNum = 0;
 }
 
+void TryDash(Sprite *spr)
+{
+
+  // if we're in the delay phase, count up to 0
+  // before allowing another dash
+  if (spr->dashFrameNum < 0)
+  {
+    spr->dashFrameNum++;
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "__TEST__ dash counter %d", spr->dashFrameNum);
+    return;
+  }
+
+  if (!spr->input.run)
+  {
+    return;
+  }
+
+  if (SpriteJumping(spr))
+  {
+    return;
+  }
+
+  if (SpriteDashing(spr))
+  {
+    return;
+  }
+
+  bool grounded = IsGroundedOrCoyoteTime(spr);
+  if (!grounded)
+  {
+    return;
+  }
+
+  SetMoveMode(spr, MM_DASH);
+  spr->dashFrameNum = 0;
+}
+
 // prevent the jump button applying further up force
 void StopJumpBoost(Sprite *spr, const char *src)
 {
-  if (spr->jumpFrameNum < spr->profile.max_jump_boost_frames)
+  if (!SpriteJumping(spr))
   {
-    printf("__DBG__ jump boost canceled, src='%s'\n", src);
-    spr->jumpFrameNum = spr->profile.max_jump_boost_frames;
+    return;
+  }
+
+  printf("__DBG__ jump boost canceled, src='%s'\n", src);
+  spr->jumpFrameNum = spr->profile.max_jump_boost_frames;
+}
+
+// if we hit something, we knockback
+// if we didn't, we go back to walk
+void StopDashBoost(Sprite *spr, bool bounced, const char *src)
+{
+
+  if (!SpriteDashing(spr))
+  {
+    // vmupro_log(VMUPRO_LOG_ERROR, TAG, "Frame %d, Sprite %s isn't dashing, can't StopDashBoost(%s)", frameCounter, spr->name, src);
+    return;
+  }
+
+  if (spr->dashFrameNum < spr->profile.max_dash_frames)
+  {
+    vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s, dash boost canceled, src= '%s' dashbounce = %d\n", frameCounter, spr->name, src, bounced);
+    spr->dashFrameNum = -spr->profile.dashDelayFrames;
+  }
+
+  if (bounced)
+  {
+    SetMoveMode(spr, MM_DASHBOUNCE);
+  }
+  else
+  {
+    // TODO: should we check the grounded status?
+    SetMoveMode(spr, MM_WALK);
   }
 }
 
@@ -3126,19 +3228,61 @@ void TryContinueJump(Sprite *spr)
   }
 
   // we're jumping, and we've not run out of boost frames
-
   if (spr->input.jump)
   {
     // add jump velo
     spr->subVelo.y -= spr->profile.sub_jumpforce;
     // printf("__DBG__ Frame %d Applying jump on frame %d - velo %d\n", frameCounter, spr->jumpFrameNum, spr->subVelo.y);
     spr->jumpFrameNum++;
+
+    if (spr->jumpFrameNum >= spr->profile.max_jump_boost_frames)
+    {
+      StopJumpBoost(spr, "ReachedFrameMax");
+    }
   }
   else
   {
     // user has released jump, prevent further re-presses
     // until we land
-    StopJumpBoost(spr, "ReachedFrameMax");
+    StopJumpBoost(spr, "released");
+  }
+}
+
+void TryContinueDash(Sprite *spr)
+{
+
+  if (!SpriteDashing(spr))
+  {
+    return;
+  }
+
+  // <- for delay
+  if (spr->dashFrameNum < 0 || spr->dashFrameNum >= spr->profile.max_dash_frames)
+  {
+    return;
+  }
+
+  if (spr->input.run)
+  {
+    // add dash velo
+    if (spr->facingRight)
+    {
+      spr->subVelo.x += spr->profile.sub_dashforce;
+    }
+    else
+    {
+      spr->subVelo.x -= spr->profile.sub_dashforce;
+    }
+    spr->dashFrameNum++;
+    if (spr->dashFrameNum >= spr->profile.max_dash_frames)
+    {
+      StopDashBoost(spr, false, "ReachedFrameMax");
+    }
+  }
+  else
+  {
+    // user released dash early, prevent a re-dash
+    StopDashBoost(spr, false, "Released");
   }
 }
 
@@ -3198,14 +3342,7 @@ void CheckLanded(Sprite *spr)
   }
   // we're on the ground
   // we weren't during the last frame
-  if (spr->input.run)
-  {
-    SetMoveMode(spr, MM_RUN);
-  }
-  else
-  {
-    SetMoveMode(spr, MM_WALK);
-  }
+  SetMoveMode(spr, MM_WALK);
 }
 
 Sprite *FindSpriteOfType(SpriteType inType, Sprite *excludeOrNull)
@@ -3398,6 +3535,8 @@ void SolveMovement(Sprite *spr)
 
   TryJump(spr);
   TryContinueJump(spr);
+  TryDash(spr);
+  TryContinueDash(spr);
 
   bool spriteXInput = inp->right || inp->left;
   bool spriteYInput = inp->up || inp->down;
@@ -3730,9 +3869,13 @@ void SolveMovement(Sprite *spr)
 
   // head or feet bonked
   // prevent jump boost
-  if (spr->isGrounded && vBonk != 0)
+  if (spr->isGrounded || vBonk != 0)
   {
     StopJumpBoost(spr, "LandedOrHeadBonk");
+  }
+  if (hBonk != 0 || vBonk < 0)
+  {
+    StopDashBoost(spr, true, "bonk");
   }
 
   // Keep track of our jump height
@@ -3864,6 +4007,7 @@ void DrawSprite(Sprite *spr)
 
   bool dying = (spr->animID == ANIIMTYPE_DIE);
 
+  // TODO: make a table for this
   if (dying)
   {
     SetAnim(spr, ANIIMTYPE_DIE);
@@ -3872,27 +4016,36 @@ void DrawSprite(Sprite *spr)
   {
     SetAnim(spr, ANIMTYPE_IDLE);
   }
-  else
+  else if (spr->moveMode == MM_DASH)
   {
-    if (spr->moveMode == MM_WALK)
+    SetAnim(spr, ANIMTYPE_DASH);
+  }
+  else if (spr->moveMode == MM_DASHBOUNCE)
+  {
+    SetAnim(spr, ANIMTYPE_DASHBOUNCE);
+  }
+  else if (spr->moveMode == MM_WALK)
+  {
+    SetAnim(spr, ANIMTYPE_WALK);
+  }
+  else if (spr->moveMode == MM_JUMP)
+  {
+    if (goingUp)
     {
-      SetAnim(spr, ANIMTYPE_WALK);
+      SetAnim(spr, ANIMTYPE_JUMP);
     }
-    else if (spr->moveMode == MM_JUMP)
-    {
-      if (goingUp)
-      {
-        SetAnim(spr, ANIMTYPE_JUMP);
-      }
-      else
-      {
-        SetAnim(spr, ANIMTYPE_FALL);
-      }
-    }
-    else if (spr->moveMode == MM_FALL)
+    else
     {
       SetAnim(spr, ANIMTYPE_FALL);
     }
+  }
+  else if (spr->moveMode == MM_FALL)
+  {
+    SetAnim(spr, ANIMTYPE_FALL);
+  }
+  else
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Frame %d Sprite %s unhandled move state", frameCounter, spr->name);
   }
 
   UpdateAnimation(spr);
@@ -4074,12 +4227,12 @@ void DrawUI()
   }
 }
 
-void SpawnDuckAboveMe(Sprite * srcSprite){
+void SpawnDuckAboveMe(Sprite *srcSprite)
+{
 
   Vec2 srcHeadWorld = GetPointOnSprite(srcSprite, false, ANCHOR_HMID, ANCHOR_VTOP);
   srcHeadWorld.y -= TILE_SIZE_PX * 3;
-  CreateSprite( STYPE_TESTMOB, srcHeadWorld, "TEST DUCK");
-
+  CreateSprite(STYPE_TESTMOB, srcHeadWorld, "TEST DUCK");
 }
 
 void app_main(void)
