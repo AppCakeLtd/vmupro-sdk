@@ -99,11 +99,11 @@ extern "C"
    * @example
    * @code
    * // Check current brightness
-   * int current_brightness = vmupro_get_global_brightness();
+   * uint8_t current_brightness = vmupro_get_global_brightness();
    * vmupro_log(VMUPRO_LOG_INFO, "DISPLAY", "Current brightness: %d%%", current_brightness);
    * @endcode
    */
-  int vmupro_get_global_brightness(void);
+  uint8_t vmupro_get_global_brightness(void);
 
   /**
    * @brief Set the global display brightness
@@ -136,7 +136,7 @@ extern "C"
    * }
    * @endcode
    */
-  void vmupro_set_global_brightness(int brightness);
+  void vmupro_set_global_brightness(uint8_t brightness);
 
   /**
    * @brief Get pointer to the front framebuffer

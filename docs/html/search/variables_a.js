@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['y_0',['y',['../structvmupro__sprite__t.html#a068a4a5b3ec8ca924a48d671fa5301e8',1,'vmupro_sprite_t']]]
+  ['x_0',['x',['../structvmupro__sprite__t.html#a344e319a5567946abf95997b29963dff',1,'vmupro_sprite_t']]]
 ];
