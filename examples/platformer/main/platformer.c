@@ -363,7 +363,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
   p->max_dash_frames = 16;
   p->sub_jumpforce = 14;
   p->sub_dashforce = 14;
-  p->dashDelayFrames = 240;
+  p->dashDelayFrames = 50;
   p->sub_gravity = 9;
   p->max_subfallspeed = 120;
 
@@ -1011,7 +1011,7 @@ void SetMoveMode(Sprite *spr, MoveMode inMode)
   //
 
   // pretty much any change should cancel a dash
-  if (inMode != MM_DASH && inMode != MM_FALL)
+  if (inMode != MM_DASH)
   {
     StopDashBoost(spr, false, "NewMode");
   }
@@ -3160,7 +3160,7 @@ void TryJump(Sprite *spr)
     return;
   }
 
-  SetMoveMode(spr, MM_JUMP);  
+  SetMoveMode(spr, MM_JUMP);
 }
 
 void TryDash(Sprite *spr)
@@ -3247,11 +3247,11 @@ void StopDashBoost(Sprite *spr, bool resetMovemode, const char *src)
     return;
   }
 
-  if (spr->dashFrameNum < spr->profile.max_dash_frames)
-  {
-    vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s, dashboost canceled, src= '%s' resetMoveMode = %d\n", frameCounter, spr->name, src, resetMovemode);
-    spr->dashFrameNum = -spr->profile.dashDelayFrames;
-  }
+  // if (spr->dashFrameNum > 0 && spr->dashFrameNum < spr->profile.max_dash_frames)
+  //{
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s, dashboost canceled, src= '%s' resetMoveMode = %d\n", frameCounter, spr->name, src, resetMovemode);
+  spr->dashFrameNum = -spr->profile.dashDelayFrames;
+  //}
 
   if (resetMovemode)
   {
@@ -3363,7 +3363,14 @@ void CheckFallen(Sprite *spr)
   // we're not jumping...
   // so we're falling
   vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s walked off edge", frameCounter, spr->name);
-  SetMoveMode(spr, MM_FALL);
+  if (SpriteDashing(spr))
+  {
+    vmupro_log(VMUPRO_LOG_INFO, TAG, "(ignored due to dash)");
+  }
+  else
+  {
+    SetMoveMode(spr, MM_FALL);
+  }
 }
 
 void CheckLanded(Sprite *spr)
@@ -4332,6 +4339,7 @@ void app_main(void)
       // printf("Player grounded? %d\n", (int)player->isGrounded);
       // LoadLevel(1);
       // SpawnDuckAboveMe(player);
+      printf("__TEST__ %d\n", player->dashFrameNum);
     }
 
     frameCounter++;
