@@ -33,7 +33,7 @@ typedef enum
     ANIMTYPE_FALL,
     ANIMTYPE_WALK,
     ANIMTYPE_JUMP,
-    ANIMTYPE_DASH,    
+    ANIMTYPE_DASH,
     ANIMTYPE_BUTTSTOMP,
     ANIMTYPE_BUTTBOUNCE,
     ANIMTYPE_KNOCKBACK,
@@ -47,7 +47,7 @@ typedef struct
     AnimFrames fallFrames;
     AnimFrames walkFrames;
     AnimFrames jumpFrames;
-    AnimFrames dashFrames;    
+    AnimFrames dashFrames;
     AnimFrames buttstompFrames;
     AnimFrames buttBounceFrames;
     AnimFrames knockbackFrames;
@@ -125,13 +125,13 @@ AnimFrames frames_player_idle = {
 */
 
 // C++ would be nice here
-AnimGroup animgroup_player = {
+const AnimGroup animgroup_player = {
 
     .idleFrames = {.frameSpeed = 20, .numImages = ARRAYSIZE(imgs_player_idle), .images = imgs_player_idle},
     .fallFrames = {.frameSpeed = 4, .numImages = ARRAYSIZE(imgs_player_fall), .images = imgs_player_fall},
     .walkFrames = {.frameSpeed = 3, .numImages = ARRAYSIZE(imgs_player_walk), .images = imgs_player_walk},
     .jumpFrames = {.frameSpeed = 7, .numImages = ARRAYSIZE(imgs_player_jump), .images = imgs_player_jump},
-    .dashFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_player_dash), .images = imgs_player_dash},    
+    .dashFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_player_dash), .images = imgs_player_dash},
     .buttstompFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_player_buttstomp), .images = imgs_player_buttstomp},
     .buttBounceFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_player_buttbounce), .images = imgs_player_buttbounce},
     .knockbackFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_player_knockback), .images = imgs_player_knockback},
@@ -141,15 +141,8 @@ AnimGroup animgroup_player = {
 const Img *imgs_door_all[] = {
     &img_door_0};
 
-AnimGroup animgroup_door = {
+const AnimGroup animgroup_door = {.idleFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_door_all), .images = imgs_door_all}};
 
-    .idleFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_door_all), .images = imgs_door_all},
-    .fallFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_door_all), .images = imgs_door_all},
-    .walkFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_door_all), .images = imgs_door_all},
-    .jumpFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_door_all), .images = imgs_door_all},
-    .dashFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_door_all), .images = imgs_door_all},    
-    .buttstompFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_door_all), .images = imgs_door_all},
-    .buttBounceFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_door_all), .images = imgs_door_all},
-    .knockbackFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_door_all), .images = imgs_door_all},
-    .stunFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_door_all), .images = imgs_door_all},
-    .dieFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_door_all), .images = imgs_door_all}};
+const Img *imgs_spikeball_all[] = {&img_spikeball_idle_0, &img_spikeball_idle_1};
+
+const AnimGroup animgroup_spikeball = {.idleFrames = {.frameSpeed = 20, .numImages = ARRAYSIZE(imgs_spikeball_all), .images = imgs_spikeball_all}};

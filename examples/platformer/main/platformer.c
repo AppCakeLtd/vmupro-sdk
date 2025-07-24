@@ -242,6 +242,7 @@ typedef enum
   STYPE_ROW2_15,
   // third row of sprites in the tilemap
   STYPE_TESTMOB,
+  STYPE_SPIKEBALL,
   STYPE_MAX
 } SpriteType;
 
@@ -399,6 +400,14 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
   {
     p->solid = SOLIDMASK_TRIGGER;
     p->defaultAnimGroup = &animgroup_door;
+    p->skipMovement = true;
+    p->canBeRidden = false;
+    p->canRideStuff = false;
+  }
+  else if (inType == STYPE_SPIKEBALL)
+  {
+    p->solid = SOLIDMASK_SOLID;
+    p->defaultAnimGroup = &animgroup_spikeball;
     p->skipMovement = true;
     p->canBeRidden = false;
     p->canRideStuff = false;
@@ -1193,6 +1202,13 @@ void ResetSprite(Sprite *spr)
 // Some stuff isn't: e.g. markers to denote room boundaries
 bool IsTypeSpawnable(SpriteType inType)
 {
+
+  if (inType >= STYPE_MAX)
+  {
+    vmupro_log(VMUPRO_LOG_INFO, TAG, "Sprite type %d is beyond max valid value!", (int)inType);
+    return false;
+  }
+
   // could've handled this better, my bad
   if (inType >= STYPE_PLAYER && inType <= STYPE_DOOR_4)
     return true;
@@ -1887,7 +1903,7 @@ void UpdateSpriteInputs(Sprite *spr)
     ClearSpriteInputs(spr);
     UpdatePatrollInputs(spr);
   }
-  else if (spr->sType >= STYPE_DOOR_0 && spr->sType <= STYPE_DOOR_1)
+  else if (spr->profile.skipMovement)
   {
     // legit do nothing.
   }
@@ -3547,6 +3563,11 @@ bool SpriteCanRideSprite(Sprite *rider, Sprite *thingImRiding)
     return false;
   }
 
+  if (!thingImRiding->profile.canBeRidden)
+  {
+    return false;
+  }
+
   // only allow a small set of valid anims, states
   // err on the side of caution
   if (!thingImRiding->sentinel)
@@ -4034,10 +4055,14 @@ void SolveMovement(Sprite *spr)
 
   // Are we riding anything?
 
-  Sprite *spriteImRiding = ghi.otherSpriteOrNull;
-  if (spriteImRiding != NULL)
+  Sprite *standingOn = ghi.otherSpriteOrNull;
+  if (standingOn != NULL)
   {
-    spr->thingImRiding = spriteImRiding;
+    bool canRide = SpriteCanRideSprite(spr, ghi.otherSpriteOrNull);
+    if (canRide)
+    {
+      spr->thingImRiding = standingOn;
+    }
   }
 
   // For coyote time
@@ -4064,7 +4089,6 @@ void SolveMovement(Sprite *spr)
   }
   if (hBonk != 0 || vBonk < 0)
   {
-
     if (SpriteDashing(spr))
     {
       OnDashBonk(spr);
