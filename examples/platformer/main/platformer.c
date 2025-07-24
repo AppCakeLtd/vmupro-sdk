@@ -2192,6 +2192,16 @@ void EndFrameAllSprites()
   }
 }
 
+int GetYSubAccel(Sprite * spr){
+
+  if ( SpriteIsKnockback(spr) ){
+    return -player->profile.sub_gravity /2;
+  }
+
+  return spr->isGrounded ? 0 : player->profile.sub_gravity;
+
+}
+
 int GetXSubAccel(Sprite *spr)
 {
 
@@ -2211,6 +2221,8 @@ int GetXSubAccel(Sprite *spr)
     break;
 
   case MM_KNOCKBACK:
+    return spr->facingRight ? -prof->subaccel_run : prof->subaccel_run;    
+    break;
   case MM_WALK:
     return prof->subaccel_walk;
     break;
@@ -3642,7 +3654,7 @@ void SolveMovement(Sprite *spr)
   int maxSubSpeedY = player->profile.max_subfallspeed;
 
   int subAccelX = GetXSubAccel(spr);
-  int subAccelY = spr->isGrounded ? 0 : player->profile.sub_gravity;
+  int subAccelY = GetYSubAccel(spr);
 
   int subDampX = GetXDamping(spr);
   int subDampY = 0;
@@ -3684,9 +3696,7 @@ void SolveMovement(Sprite *spr)
     {
       // force bounce left/right
       spriteXInput = true;
-      spriteYInput = true;
-      subAccelX = spr->facingRight ? -100 : 100;
-      subAccelY = -100;
+      spriteYInput = true;      
     }
   }
 
