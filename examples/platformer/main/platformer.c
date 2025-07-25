@@ -84,6 +84,7 @@ const int TRANSITION_FRAME_DELAY = 20;
 const int INVULN_FRAME_DELAY = 20;
 const int DOOR_THRESH_FRAMES = 15;
 const int DOOR_THRESH_SPEED = 30;
+const int DASHBONK_THRESH_SPEED = 64;
 const uint32_t COYOTE_TIME_FRAME_THRESH = 3;
 
 // not stored on the sprite
@@ -1112,6 +1113,18 @@ bool SpriteDashing(Sprite *spr)
   return spr->moveMode == MM_DASH;
 }
 
+bool SpriteDashingAboveBonkThresh(Sprite *spr)
+{
+
+  if (!SpriteDashing(spr))
+    return false;
+
+  if (Abs(spr->lastSubVelo.x) < DASHBONK_THRESH_SPEED)
+    return false;
+
+  return true;
+}
+
 bool SpriteIsMoving(Sprite *spr)
 {
 
@@ -1186,7 +1199,7 @@ bool SpriteCanDie(Sprite *spr)
 
 bool SpriteCanTakeDamage(Sprite *spr)
 {
-  
+
   if (SpriteIsDead(spr))
     return false;
   if (SpriteIsKnockback(spr))
@@ -2780,8 +2793,8 @@ bool IsOneWayPlatformSolid(int blockId, int layer, Sprite *spr, Vec2 *tileSubPos
     return true;
 
   bool movingUp = spr->subVelo.y < 0;
-  //bool movingDown = spr->subVelo.y > 0;
-  //bool movingHorz = spr->subVelo.x != 0;
+  // bool movingDown = spr->subVelo.y > 0;
+  // bool movingHorz = spr->subVelo.x != 0;
   bool movingVert = spr->subVelo.y != 0;
 
   Vec2 subFootPos = GetPointOnSprite(spr, true, ANCHOR_HMID, ANCHOR_VBOTTOM);
@@ -4066,17 +4079,9 @@ void TryKnockback(Sprite *spr, KnockbackStrength inStr, const char *cause)
 void OnDashBonk(Sprite *spr)
 {
 
-  if (!SpriteDashing(spr))
+  if (!SpriteDashingAboveBonkThresh(spr))
   {
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Frame %d, Sprite %s can't dashbonk if not dashing", frameCounter, spr->name);
-    return;
-  }
-
-  // TODO: do we want to keep this
-  const int dashBonkThresh = 64;
-  if (Abs(spr->lastSubVelo.x) < dashBonkThresh)
-  {
-    vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d, Sprite %s dashbonk is below thresh %d/%d", frameCounter, spr->name, spr->lastSubVelo.x, dashBonkThresh);
     return;
   }
 
@@ -4124,7 +4129,7 @@ void ProcessTileTouches(Sprite *spr, HitInfo *info, bool horz)
 
     if (horz)
     {
-      if (!SpriteDashing(spr))
+      if (!SpriteDashingAboveBonkThresh(spr))
       {
         continue;
       }
