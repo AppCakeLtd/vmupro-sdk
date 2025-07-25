@@ -405,7 +405,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
 
   p->skipMovement = false;
   p->skipInput = false;
-  p->skipAnim = false;
+  p->singleAnimSet = false;
   p->max_subspeed_walk = 80;
   p->max_subspeed_run = 140;
 
@@ -458,7 +458,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->skipMovement = true;
     p->iMask = IMASK_DRAW_FIRST;
     p->skipInput = true;
-    p->skipAnim = true;
+    p->singleAnimSet = true;
   }
   else if (inType == STYPE_SPIKEBALL)
   {
@@ -467,7 +467,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->skipMovement = true;
     p->iMask = IMASK_HURTS_HORZ | IMASK_HURTS_VERT;
     p->skipInput = true;
-    p->skipAnim = true;
+    p->singleAnimSet = true;
   }
   else if (inType == STYPE_PARTICLE_BROWN)
   {
@@ -478,7 +478,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->defaultAnimGroup = &animgroup_particle_brown;
     p->startVelo.x = GetRNG(40) - 20;
     p->startVelo.y = -GetRNG(40) + 40;
-    p->skipAnim = true;
+    p->singleAnimSet = true;
   }
   else
   {
@@ -595,7 +595,7 @@ void SetAnim(Sprite *spr, AnimTypes inType)
     return;
   }
 
-  if (spr->profile.skipAnim){
+  if (spr->profile.singleAnimSet){
     return;
   }
 
