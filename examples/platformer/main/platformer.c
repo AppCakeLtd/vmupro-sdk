@@ -304,6 +304,83 @@ typedef enum
   IMASK_SKIP_ANIMSETS = 0x100, // use only the IDLE anim set (no other move types)
 } InteractionMask;
 
+typedef struct
+{
+
+  // maximum speed (in subpixels) while
+  // walking or running (per frame)
+  const int max_subspeed_walk;
+  const int max_subspeed_run;
+
+  // max of like 256 since that's
+  // bigger than a tile in subpixels
+  const int max_subfallspeed;
+
+  // accel values when walking, running, etc
+  // in subpixels
+  const int subaccel_walk;
+  const int subaccel_run;
+  const int subaccel_air;
+
+  // movement damping values
+  const int subdamping_walk;
+  const int subdamping_run;
+  const int subdamping_air;
+
+  // max frames for which the up force
+  // is applied
+  const int max_jump_boost_frames;
+  const int max_dash_frames;
+  const int max_knockback_frames;
+  const int sub_jumpforce;
+  const int sub_dashforce;
+  const int dashDelayFrames;
+  const int sub_gravity;
+
+} PhysParams;
+
+const PhysParams physDefault = {
+
+    .max_subspeed_walk = 80,
+    .max_subspeed_run = 140,
+    .subaccel_walk = 8,
+    .subaccel_run = 9,
+    .subaccel_air = 6,
+    .subdamping_walk = 6,
+    .subdamping_run = 6,
+    .subdamping_air = 4,
+    .max_jump_boost_frames = 16,
+    .max_dash_frames = 16,
+    .max_knockback_frames = 12,
+    .sub_jumpforce = 14,
+    .sub_dashforce = 14,
+    .dashDelayFrames = 50,
+    .sub_gravity = 9,
+    .max_subfallspeed = 120,
+
+};
+
+const PhysParams physTestMob = {
+
+    .max_subspeed_walk = 10,
+    .max_subspeed_run = 140,
+    .subaccel_walk = 0, // make 'em slippery
+    .subaccel_run = 9,
+    .subaccel_air = 6,
+    .subdamping_walk = 6,
+    .subdamping_run = 6,
+    .subdamping_air = 4,
+    .max_jump_boost_frames = 16,
+    .max_dash_frames = 16,
+    .max_knockback_frames = 12,
+    .sub_jumpforce = 14,
+    .sub_dashforce = 14,
+    .dashDelayFrames = 50,
+    .sub_gravity = 9,
+    .max_subfallspeed = 120,
+
+};
+
 // profile of spite behaviour
 // such as runspeed, can it walk
 // off edges, etc
@@ -312,43 +389,13 @@ typedef enum
 typedef struct
 {
 
-  // maximum speed (in subpixels) while
-  // walking or running (per frame)
-  int max_subspeed_walk;
-  int max_subspeed_run;
-
-  // accel values when walking, running, etc
-  // in subpixels
-  int subaccel_walk;
-  int subaccel_run;
-  int subaccel_air;
-
-  // movement damping values
-  int subdamping_walk;
-  int subdamping_run;
-  int subdamping_air;
-
-  // max frames for which the up force
-  // is applied
-  int max_jump_boost_frames;
-  int max_dash_frames;
-  int max_knockback_frames;
-  int sub_jumpforce;
-  int sub_dashforce;
-  int dashDelayFrames;
-  int sub_gravity;
-  // max of like 256 since that's
-  // bigger than a tile in subpixels
-  int max_subfallspeed;
-
   int default_health;
   int damage_multiplier;
 
   Solidity solid;
-
-  AnimGroup *defaultAnimGroup;
-
   InteractionMask iMask;
+  const PhysParams *physParams;
+  const AnimGroup *defaultAnimGroup;
 
   Vec2 startVelo;
 
@@ -401,34 +448,16 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
   // then tweak anything we need from there
   SpriteProfile *p = inProfile;
 
-  p->max_subspeed_walk = 80;
-  p->max_subspeed_run = 140;
-
-  p->subaccel_walk = 8;
-  p->subaccel_run = 9;
-  p->subaccel_air = 6;
-
-  p->subdamping_walk = 6;
-  p->subdamping_run = 6;
-  p->subdamping_air = 4;
-
-  p->max_jump_boost_frames = 16;
-  p->max_dash_frames = 16;
-  p->max_knockback_frames = 12;
-  p->sub_jumpforce = 14;
-  p->sub_dashforce = 14;
-  p->dashDelayFrames = 50;
-  p->sub_gravity = 9;
-  p->max_subfallspeed = 120;
-
-  p->solid = SOLIDMASK_SPRITE_SOLID;
-
+  // some default vals
   p->default_health = 10;
   p->damage_multiplier = 1;
 
-  p->defaultAnimGroup = &animgroup_player;
+  p->solid = SOLIDMASK_SPRITE_SOLID;
+  p->iMask = IMASK_NONE;
+  p->physParams = &physDefault;
 
-  p->iMask = IMASK_CAN_BE_RIDDEN | IMASK_CAN_RIDE_STUFF;
+  // doors are big, we'll spot mistakes quickly
+  p->defaultAnimGroup = &animgroup_door;
 
   p->startVelo.x = 0;
   p->startVelo.y = 0;
@@ -436,15 +465,21 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
   if (inType == STYPE_PLAYER)
   {
     // default
+    p->default_health = 10;
+    p->damage_multiplier = 1;
+    p->solid = SOLIDMASK_SPRITE_SOLID;
+    p->iMask = IMASK_CAN_BE_RIDDEN | IMASK_CAN_RIDE_STUFF;
+    p->physParams = &physDefault;
+    p->defaultAnimGroup = &animgroup_player;
   }
   else if (inType == STYPE_TESTMOB)
   {
-    p->max_subspeed_walk = 10;
-    p->subaccel_walk = 1;
-    p->subdamping_walk = 0;
-    p->solid = SOLIDMASK_PLATFORM;
     p->default_health = 1;
+    p->damage_multiplier = 1;
+    p->solid = SOLIDMASK_PLATFORM;
     p->iMask = IMASK_CAN_BE_RIDDEN | IMASK_CAN_RIDE_STUFF;
+    p->physParams = &physTestMob;
+    p->defaultAnimGroup = &animgroup_player;
   }
   else if (inType >= STYPE_DOOR_0 && inType <= STYPE_DOOR_4)
   {
@@ -489,11 +524,14 @@ typedef struct Sprite
 
   SpriteType sType;
   SpriteProfile profile;
+  const PhysParams *phys;
+
   char name[10];
   Vec2 subSpawnPos;
 
   // Runtime stuff
   // calculated via ResetSprite()
+  // which transfers spawn data from the profile
 
   // typically the image's bbox
   // in world coords
@@ -542,8 +580,8 @@ typedef struct Sprite
   Inputs input;
   MoveMode moveMode;
 
-  AnimGroup *anims;
-  AnimFrames *activeFrameSet;
+  const AnimGroup *anims;
+  const AnimFrames *activeFrameSet;
   // updated per frame, to measure elapsed frames
   // TODO: rename to like gameFrameWhenAnimChanged
   int lastGameframe;
@@ -683,7 +721,7 @@ void UpdateAnimation(Sprite *spr)
     return;
   }
 
-  AnimFrames *frameSet = spr->activeFrameSet;
+  const AnimFrames *frameSet = spr->activeFrameSet;
   AnimMode mode = frameSet->mode;
   int animSpeed = frameSet->frameSpeed;
   bool framesPassed = (frameCounter >= spr->lastGameframe + animSpeed);
@@ -1306,7 +1344,7 @@ void ResetSprite(Sprite *spr)
 
   // And apply anything that's determined from the profile
   spr->health = spr->profile.default_health;
-
+  spr->phys = spr->profile.physParams;
   spr->anims = spr->profile.defaultAnimGroup;
   spr->activeFrameSet = &spr->anims->idleFrames;
   spr->animIndex = 0;
@@ -2369,7 +2407,7 @@ void EndFrameAllSprites()
 int GetYSubAccel(Sprite *spr)
 {
 
-  int returnVal = spr->isGrounded ? 0 : player->profile.sub_gravity;
+  int returnVal = spr->isGrounded ? 0 : player->phys->sub_gravity;
 
   if (spr->inLiquid)
   {
@@ -2383,7 +2421,7 @@ int GetXSubAccel(Sprite *spr)
 {
 
   MoveMode mMode = spr->moveMode;
-  SpriteProfile *prof = &spr->profile;
+  PhysParams *prof = spr->phys;
 
   int returnVal;
 
@@ -2419,7 +2457,7 @@ int GetMaxXSubSpeed(Sprite *spr)
 {
 
   MoveMode mMode = spr->moveMode;
-  SpriteProfile *prof = &spr->profile;
+  PhysParams *prof = spr->phys;
   bool wasRunningWhenLastGrounded = spr->wasRunningLastTimeWasOnGround;
 
   int returnVal = 0;
@@ -2465,7 +2503,7 @@ int GetMaxXSubSpeed(Sprite *spr)
 int GetMaxYSubSpeed(Sprite *spr)
 {
 
-  int returnVal = player->profile.max_subfallspeed;
+  int returnVal = player->phys->max_subfallspeed;
 
   if (spr->inLiquid)
   {
@@ -2479,7 +2517,7 @@ int GetXDamping(Sprite *spr)
 {
 
   MoveMode mMode = spr->moveMode;
-  SpriteProfile *prof = &spr->profile;
+  PhysParams *prof = spr->phys;
   bool wasRunningWhenLastGrounded = spr->wasRunningLastTimeWasOnGround;
 
   int returnVal = 0;
@@ -3660,7 +3698,7 @@ void StopJumpBoost(Sprite *spr, bool resetMoveMode, const char *src)
   }
 
   vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s, jumpboost canceled, src= '%s' resetMoveMode = %d\n", frameCounter, spr->name, src, resetMoveMode);
-  spr->jumpFrameNum = spr->profile.max_jump_boost_frames;
+  spr->jumpFrameNum = spr->phys->max_jump_boost_frames;
 
   if (resetMoveMode)
   {
@@ -3684,7 +3722,7 @@ void StopDashBoost(Sprite *spr, bool resetMovemode, const char *src)
   }
 
   vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s, dashboost canceled, src= '%s' resetMoveMode = %d\n", frameCounter, spr->name, src, resetMovemode);
-  spr->dashFrameNum = -spr->profile.dashDelayFrames;
+  spr->dashFrameNum = -spr->phys->dashDelayFrames;
 
   if (resetMovemode)
   {
@@ -3699,7 +3737,7 @@ void TryContinueJump(Sprite *spr)
   {
     return;
   }
-  if (spr->jumpFrameNum >= spr->profile.max_jump_boost_frames)
+  if (spr->jumpFrameNum >= spr->phys->max_jump_boost_frames)
   {
     return;
   }
@@ -3708,11 +3746,11 @@ void TryContinueJump(Sprite *spr)
   if (spr->input.jump)
   {
     // add jump velo
-    spr->subVelo.y -= spr->profile.sub_jumpforce;
+    spr->subVelo.y -= spr->phys->sub_jumpforce;
     // printf("__DBG__ Frame %d Applying jump on frame %d - velo %d\n", frameCounter, spr->jumpFrameNum, spr->subVelo.y);
     spr->jumpFrameNum++;
 
-    if (spr->jumpFrameNum >= spr->profile.max_jump_boost_frames)
+    if (spr->jumpFrameNum >= spr->phys->max_jump_boost_frames)
     {
       StopJumpBoost(spr, false, "ReachedFrameMax");
     }
@@ -3734,7 +3772,7 @@ void TryContinueDash(Sprite *spr)
   }
 
   // <- for delay
-  if (spr->dashFrameNum < 0 || spr->dashFrameNum >= spr->profile.max_dash_frames)
+  if (spr->dashFrameNum < 0 || spr->dashFrameNum >= spr->phys->max_dash_frames)
   {
     return;
   }
@@ -3744,14 +3782,14 @@ void TryContinueDash(Sprite *spr)
     // add dash velo
     if (spr->facingRight)
     {
-      spr->subVelo.x += spr->profile.sub_dashforce;
+      spr->subVelo.x += spr->phys->sub_dashforce;
     }
     else
     {
-      spr->subVelo.x -= spr->profile.sub_dashforce;
+      spr->subVelo.x -= spr->phys->sub_dashforce;
     }
     spr->dashFrameNum++;
-    if (spr->dashFrameNum >= spr->profile.max_dash_frames)
+    if (spr->dashFrameNum >= spr->phys->max_dash_frames)
     {
       StopDashBoost(spr, true, "ReachedFrameMax");
     }
@@ -3772,7 +3810,7 @@ void TryContinueKnockback(Sprite *spr)
   }
 
   spr->knockbackFrameNum++;
-  if (spr->knockbackFrameNum >= spr->profile.max_knockback_frames)
+  if (spr->knockbackFrameNum >= spr->phys->max_knockback_frames)
   {
     StopKnockback(spr, true, "ReachedFrameMax");
   }
@@ -4009,13 +4047,13 @@ void TryKnockback(Sprite *spr, KnockbackStrength inStr, const char *cause)
     break;
   case KNOCK_SOFT:
     xKnock = -spr->lastSubVelo.x / 5;
-    yKnock = -spr->profile.sub_gravity / 2;
+    yKnock = -spr->phys->sub_gravity / 2;
     break;
 
   case KNOCK_HARD:
-    xKnock = spr->profile.max_subspeed_run; // TODO: something usable for now
+    xKnock = spr->phys->max_subspeed_run; // TODO: something usable for now
     xKnock = spr->facingRight ? -xKnock : xKnock;
-    yKnock = -spr->profile.sub_gravity;
+    yKnock = -spr->phys->sub_gravity;
     spr->invulnFrameNum = INVULN_FRAME_DELAY;
     // wipe any builtup velo, to avoid gravity preventing us escaping lava
     spr->subVelo.y = 0;
@@ -4143,7 +4181,7 @@ void SolveMovement(Sprite *spr)
   if (spr->animID == ANIIMTYPE_DIE)
   {
 
-    AddVecInts(&spr->subVelo, 0, spr->profile.sub_gravity);
+    AddVecInts(&spr->subVelo, 0, spr->phys->sub_gravity);
     AddVec(&spr->subPos, &spr->subVelo);
 
     return;
