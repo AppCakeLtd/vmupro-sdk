@@ -25,7 +25,6 @@ const bool DEBUG_SPRITEBOX = false;
 const bool DEBUG_HITBOX = false;
 const bool DEBUG_HITPOINTS = false;
 const bool DEBUG_SCROLL_ZONE = false;
-const bool DEBUG_NO_X = false;
 const bool DEBUG_NO_Y = false;
 const bool DEBUG_ONLY_SPAWN_PLAYER = false;
 const bool DEBUG_ONLY_MOVE_PLAYER = false;
@@ -103,6 +102,26 @@ PersistentData pData;
 int camX = 0;
 int camY = 0;
 int frameCounter = 0;
+
+uint32_t CalcDJB2(uint8_t *inBytes, uint32_t inLength)
+{
+
+  uint32_t returnVal = 5381;
+  for (int i = 0; i < inLength; i++)
+  {
+    returnVal = (returnVal << 5) + returnVal + inBytes[i];
+  }
+  return returnVal;
+}
+
+uint32_t rng = 1234;
+
+uint32_t GetRNG(int maxVal)
+{
+  // it'll do
+  rng = (rng << 5) + rng;
+  return rng % maxVal;
+}
 
 bool didDecompressImages = false;
 uint8_t *decompressedImageDataTable[allImagesLength];
@@ -230,7 +249,7 @@ typedef enum
   STYPE_DOOR_3,
   STYPE_DOOR_4,
   STYPE_RESERVED_9,
-  STYPE_RESERVED_10,
+  STYPE_PARTICLE_BROWN,
   STYPE_RESERVED_11,
   STYPE_RESERVED_12,
   STYPE_RESERVED_13,
@@ -274,12 +293,12 @@ typedef enum
 typedef enum
 {
   IMASK_NONE = 0x00,
-  IMASK_HURTS_HORZ = 0x01,
-  IMASK_HURTS_VERT = 0x02,
-  IMASK_CAN_BE_RIDDEN = 0x04,
-  IMASK_CAN_RIDE_STUFF = 0x08,
-  IMASK_DRAW_FIRST = 0x10, // doors n things, draw at the back
-  IMASK_DRAW_LAST = 0x20,  // anything which should be drawn on top
+  IMASK_HURTS_HORZ = 0x01,     // hurty if you walk into it horizontally
+  IMASK_HURTS_VERT = 0x02,     // hurty if you land or bonk it
+  IMASK_CAN_BE_RIDDEN = 0x04,  //
+  IMASK_CAN_RIDE_STUFF = 0x08, //
+  IMASK_DRAW_FIRST = 0x10,     // doors n things, draw at the back
+  // IMASK_DRAW_LAST = 0x20,  // anything which should be drawn on top
 } InteractionMask;
 
 // profile of spite behaviour
@@ -292,6 +311,8 @@ typedef struct
 
   // e.g. doors n stuff
   bool skipMovement;
+  bool skipInput;
+  bool skipAnim; // stick to the first frame set
 
   // maximum speed (in subpixels) while
   // walking or running (per frame)
@@ -330,6 +351,8 @@ typedef struct
   AnimGroup *defaultAnimGroup;
 
   InteractionMask iMask;
+
+  Vec2 startVelo;
 
 } SpriteProfile;
 // TODO: rename to spriteblueprint?
@@ -381,6 +404,8 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
   SpriteProfile *p = inProfile;
 
   p->skipMovement = false;
+  p->skipInput = false;
+  p->skipAnim = false;
   p->max_subspeed_walk = 80;
   p->max_subspeed_run = 140;
 
@@ -410,6 +435,9 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
 
   p->iMask = IMASK_CAN_BE_RIDDEN | IMASK_CAN_RIDE_STUFF;
 
+  p->startVelo.x = 0;
+  p->startVelo.y = 0;
+
   if (inType == STYPE_PLAYER)
   {
     // default
@@ -429,6 +457,8 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->defaultAnimGroup = &animgroup_door;
     p->skipMovement = true;
     p->iMask = IMASK_DRAW_FIRST;
+    p->skipInput = true;
+    p->skipAnim = true;
   }
   else if (inType == STYPE_SPIKEBALL)
   {
@@ -436,6 +466,19 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->defaultAnimGroup = &animgroup_spikeball;
     p->skipMovement = true;
     p->iMask = IMASK_HURTS_HORZ | IMASK_HURTS_VERT;
+    p->skipInput = true;
+    p->skipAnim = true;
+  }
+  else if (inType == STYPE_PARTICLE_BROWN)
+  {
+    p->solid = SOLIDMASK_NONE;
+    p->iMask = IMASK_NONE;
+    p->skipMovement = false;
+    p->skipInput = true;
+    p->defaultAnimGroup = &animgroup_particle_brown;
+    p->startVelo.x = GetRNG(40) - 20;
+    p->startVelo.y = -GetRNG(40) + 40;
+    p->skipAnim = true;
   }
   else
   {
@@ -549,6 +592,10 @@ void SetAnim(Sprite *spr, AnimTypes inType)
 
   if (spr->animID == inType)
   {
+    return;
+  }
+
+  if (spr->profile.skipAnim){
     return;
   }
 
@@ -1297,16 +1344,25 @@ bool IsTypeSpawnable(SpriteType inType)
 
   // could've handled this better, my bad
   if (inType >= STYPE_PLAYER && inType <= STYPE_DOOR_4)
+  {
     return true;
+  }
 
   if (inType >= STYPE_TESTMOB)
+  {
     return true;
+  }
+
+  if (inType == STYPE_PARTICLE_BROWN)
+  {
+    return true;
+  }
 
   return false;
 }
 
 // TODO: rename to reflect spawn usage
-void HandleSpecialSpriteType(SpriteType inType, Vec2 worldStartPos)
+void HandleNonSpawnableSpriteType(SpriteType inType, Vec2 worldStartPos)
 {
 
   switch (inType)
@@ -1394,7 +1450,7 @@ Sprite *CreateSprite(SpriteType inType, Vec2 worldStartPos, const char *inName)
 
   if (!IsTypeSpawnable(inType))
   {
-    HandleSpecialSpriteType(inType, worldStartPos);
+    HandleNonSpawnableSpriteType(inType, worldStartPos);
     return NULL;
   }
 
@@ -1620,17 +1676,6 @@ void PrintBytes(const char *tag, uint8_t *bytes, uint32_t len)
     printf("0x%02x ", (uint8_t)bytes[i]);
   }
   printf("\n");
-}
-
-uint32_t CalcDJB2(uint8_t *inBytes, uint32_t inLength)
-{
-
-  uint32_t returnVal = 5381;
-  for (int i = 0; i < inLength; i++)
-  {
-    returnVal = (returnVal << 5) + returnVal + inBytes[i];
-  }
-  return returnVal;
 }
 
 bool RLE16BitDecode(uint8_t *inBytes, uint32_t inLength, uint8_t *outBytes, uint32_t outLength)
@@ -1921,12 +1966,20 @@ void UpdatePatrollInputs(Sprite *spr)
 bool AllowSpriteInput(Sprite *spr)
 {
 
-  if (SpriteIsDead(spr))
+  if (spr->profile.skipInput)
+  {
     return false;
-  // TODO: some kinda sequence
+  }
+
+  if (SpriteIsDead(spr))
+  {
+    return false;
+  }
 
   if (SpriteIsKnockback(spr))
+  {
     return false;
+  }
 
   switch (gState)
   {
@@ -3365,7 +3418,16 @@ void GetEjectionInfo(Sprite *spr, HitInfo *info, bool horz)
 int CheckCollisionsAndEject(HitInfo *info, Sprite *spr, bool horz, Vec2 platformDelta)
 {
 
+  // TODO: need a function to init the hitinfo cleanly
   memset(info, 0, sizeof(HitInfo));
+  info->lastBlockHitIndex = -1;
+  info->lastSpriteHitIndex = -1;
+
+  // Non solid, it's not hitting anything
+  if (spr->profile.solid == SOLIDMASK_NONE)
+  {
+    return 0;
+  }
 
   // We're not using prediction by default
   // but it could later be applied
@@ -3375,6 +3437,7 @@ int CheckCollisionsAndEject(HitInfo *info, Sprite *spr, bool horz, Vec2 platform
   if (horz)
   {
 
+    // TODO: this whole section could use a tidy
     // Could include nonzero values
     // but would need to prevent warping up when
     // approaching sprites from the left
@@ -4308,15 +4371,11 @@ void SolveMovement(Sprite *spr)
   int vBonk = 0;
   int hBonk = 0;
 
-  if (!DEBUG_NO_X)
-  {
-    // Apply X velo to X movement + update bounding boxes
-    AddSubPos2(spr, spr->subVelo.x + ridingPlatformDelta.x, 0);
+  // Apply X velo to X movement + update bounding boxes
+  AddSubPos2(spr, spr->subVelo.x + ridingPlatformDelta.x, 0);
 
-    // Eject from any X Collisions
-    hBonk = CheckCollisionsAndEject(&xHitInfo, spr, true, ridingPlatformDelta);
-
-  } // DEBUG_NO_X
+  // Eject from any X Collisions
+  hBonk = CheckCollisionsAndEject(&xHitInfo, spr, true, ridingPlatformDelta);
 
   //
   // Y/Horizontal damp, clamp, move, eject
@@ -4934,10 +4993,14 @@ void app_main(void)
       // printf("Player grounded? %d\n", (int)player->isGrounded);
       // LoadLevel(1);
       // SpawnDuckAboveMe(player);
+      Vec2 playerWorld = Sub2World(&player->subPos);
+      CreateSprite(STYPE_PARTICLE_BROWN, playerWorld, "TEST PARTICLE");
     }
 
     frameCounter++;
     uiStateFrameCounter++;
+    // re-seed the rng
+    rng = GetRNG(1);
   }
 
   // Terminate the renderer

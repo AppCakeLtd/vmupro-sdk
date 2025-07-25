@@ -138,11 +138,11 @@ const AnimGroup animgroup_player = {
     .stunFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_player_stun), .images = imgs_player_stun},
     .dieFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_player_die), .images = imgs_player_die}};
 
-const Img *imgs_door_all[] = {
-    &img_door_0};
-
+const Img *imgs_door_all[] = {&img_door_0};
 const AnimGroup animgroup_door = {.idleFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_door_all), .images = imgs_door_all}};
 
 const Img *imgs_spikeball_all[] = {&img_spikeball_idle_0, &img_spikeball_idle_1};
-
 const AnimGroup animgroup_spikeball = {.idleFrames = {.frameSpeed = 20, .numImages = ARRAYSIZE(imgs_spikeball_all), .images = imgs_spikeball_all}};
+
+const Img *imgs_particle_brown_all[] = {&img_particle_brown_0};
+const AnimGroup animgroup_particle_brown = {.idleFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_particle_brown_all), .images = imgs_particle_brown_all}};
