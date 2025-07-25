@@ -4147,6 +4147,45 @@ void ProcessSpriteTouches(Sprite *spr, HitInfo *info)
 {
 }
 
+void DestroyBlock(Vec2 *rowAndCol)
+{
+
+  // TODO: bounds check
+  int oldVal = GetBlockIDAtColRow(rowAndCol->x, rowAndCol->y, LAYER_COLS);
+  ;
+  if (oldVal == BLOCK_NULL)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Can't delete tile at row/col %d/%d since it's already NULL", rowAndCol->x, rowAndCol->y);
+  }
+
+  uint8_t *tileData = GetTileLayerData(LAYER_COLS);
+
+  int indexIntoTileArray = (rowAndCol->y * currentLevel->colLayer->width) + rowAndCol->x;
+  // destroy the tile in the tilemap, but not in the hitinfo
+  // since we might still be using it
+  tileData[indexIntoTileArray] = BLOCK_NULL;
+
+  // spawn some destroy sprites
+
+  Vec2 worldSpawnPoint;
+  worldSpawnPoint.x = rowAndCol->x * TILE_SIZE_PX;
+  worldSpawnPoint.y = rowAndCol->y * TILE_SIZE_PX;
+
+  for (int i = 0; i < 4; i++)
+  {
+    CreateSprite(STYPE_PARTICLE_BROWN, worldSpawnPoint, "Particle");
+    if (i == 0 || i == 2)
+    {
+      worldSpawnPoint.x += TILE_SIZE_PX;
+    }
+    if (i == 1)
+    {
+      worldSpawnPoint.x += TILE_SIZE_PX;
+      worldSpawnPoint.y += TILE_SIZE_PX;
+    }
+  }
+}
+
 void ProcessTileTouches(Sprite *spr, HitInfo *info, bool horz)
 {
 
@@ -4176,17 +4215,8 @@ void ProcessTileTouches(Sprite *spr, HitInfo *info, bool horz)
       }
     }
 
-    uint8_t *tileData = GetTileLayerData(LAYER_COLS);
-
-    int idx = GetTileIndexFromSubPos(&info->subCheckPos[i]);
-    if (spr == player)
-    {
-      printf("bonked index %d\n", idx);
-    }
-
-    // destroy the tile in the tilemap, but not in the hitinfo
-    // since we might still be using it
-    tileData[idx] = BLOCK_NULL;
+    Vec2 rowAndCol = GetTileRowAndColFromSubPos(&info->subCheckPos[i]);
+    DestroyBlock(&rowAndCol);
   }
 }
 
@@ -5104,8 +5134,8 @@ void app_main(void)
       // printf("Player grounded? %d\n", (int)player->isGrounded);
       // LoadLevel(1);
       // SpawnDuckAboveMe(player);
-      Vec2 playerWorld = Sub2World(&player->subPos);
-      CreateSprite(STYPE_PARTICLE_BROWN, playerWorld, "TEST PARTICLE");
+      //Vec2 playerWorld = Sub2World(&player->subPos);
+      //CreateSprite(STYPE_PARTICLE_BROWN, playerWorld, "TEST PARTICLE");
     }
 
     frameCounter++;
