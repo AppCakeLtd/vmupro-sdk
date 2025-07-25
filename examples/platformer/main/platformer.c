@@ -217,6 +217,34 @@ typedef enum
 
 } MoveMode;
 
+const char *MoveModetoString(MoveMode inMode)
+{
+
+  switch (inMode)
+  {
+  default:
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "UNNAMED MOVE MODE %d\n", (int)inMode);
+    return "UNKNOWN MOVVE MODE";
+    break;
+
+  case MM_FALL:
+    return "FALL";
+    break;
+  case MM_WALK:
+    return "WALK";
+    break;
+  case MM_DASH:
+    return "DASH";
+    break;
+  case MM_JUMP:
+    return "JUMP";
+    break;
+  case MM_KNOCKBACK:
+    return "KNOCKBACK";
+    break;
+  }
+}
+
 typedef enum
 {
   KNOCK_SOFT, // dashed into a wall or something
@@ -643,7 +671,8 @@ void SetAnim(Sprite *spr, AnimTypes inType)
     return;
   }
 
-  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s Anim ID %d", frameCounter, spr->name, (int)inType);
+  const char *animString = AnimTypeToString(inType);
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s Anim %s", frameCounter, spr->name, animString);
 
   // TODO: could move this to a table
   switch (inType)
@@ -1159,7 +1188,7 @@ bool SpriteIsKnockback(Sprite *spr)
   return spr->moveMode == MM_KNOCKBACK;
 }
 
-void SetMoveMode(Sprite *spr, MoveMode inMode, const char * cause)
+void SetMoveMode(Sprite *spr, MoveMode inMode, const char *cause)
 {
 
   if (SpriteIsDead(spr))
@@ -1171,19 +1200,20 @@ void SetMoveMode(Sprite *spr, MoveMode inMode, const char * cause)
   // Cancel any ongoing anims *before* we switch modes
   // since they won't cancel unless we're in the right mode
   //
+  const char *modeString = MoveModetoString(inMode);
 
   // pretty much any change should cancel a dash
   if (inMode != MM_DASH)
   {
-    StopDashBoost(spr, false, "NewMode");
+    StopDashBoost(spr, false, modeString);
   }
   if (inMode != MM_JUMP)
   {
-    StopJumpBoost(spr, false, "NewMode");
+    StopJumpBoost(spr, false, modeString);
   }
   if (inMode != MM_KNOCKBACK)
   {
-    StopKnockback(spr, false, "NewMode");
+    StopKnockback(spr, false, modeString);
   }
 
   //
@@ -1195,7 +1225,7 @@ void SetMoveMode(Sprite *spr, MoveMode inMode, const char * cause)
 
   if (oldMode != inMode)
   {
-    vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s MoveMode %d Cause= %s", frameCounter, spr->name, (int)inMode, cause);
+    vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s MoveMode %s Cause= %s", frameCounter, spr->name, modeString, cause);
   }
 }
 

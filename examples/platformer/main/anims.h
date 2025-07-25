@@ -41,6 +41,49 @@ typedef enum
     ANIIMTYPE_DIE,
 } AnimTypes;
 
+const char *AnimTypeToString(AnimTypes inMode)
+{
+
+    switch (inMode)
+    {
+    default:
+        vmupro_log(VMUPRO_LOG_ERROR, "anims", "UNNAMED ANIM TYPE: %d\n", (int)inMode);
+        return "UNNAMED ANIM TYPE";
+        break;
+
+    case ANIMTYPE_IDLE:
+        return "IDLE";
+        break;
+    case ANIMTYPE_FALL:
+        return "FALL";
+        break;
+    case ANIMTYPE_WALK:
+        return "WALK";
+        break;
+    case ANIMTYPE_JUMP:
+        return "JUMP";
+        break;
+    case ANIMTYPE_DASH:
+        return "DASH";
+        break;
+    case ANIMTYPE_BUTTSTOMP:
+        return "BUTTSTOMP";
+        break;
+    case ANIMTYPE_BUTTBOUNCE:
+        return "BUTTBOUNCE";
+        break;
+    case ANIMTYPE_KNOCKBACK:
+        return "KNOCKBACK";
+        break;
+    case ANIMTYPE_STUNNED:
+        return "STUNNED";
+        break;
+    case ANIIMTYPE_DIE:
+        return "DIE";
+        break;
+    }
+}
+
 typedef struct
 {
     AnimFrames idleFrames;
