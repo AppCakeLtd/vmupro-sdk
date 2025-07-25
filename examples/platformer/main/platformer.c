@@ -1186,7 +1186,7 @@ bool SpriteCanDie(Sprite *spr)
 
 bool SpriteCanTakeDamage(Sprite *spr)
 {
-  printf("__TEST__ iframe %d\n", spr->invulnFrameNum);
+  
   if (SpriteIsDead(spr))
     return false;
   if (SpriteIsKnockback(spr))
