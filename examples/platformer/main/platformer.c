@@ -1159,7 +1159,7 @@ bool SpriteIsKnockback(Sprite *spr)
   return spr->moveMode == MM_KNOCKBACK;
 }
 
-void SetMoveMode(Sprite *spr, MoveMode inMode)
+void SetMoveMode(Sprite *spr, MoveMode inMode, const char * cause)
 {
 
   if (SpriteIsDead(spr))
@@ -1195,7 +1195,7 @@ void SetMoveMode(Sprite *spr, MoveMode inMode)
 
   if (oldMode != inMode)
   {
-    vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s MoveMode %d", frameCounter, spr->name, (int)inMode);
+    vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s MoveMode %d Cause= %s", frameCounter, spr->name, (int)inMode, cause);
   }
 }
 
@@ -1362,7 +1362,7 @@ void ResetSprite(Sprite *spr)
 
   spr->subKnockbackAccel = ZeroVec();
 
-  SetMoveMode(spr, MM_FALL);
+  SetMoveMode(spr, MM_FALL, "resetsprite");
 
   spr->lastGroundedFrame = 0;
   spr->thingImRiding = NULL;
@@ -3670,7 +3670,7 @@ void TryJump(Sprite *spr)
     }
   }
 
-  SetMoveMode(spr, MM_JUMP);
+  SetMoveMode(spr, MM_JUMP, "TryJump");
   spr->mustReleaseJump = true;
   // for water
   spr->jumpFrameNum = 0;
@@ -3731,7 +3731,7 @@ void TryDash(Sprite *spr)
   }
 
   vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d sprite %s, starting dash", frameCounter, spr->name);
-  SetMoveMode(spr, MM_DASH);
+  SetMoveMode(spr, MM_DASH, "TryDash");
   spr->dashFrameNum = 0;
 }
 
@@ -3754,7 +3754,7 @@ void StopJumpBoost(Sprite *spr, bool resetMoveMode, const char *src)
 
   if (resetMoveMode)
   {
-    SetMoveMode(spr, MM_WALK);
+    SetMoveMode(spr, MM_WALK, "StopJumpBoostWithReset");
   }
 }
 
@@ -3778,7 +3778,7 @@ void StopDashBoost(Sprite *spr, bool resetMovemode, const char *src)
 
   if (resetMovemode)
   {
-    SetMoveMode(spr, MM_WALK);
+    SetMoveMode(spr, MM_WALK, "StopDashBoostWithReset");
   }
 }
 
@@ -3907,7 +3907,7 @@ void CheckFallen(Sprite *spr)
   }
   else
   {
-    SetMoveMode(spr, MM_FALL);
+    SetMoveMode(spr, MM_FALL, "CheckFallen");
   }
 }
 
@@ -3932,9 +3932,16 @@ void CheckLanded(Sprite *spr)
   {
     printf("__DBG__ Frame %d landed @ %d/%d\n", frameCounter, spr->subPos.y, spr->subPos.y >> SHIFT);
   }
+
+  // don't land if we clip the corner of a stair
+  // while jumping up
+  // if ( spr->moveMode == MM_JUMP && spr->subVelo.y < 0 ){
+  //   return;
+  // }
+
   // we're on the ground
   // we weren't during the last frame
-  SetMoveMode(spr, MM_WALK);
+  SetMoveMode(spr, MM_WALK, "CheckLanded");
   spr->jumpFrameNum = 0;
 }
 
@@ -4114,7 +4121,7 @@ void TryKnockback(Sprite *spr, KnockbackStrength inStr, const char *cause)
   spr->subKnockbackAccel.x = xKnock;
   spr->subKnockbackAccel.y = yKnock;
 
-  SetMoveMode(spr, MM_KNOCKBACK);
+  SetMoveMode(spr, MM_KNOCKBACK, "TryKnockback");
 }
 
 void OnDashBonk(Sprite *spr)
@@ -4143,7 +4150,7 @@ void StopKnockback(Sprite *spr, bool resetMoveMode, const char *cause)
 
   if (resetMoveMode)
   {
-    SetMoveMode(spr, MM_FALL);
+    SetMoveMode(spr, MM_FALL, "StopKnockbackWithReset");
   }
 }
 
@@ -4738,7 +4745,12 @@ void SolveMovement(Sprite *spr)
   if (spr->isGrounded || vBonk != 0)
   {
     // don't need to change move mode, checklanded will have set that
-    StopJumpBoost(spr, false, "LandedOrHeadBonk (v)");
+    // special case, clippin the edge of a stair while jumping up
+    if (!(spr->isGrounded && vBonk == 0 && spr->moveMode == MM_JUMP && spr->subVelo.y < 0))
+    {
+      StopJumpBoost(spr, false, "LandedOrHeadBonk (v)");
+    }
+
     StopKnockback(spr, false, "LandedOrHeadBonk (v)");
   }
   if (hBonk != 0 || vBonk < 0)
