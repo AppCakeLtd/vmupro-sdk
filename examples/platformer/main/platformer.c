@@ -392,6 +392,7 @@ typedef struct
 
   int default_health;
   int damage_multiplier;
+  int default_despawnTimer;
 
   Solidity solid;
   InteractionMask iMask;
@@ -453,6 +454,8 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
   p->default_health = 10;
   p->damage_multiplier = 1;
 
+  p->default_despawnTimer = 0;
+
   p->solid = SOLIDMASK_SPRITE_SOLID;
   p->iMask = IMASK_NONE;
   p->physParams = &physDefault;
@@ -501,6 +504,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->defaultAnimGroup = &animgroup_particle_brown;
     p->startVelo.x = GetRNG(40) - 20;
     p->startVelo.y = -GetRNG(40) + 40;
+    p->default_despawnTimer = 60;
   }
   else
   {
@@ -544,6 +548,7 @@ typedef struct Sprite
   // despawn at the end of the frame
   // so we don't screw with collision/loop logic
   bool markedForDespawn;
+  int despawnTimer;
 
   // typically the image's bbox
   // in world coords
@@ -1337,6 +1342,7 @@ void ResetSprite(Sprite *spr)
 
   // cleared on unload
   spr->sentinel = true;
+
   spr->markedForDespawn = false;
   spr->spawnFrame = frameCounter;
 
@@ -1383,6 +1389,7 @@ void ResetSprite(Sprite *spr)
   CreateProfile(&spr->profile, spr->sType);
 
   // And apply anything that's determined from the profile
+  spr->despawnTimer = spr->profile.default_despawnTimer;
   spr->health = spr->profile.default_health;
   spr->phys = spr->profile.physParams;
   spr->anims = spr->profile.defaultAnimGroup;
@@ -5012,7 +5019,7 @@ void DespawnSprite(Sprite *spr)
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite %s has no valid index!", spr->name);
     return;
   }
-  
+
   // shuffle everything down by one
   for (int i = idx; i < numSprites; i++)
   {
@@ -5030,6 +5037,16 @@ void DespawnAllMarkedSprites()
   for (int i = numSprites - 1; i >= 0; i--)
   {
     Sprite *spr = sprites[i];
+
+    if (spr->despawnTimer > 0)
+    {
+      spr->despawnTimer--;
+      if (spr->despawnTimer == 0)
+      {
+        MarkSpriteForDespawn(spr, "timer");
+      }
+    }
+
     if (spr->markedForDespawn)
     {
       DespawnSprite(spr);
