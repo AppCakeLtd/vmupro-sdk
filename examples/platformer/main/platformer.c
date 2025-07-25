@@ -299,6 +299,9 @@ typedef enum
   IMASK_CAN_RIDE_STUFF = 0x08, //
   IMASK_DRAW_FIRST = 0x10,     // doors n things, draw at the back
   // IMASK_DRAW_LAST = 0x20,  // anything which should be drawn on top
+  IMASK_SKIP_INPUT = 0x40,     // don't bother processing input (doors, spikes, projectiles)
+  IMASK_SKIP_MOVEMENT = 0x80,  // static, don't process the movement steps (doors, spikes)
+  IMASK_SKIP_ANIMSETS = 0x100, // use only the IDLE anim set (no other move types)
 } InteractionMask;
 
 // profile of spite behaviour
@@ -308,11 +311,6 @@ typedef enum
 // prefix "world" means regular world space 1:1 pixels
 typedef struct
 {
-
-  // e.g. doors n stuff
-  bool skipMovement;
-  bool skipInput;
-  bool skipAnim; // stick to the first frame set
 
   // maximum speed (in subpixels) while
   // walking or running (per frame)
@@ -403,9 +401,6 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
   // then tweak anything we need from there
   SpriteProfile *p = inProfile;
 
-  p->skipMovement = false;
-  p->skipInput = false;
-  p->singleAnimSet = false;
   p->max_subspeed_walk = 80;
   p->max_subspeed_run = 140;
 
@@ -455,30 +450,21 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
   {
     p->solid = SOLIDMASK_SPRITE_TRIGGER;
     p->defaultAnimGroup = &animgroup_door;
-    p->skipMovement = true;
-    p->iMask = IMASK_DRAW_FIRST;
-    p->skipInput = true;
-    p->singleAnimSet = true;
+    p->iMask = IMASK_SKIP_ANIMSETS | IMASK_SKIP_INPUT | IMASK_SKIP_MOVEMENT | IMASK_DRAW_FIRST;
   }
   else if (inType == STYPE_SPIKEBALL)
   {
     p->solid = SOLIDMASK_SPRITE_SOLID;
     p->defaultAnimGroup = &animgroup_spikeball;
-    p->skipMovement = true;
-    p->iMask = IMASK_HURTS_HORZ | IMASK_HURTS_VERT;
-    p->skipInput = true;
-    p->singleAnimSet = true;
+    p->iMask = IMASK_SKIP_ANIMSETS | IMASK_SKIP_INPUT | IMASK_SKIP_MOVEMENT | IMASK_HURTS_HORZ | IMASK_HURTS_VERT;
   }
   else if (inType == STYPE_PARTICLE_BROWN)
   {
     p->solid = SOLIDMASK_NONE;
-    p->iMask = IMASK_NONE;
-    p->skipMovement = false;
-    p->skipInput = true;
+    p->iMask = IMASK_SKIP_ANIMSETS | IMASK_SKIP_INPUT;
     p->defaultAnimGroup = &animgroup_particle_brown;
     p->startVelo.x = GetRNG(40) - 20;
     p->startVelo.y = -GetRNG(40) + 40;
-    p->singleAnimSet = true;
   }
   else
   {
@@ -595,7 +581,8 @@ void SetAnim(Sprite *spr, AnimTypes inType)
     return;
   }
 
-  if (spr->profile.singleAnimSet){
+  if (spr->profile.iMask & IMASK_SKIP_ANIMSETS)
+  {
     return;
   }
 
@@ -1966,7 +1953,7 @@ void UpdatePatrollInputs(Sprite *spr)
 bool AllowSpriteInput(Sprite *spr)
 {
 
-  if (spr->profile.skipInput)
+  if (spr->profile.iMask & IMASK_SKIP_INPUT)
   {
     return false;
   }
@@ -2038,6 +2025,12 @@ void UpdateSpriteInputs(Sprite *spr)
     return;
   }
 
+  if (spr->profile.iMask & IMASK_SKIP_MOVEMENT)
+  {
+    ClearSpriteInputs(spr);
+    return;
+  }
+
   if (spr->sType == STYPE_PLAYER)
   {
     // other sprites can continue while the player's dead
@@ -2062,10 +2055,6 @@ void UpdateSpriteInputs(Sprite *spr)
   {
     ClearSpriteInputs(spr);
     UpdatePatrollInputs(spr);
-  }
-  else if (spr->profile.skipMovement)
-  {
-    // legit do nothing.
   }
   else
   {
@@ -4144,7 +4133,7 @@ void SolveMovement(Sprite *spr)
   }
 
   // skip the whole loop if it's a door or something
-  if (spr->profile.skipMovement)
+  if (spr->profile.iMask & IMASK_SKIP_MOVEMENT)
   {
     return;
   }
