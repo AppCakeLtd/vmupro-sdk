@@ -520,8 +520,10 @@ typedef struct Sprite
   // sentinel value, we've got a stale ref bug
   bool sentinel;
 
+  //
   // Config options
   // from which the rest of the struct is calculated
+  //
 
   SpriteType sType;
   SpriteProfile profile;
@@ -530,9 +532,18 @@ typedef struct Sprite
   char name[10];
   Vec2 subSpawnPos;
 
+  //
   // Runtime stuff
   // calculated via ResetSprite()
   // which transfers spawn data from the profile
+  //
+
+  // the frame we spawned on
+  int spawnFrame;
+
+  // despawn at the end of the frame
+  // so we don't screw with collision/loop logic
+  bool markedForDespawn;
 
   // typically the image's bbox
   // in world coords
@@ -1210,6 +1221,19 @@ bool SpriteCanTakeDamage(Sprite *spr)
   return true;
 }
 
+void MarkSpriteForDespawn(Sprite *spr, const char *cause)
+{
+
+  if (spr->markedForDespawn)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Frame %d, Sprite %s marked for despawn: cause=%s but already marked!\n", frameCounter, spr->name, cause);
+    return;
+  }
+
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d, Sprite %s marked for despawn: cause=%s\n", frameCounter, spr->name, cause);
+  spr->markedForDespawn = true;
+}
+
 void OnSpriteDied(Sprite *spr, const char *cause)
 {
 
@@ -1246,7 +1270,8 @@ void OnSpriteDied(Sprite *spr, const char *cause)
   }
   else
   {
-    printf("TODO: non-player sprite death\n");
+
+    MarkSpriteForDespawn(spr, cause);
   }
 }
 
@@ -1312,6 +1337,8 @@ void ResetSprite(Sprite *spr)
 
   // cleared on unload
   spr->sentinel = true;
+  spr->markedForDespawn = false;
+  spr->spawnFrame = frameCounter;
 
   // update other struct vals
   spr->facingRight = true;
@@ -1565,12 +1592,14 @@ int GetIndexOfSprite(Sprite *spr)
 }
 
 // TODO: placeholder for anything malloced
-void UnloadSprite(Sprite *spr)
+// returns sprite's old index, incase you want
+// to clean up the array after
+int UnloadSprite(Sprite *spr)
 {
   if (spr == NULL)
   {
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Attempt to unload a null sprite!");
-    return;
+    return -1;
   }
 
   int myIndex = GetIndexOfSprite(spr);
@@ -1580,13 +1609,14 @@ void UnloadSprite(Sprite *spr)
   if (myIndex == -1)
   {
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Frame %d Sprite %s is NOT in the sprite list.", frameCounter, spr->name);
-    return;
+    return -1;
   }
 
   vmupro_log(VMUPRO_LOG_WARN, TAG, "Frame %d Sprite %s unloading", frameCounter, spr->name);
   // wipe the mem before freeing it
   memset(spr, 0, sizeof(Sprite));
   free(spr);
+  return myIndex;
 }
 
 void UnloadSprites()
@@ -4970,6 +5000,43 @@ void SpawnDuckAboveMe(Sprite *srcSprite)
   CreateSprite(STYPE_TESTMOB, srcHeadWorld, "TEST DUCK");
 }
 
+void DespawnSprite(Sprite *spr)
+{
+
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Despawning sprite %s", spr->name);
+
+  int idx = UnloadSprite(spr);
+
+  if (idx == -1)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite %s has no valid index!", spr->name);
+    return;
+  }
+  
+  // shuffle everything down by one
+  for (int i = idx; i < numSprites; i++)
+  {
+    sprites[i] = sprites[i + 1];
+  }
+  // clear the end one
+  sprites[numSprites] = NULL;
+  // and reduce the sprite count
+  numSprites--;
+}
+
+void DespawnAllMarkedSprites()
+{
+
+  for (int i = numSprites - 1; i >= 0; i--)
+  {
+    Sprite *spr = sprites[i];
+    if (spr->markedForDespawn)
+    {
+      DespawnSprite(spr);
+    }
+  }
+}
+
 void app_main(void)
 {
   vmupro_log(VMUPRO_LOG_INFO, TAG, "8BM Platformer Example");
@@ -5001,6 +5068,7 @@ void app_main(void)
     DrawUI();
 
     DrawDebugAllSprites();
+    DespawnAllMarkedSprites();
 
     vmupro_push_double_buffer_frame();
 
