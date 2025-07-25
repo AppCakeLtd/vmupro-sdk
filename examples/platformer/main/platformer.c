@@ -275,6 +275,8 @@ typedef enum
   IMASK_HURTS_VERT = 0x02,
   IMASK_CAN_BE_RIDDEN = 0x04,
   IMASK_CAN_RIDE_STUFF = 0x08,
+  IMASK_DRAW_FIRST = 0x10, // doors n things, draw at the back
+  IMASK_DRAW_LAST = 0x20,  // anything which should be drawn on top
 } InteractionMask;
 
 // profile of spite behaviour
@@ -423,7 +425,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->solid = SOLIDMASK_SPRITE_TRIGGER;
     p->defaultAnimGroup = &animgroup_door;
     p->skipMovement = true;
-    p->iMask = IMASK_NONE;
+    p->iMask = IMASK_DRAW_FIRST;
   }
   else if (inType == STYPE_SPIKEBALL)
   {
@@ -1345,6 +1347,25 @@ void HandleSpecialSpriteType(SpriteType inType, Vec2 worldStartPos)
   }
 }
 
+void AddToSpriteList(Sprite * inSprite ){
+
+  if ( inSprite->profile.iMask & IMASK_DRAW_FIRST ){
+    printf("__TEST__ draw at start!\n");
+    // shuffle every sprite up by one
+    numSprites++;
+    for( int i = numSprites; i > 0; i-- ){
+      sprites[i] = sprites[i-1];
+    }
+    sprites[0] = inSprite;
+
+
+  }else{
+    sprites[numSprites] = inSprite;
+    numSprites++;
+  }
+
+}
+
 Sprite *CreateSprite(SpriteType inType, Vec2 worldStartPos, const char *inName)
 {
 
@@ -1398,8 +1419,7 @@ Sprite *CreateSprite(SpriteType inType, Vec2 worldStartPos, const char *inName)
   // Finally, assign it.
   //
 
-  sprites[numSprites] = returnVal;
-  numSprites++;
+  AddToSpriteList(returnVal);
 
   if (inType == STYPE_PLAYER)
   {
