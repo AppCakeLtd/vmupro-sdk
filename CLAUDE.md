@@ -24,7 +24,20 @@ This is the VMUPro SDK - a development toolkit for creating applications and gam
   - Visual effects: mosaic, blur, shadow/highlight, color filters, blending modes
   - Collision detection: rectangle and pixel-perfect collision testing
   - Sprite batching and multi-layer rendering system
-  - Tile-based rendering with `vmupro_blit_tile()` function
+  - Tile-based rendering with `vmupro_blit_tile()` and `vmupro_blit_tile_advanced()` functions
+  - Double buffering support with pause/resume capabilities
+  - Global brightness control (vmupro_get_global_brightness, vmupro_set_global_brightness)
+- **Audio** (`vmupro_audio.h`) - Real-time audio streaming API including:
+  - Audio streaming mode (vmupro_audio_start_listen_mode, vmupro_audio_exit_listen_mode)
+  - Sample buffering (vmupro_audio_add_stream_samples, vmupro_audio_clear_ring_buffer)
+  - Global volume control (vmupro_get_global_volume, vmupro_set_global_volume)
+  - Support for 44.1kHz mono 16-bit audio streaming
+- **Fonts** (`vmupro_fonts.h`) - Text rendering and font management including:
+  - 15 predefined bitmap fonts from 6x8 to 32x37 pixels
+  - Font selection (vmupro_set_font) with convenience aliases (SMALL, MEDIUM, LARGE, DEFAULT)
+  - Text rendering (vmupro_draw_text) with foreground/background colors
+  - Text measurement (vmupro_calc_text_length) for layout calculations
+  - Font information queries (vmupro_get_font_info) for width, height, and monospace detection
 - **Logging** (`vmupro_log.h`) - Multi-level logging system  
 - **Utils** (`vmupro_utils.h`) - Utility functions including:
   - Sleep/timing functions (vmupro_sleep_ms, vmupro_get_time_us, vmupro_delay_us, vmupro_delay_ms)
@@ -115,18 +128,21 @@ Required for every application:
 
 ## Memory Management
 The SDK uses standard C library memory management functions:
-- **malloc()** - Allocate memory blocks
-- **calloc()** - Allocate and zero-initialize memory blocks  
-- **realloc()** - Resize previously allocated memory blocks
-- **free()** - Deallocate memory blocks
+- **malloc()** - Allocate memory blocks (uses vmupro_malloc internally)
+- **calloc()** - Allocate and zero-initialize memory blocks (uses vmupro_calloc internally)
+- **realloc()** - Resize previously allocated memory blocks (uses vmupro_realloc internally)
+- **free()** - Deallocate memory blocks (uses vmupro_free internally)
 
-All memory allocation functions are provided by the firmware and work with both internal RAM and SPIRAM as available.
+All memory allocation functions are provided by the firmware and work with both internal RAM and SPIRAM as available. The SDK now uses standard memory control calls instead of custom ones.
 
 ## Future Expansion Areas
 The SDK is designed to grow with additional APIs for:
-- Input/Controls
-- Audio system
-- File system operations
-- Advanced graphics
+- Input/Controls (✓ Basic input handling available)
+- Audio system (✓ Real-time audio streaming now available)
+- File system operations (✓ Comprehensive file I/O available)
+- Advanced graphics (✓ Comprehensive graphics API available)
 - Math/physics helpers
-- Text rendering
+- Text rendering (✓ Font system and text rendering now available)
+- Additional audio formats and effects
+- Advanced input handling (gestures, combinations)
+- Network/communication APIs

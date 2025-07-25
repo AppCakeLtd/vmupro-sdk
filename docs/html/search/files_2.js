@@ -1,9 +1,4 @@
 var searchData=
 [
-  ['vmupro_5fbuttons_2eh_0',['vmupro_buttons.h',['../vmupro__buttons_8h.html',1,'']]],
-  ['vmupro_5fdisplay_2eh_1',['vmupro_display.h',['../vmupro__display_8h.html',1,'']]],
-  ['vmupro_5ffile_2eh_2',['vmupro_file.h',['../vmupro__file_8h.html',1,'']]],
-  ['vmupro_5flog_2eh_3',['vmupro_log.h',['../vmupro__log_8h.html',1,'']]],
-  ['vmupro_5fsdk_2eh_4',['vmupro_sdk.h',['../vmupro__sdk_8h.html',1,'']]],
-  ['vmupro_5futils_2eh_5',['vmupro_utils.h',['../vmupro__utils_8h.html',1,'']]]
+  ['stdlib_5ffunctions_2emd_0',['stdlib_functions.md',['../stdlib__functions_8md.html',1,'']]]
 ];

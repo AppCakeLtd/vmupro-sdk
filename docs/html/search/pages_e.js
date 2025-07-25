@@ -1,7 +1,10 @@
 var searchData=
 [
-  ['navigate_20to_20example_20directory_0',['1. Navigate to Example Directory',['../index.html#autotoc_md14',1,'']]],
-  ['needed_1',['4. Clean Build (if needed)',['../index.html#autotoc_md17',1,'']]],
-  ['not_20set_2',['ESP-IDF Environment Not Set',['../index.html#autotoc_md41',1,'']]],
-  ['notes_3',['Performance Notes',['../vmupro__display_8h.html#autotoc_md49',1,'']]]
+  ['last_20character_20in_20string_0',['strrchr - Find last character in string',['../md_docs_2stdlib__functions.html#autotoc_md67',1,'']]],
+  ['length_1',['strlen - Get string length',['../md_docs_2stdlib__functions.html#autotoc_md64',1,'']]],
+  ['library_20functions_2',['Standard C Library Functions',['../md_docs_2stdlib__functions.html',1,'']]],
+  ['limit_3',['limit',['../md_docs_2stdlib__functions.html#autotoc_md71',1,'strncat - Concatenate strings with limit'],['../md_docs_2stdlib__functions.html#autotoc_md72',1,'strncpy - Copy string with limit']]],
+  ['local_20jump_4',['longjmp - Non-local jump',['../md_docs_2stdlib__functions.html#autotoc_md111',1,'']]],
+  ['long_5',['strtol - String to long',['../md_docs_2stdlib__functions.html#autotoc_md91',1,'']]],
+  ['longjmp_20non_20local_20jump_6',['longjmp - Non-local jump',['../md_docs_2stdlib__functions.html#autotoc_md111',1,'']]]
 ];

@@ -114,10 +114,14 @@ Data Structures</h2></td></tr>
 Functions</h2></td></tr>
 <tr class="memitem:a5da2aaaabf926fa9f1dbda161811ba29" id="r_a5da2aaaabf926fa9f1dbda161811ba29"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5da2aaaabf926fa9f1dbda161811ba29">vmupro_sleep_ms</a> (uint32_t milliseconds)</td></tr>
 <tr class="memdesc:a5da2aaaabf926fa9f1dbda161811ba29"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sleep for a specified number of milliseconds.  <br /></td></tr>
+<tr class="memitem:aca66aaa03216acbaf0cd0e4254a5e7ab" id="r_aca66aaa03216acbaf0cd0e4254a5e7ab"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aca66aaa03216acbaf0cd0e4254a5e7ab">vmupro_get_time_us</a> (void)</td></tr>
+<tr class="memdesc:aca66aaa03216acbaf0cd0e4254a5e7ab"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get current time in microseconds.  <br /></td></tr>
+<tr class="memitem:af164618411087041e8054934354312d8" id="r_af164618411087041e8054934354312d8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af164618411087041e8054934354312d8">vmupro_delay_us</a> (uint64_t delay_us)</td></tr>
+<tr class="memdesc:af164618411087041e8054934354312d8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Delay for a specified number of microseconds.  <br /></td></tr>
+<tr class="memitem:a4a9422cfea5f0b97738f10d508391fd9" id="r_a4a9422cfea5f0b97738f10d508391fd9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4a9422cfea5f0b97738f10d508391fd9">vmupro_delay_ms</a> (uint64_t delay_ms)</td></tr>
+<tr class="memdesc:a4a9422cfea5f0b97738f10d508391fd9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Delay for a specified number of milliseconds.  <br /></td></tr>
 <tr class="memitem:af969f2eeaf266ffc9d7e0f5f8397d63b" id="r_af969f2eeaf266ffc9d7e0f5f8397d63b"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af969f2eeaf266ffc9d7e0f5f8397d63b">vmupro_snprintf</a> (char *buffer, size_t size, const char *format,...)</td></tr>
 <tr class="memdesc:af969f2eeaf266ffc9d7e0f5f8397d63b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Safe string formatting function.  <br /></td></tr>
-<tr class="memitem:acbc9f3f93d68db4ba89ed9da52158ee4" id="r_acbc9f3f93d68db4ba89ed9da52158ee4"><td class="memItemLeft" align="right" valign="top">char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acbc9f3f93d68db4ba89ed9da52158ee4">vmupro_strdup</a> (const char *source)</td></tr>
-<tr class="memdesc:acbc9f3f93d68db4ba89ed9da52158ee4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Duplicate a string.  <br /></td></tr>
 <tr class="memitem:a6aa7291578b63fecc7c512bc9f60c08d" id="r_a6aa7291578b63fecc7c512bc9f60c08d"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6aa7291578b63fecc7c512bc9f60c08d">vmupro_emubrowser_init</a> (<a class="el" href="structvmupro__emubrowser__settings__t.html">vmupro_emubrowser_settings_t</a> settings)</td></tr>
 <tr class="memdesc:a6aa7291578b63fecc7c512bc9f60c08d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialize the emulator browser.  <br /></td></tr>
 <tr class="memitem:a9ffccf21751a39cf2891f06fa0e8cd44" id="r_a9ffccf21751a39cf2891f06fa0e8cd44"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9ffccf21751a39cf2891f06fa0e8cd44">vmupro_emubrowser_render_contents</a> (char *launchfile)</td></tr>
@@ -133,6 +137,94 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition in file <a class="el" href="vmupro__utils_8h_source.html">vmupro_utils.h</a>.</p>
 </div><a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Function Documentation</h2>
+<a id="a4a9422cfea5f0b97738f10d508391fd9" name="a4a9422cfea5f0b97738f10d508391fd9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4a9422cfea5f0b97738f10d508391fd9">&#9670;&#160;</a></span>vmupro_delay_ms()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void vmupro_delay_ms </td>
+          <td>(</td>
+          <td class="paramtype">uint64_t</td>          <td class="paramname"><span class="paramname"><em>delay_ms</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Delay for a specified number of milliseconds. </p>
+<p>Blocks execution for the specified duration in milliseconds. This function provides millisecond precision timing control.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">delay_ms</td><td>Duration to delay in milliseconds</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>Uses millisecond precision (less precise than vmupro_delay_us) </dd>
+<dd>
+If delay_ms is 0, the function returns immediately </dd>
+<dd>
+Useful for less timing-critical applications</dd></dl>
+<div class="fragment"><div class="line"><span class="comment">// Simple periodic updates</span></div>
+<div class="line"><span class="keywordflow">while</span> (running) {</div>
+<div class="line">    update_logic();</div>
+<div class="line">    <a class="code hl_function" href="#a4a9422cfea5f0b97738f10d508391fd9">vmupro_delay_ms</a>(100); <span class="comment">// Wait 100ms between updates</span></div>
+<div class="line">}</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Precise timing with microsecond conversion</span></div>
+<div class="line"><a class="code hl_function" href="#a4a9422cfea5f0b97738f10d508391fd9">vmupro_delay_ms</a>(50); <span class="comment">// Wait 50 milliseconds</span></div>
+<div class="ttc" id="avmupro__utils_8h_html_a4a9422cfea5f0b97738f10d508391fd9"><div class="ttname"><a href="#a4a9422cfea5f0b97738f10d508391fd9">vmupro_delay_ms</a></div><div class="ttdeci">void vmupro_delay_ms(uint64_t delay_ms)</div><div class="ttdoc">Delay for a specified number of milliseconds.</div></div>
+</div><!-- fragment --> 
+</div>
+</div>
+<a id="af164618411087041e8054934354312d8" name="af164618411087041e8054934354312d8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af164618411087041e8054934354312d8">&#9670;&#160;</a></span>vmupro_delay_us()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void vmupro_delay_us </td>
+          <td>(</td>
+          <td class="paramtype">uint64_t</td>          <td class="paramname"><span class="paramname"><em>delay_us</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Delay for a specified number of microseconds. </p>
+<p>Blocks execution for the specified duration in microseconds. This function provides precise timing control for frame rate limiting and delays.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">delay_us</td><td>Duration to delay in microseconds</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section note"><dt>Note</dt><dd>More precise than <a class="el" href="#a5da2aaaabf926fa9f1dbda161811ba29" title="Sleep for a specified number of milliseconds.">vmupro_sleep_ms()</a> for timing-critical applications </dd>
+<dd>
+If delay_us is 0, the function returns immediately </dd>
+<dd>
+Uses high-resolution timing for accurate delays</dd></dl>
+<div class="fragment"><div class="line"><span class="comment">// Frame rate limiting to 60 FPS</span></div>
+<div class="line">uint64_t frame_duration_us = 1000000 / 60; <span class="comment">// 16666 microseconds per frame</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keywordflow">while</span> (game_running) {</div>
+<div class="line">    uint64_t frame_start = <a class="code hl_function" href="#aca66aaa03216acbaf0cd0e4254a5e7ab">vmupro_get_time_us</a>();</div>
+<div class="line">    </div>
+<div class="line">    <span class="comment">// Render frame</span></div>
+<div class="line">    render_game_frame();</div>
+<div class="line">    </div>
+<div class="line">    <span class="comment">// Calculate remaining time for this frame</span></div>
+<div class="line">    uint64_t elapsed = <a class="code hl_function" href="#aca66aaa03216acbaf0cd0e4254a5e7ab">vmupro_get_time_us</a>() - frame_start;</div>
+<div class="line">    <span class="keywordflow">if</span> (elapsed &lt; frame_duration_us) {</div>
+<div class="line">        <a class="code hl_function" href="#af164618411087041e8054934354312d8">vmupro_delay_us</a>(frame_duration_us - elapsed);</div>
+<div class="line">    }</div>
+<div class="line">}</div>
+<div class="ttc" id="avmupro__utils_8h_html_aca66aaa03216acbaf0cd0e4254a5e7ab"><div class="ttname"><a href="#aca66aaa03216acbaf0cd0e4254a5e7ab">vmupro_get_time_us</a></div><div class="ttdeci">uint64_t vmupro_get_time_us(void)</div><div class="ttdoc">Get current time in microseconds.</div></div>
+<div class="ttc" id="avmupro__utils_8h_html_af164618411087041e8054934354312d8"><div class="ttname"><a href="#af164618411087041e8054934354312d8">vmupro_delay_us</a></div><div class="ttdeci">void vmupro_delay_us(uint64_t delay_us)</div><div class="ttdoc">Delay for a specified number of microseconds.</div></div>
+</div><!-- fragment --> 
+</div>
+</div>
 <a id="a6aa7291578b63fecc7c512bc9f60c08d" name="a6aa7291578b63fecc7c512bc9f60c08d"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a6aa7291578b63fecc7c512bc9f60c08d">&#9670;&#160;</a></span>vmupro_emubrowser_init()</h2>
 
@@ -168,7 +260,7 @@ All string pointers in settings must remain valid during browser usage</dd></dl>
 <div class="line"><span class="keywordflow">if</span> (<a class="code hl_function" href="#a6aa7291578b63fecc7c512bc9f60c08d">vmupro_emubrowser_init</a>(settings) == 0) {</div>
 <div class="line">    <span class="comment">// Browser initialized successfully</span></div>
 <div class="line">}</div>
-<div class="ttc" id="astructvmupro__emubrowser__settings__t_html"><div class="ttname"><a href="structvmupro__emubrowser__settings__t.html">vmupro_emubrowser_settings_t</a></div><div class="ttdoc">Settings structure for the emulator browser.</div><div class="ttdef"><b>Definition</b> <a href="vmupro__utils_8h_source.html#l00100">vmupro_utils.h:100</a></div></div>
+<div class="ttc" id="astructvmupro__emubrowser__settings__t_html"><div class="ttname"><a href="structvmupro__emubrowser__settings__t.html">vmupro_emubrowser_settings_t</a></div><div class="ttdoc">Settings structure for the emulator browser.</div><div class="ttdef"><b>Definition</b> <a href="vmupro__utils_8h_source.html#l00156">vmupro_utils.h:156</a></div></div>
 <div class="ttc" id="avmupro__utils_8h_html_a6aa7291578b63fecc7c512bc9f60c08d"><div class="ttname"><a href="#a6aa7291578b63fecc7c512bc9f60c08d">vmupro_emubrowser_init</a></div><div class="ttdeci">int vmupro_emubrowser_init(vmupro_emubrowser_settings_t settings)</div><div class="ttdoc">Initialize the emulator browser.</div></div>
 </div><!-- fragment --> 
 </div>
@@ -210,6 +302,42 @@ The returned path is relative to the root path specified in settings</dd></dl>
 <div class="line">    <span class="comment">// User cancelled</span></div>
 <div class="line">}</div>
 <div class="ttc" id="avmupro__utils_8h_html_a9ffccf21751a39cf2891f06fa0e8cd44"><div class="ttname"><a href="#a9ffccf21751a39cf2891f06fa0e8cd44">vmupro_emubrowser_render_contents</a></div><div class="ttdeci">void vmupro_emubrowser_render_contents(char *launchfile)</div><div class="ttdoc">Render the emulator browser and get selected file.</div></div>
+</div><!-- fragment --> 
+</div>
+</div>
+<a id="aca66aaa03216acbaf0cd0e4254a5e7ab" name="aca66aaa03216acbaf0cd0e4254a5e7ab"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aca66aaa03216acbaf0cd0e4254a5e7ab">&#9670;&#160;</a></span>vmupro_get_time_us()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint64_t vmupro_get_time_us </td>
+          <td>(</td>
+          <td class="paramtype">void</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get current time in microseconds. </p>
+<p>Returns the current system time in microseconds since boot. This function provides high-resolution timing for precise measurements.</p>
+<dl class="section return"><dt>Returns</dt><dd>Current time in microseconds (64-bit unsigned integer)</dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Time starts from 0 at system boot </dd>
+<dd>
+Provides microsecond precision for accurate timing </dd>
+<dd>
+Useful for performance measurement and frame timing</dd></dl>
+<div class="fragment"><div class="line"><span class="comment">// Measure execution time</span></div>
+<div class="line">uint64_t start_time = <a class="code hl_function" href="#aca66aaa03216acbaf0cd0e4254a5e7ab">vmupro_get_time_us</a>();</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// ... do some work ...</span></div>
+<div class="line"> </div>
+<div class="line">uint64_t end_time = <a class="code hl_function" href="#aca66aaa03216acbaf0cd0e4254a5e7ab">vmupro_get_time_us</a>();</div>
+<div class="line">uint64_t elapsed = end_time - start_time;</div>
+<div class="line"><a class="code hl_function" href="vmupro__log_8h.html#aa9d7679f702f8bdfbd3d3ff0b2654656">vmupro_log</a>(<a class="code hl_enumvalue" href="vmupro__log_8h.html#a9712706598d53a2e669535d1f220a4a2af985b0a6e80e3ca9deb4ef818d852bd8">VMUPRO_LOG_INFO</a>, <span class="stringliteral">&quot;TIMING&quot;</span>, <span class="stringliteral">&quot;Operation took %llu microseconds&quot;</span>, elapsed);</div>
+<div class="ttc" id="avmupro__log_8h_html_a9712706598d53a2e669535d1f220a4a2af985b0a6e80e3ca9deb4ef818d852bd8"><div class="ttname"><a href="vmupro__log_8h.html#a9712706598d53a2e669535d1f220a4a2af985b0a6e80e3ca9deb4ef818d852bd8">VMUPRO_LOG_INFO</a></div><div class="ttdeci">@ VMUPRO_LOG_INFO</div><div class="ttdef"><b>Definition</b> <a href="vmupro__log_8h_source.html#l00033">vmupro_log.h:33</a></div></div>
+<div class="ttc" id="avmupro__log_8h_html_aa9d7679f702f8bdfbd3d3ff0b2654656"><div class="ttname"><a href="vmupro__log_8h.html#aa9d7679f702f8bdfbd3d3ff0b2654656">vmupro_log</a></div><div class="ttdeci">void vmupro_log(vmupro_log_level_t level, const char *tag, const char *fmt,...)</div><div class="ttdoc">Output a formatted log message.</div></div>
 </div><!-- fragment --> 
 </div>
 </div>
@@ -294,49 +422,6 @@ A warning is logged if truncation occurs</dd></dl>
 <div class="line"><span class="keywordtype">int</span> score = 1234;</div>
 <div class="line"><a class="code hl_function" href="#af969f2eeaf266ffc9d7e0f5f8397d63b">vmupro_snprintf</a>(buffer, <span class="keyword">sizeof</span>(buffer), <span class="stringliteral">&quot;Score: %d&quot;</span>, score);</div>
 <div class="ttc" id="avmupro__utils_8h_html_af969f2eeaf266ffc9d7e0f5f8397d63b"><div class="ttname"><a href="#af969f2eeaf266ffc9d7e0f5f8397d63b">vmupro_snprintf</a></div><div class="ttdeci">int vmupro_snprintf(char *buffer, size_t size, const char *format,...)</div><div class="ttdoc">Safe string formatting function.</div></div>
-</div><!-- fragment --> 
-</div>
-</div>
-<a id="acbc9f3f93d68db4ba89ed9da52158ee4" name="acbc9f3f93d68db4ba89ed9da52158ee4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#acbc9f3f93d68db4ba89ed9da52158ee4">&#9670;&#160;</a></span>vmupro_strdup()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">char * vmupro_strdup </td>
-          <td>(</td>
-          <td class="paramtype">const char *</td>          <td class="paramname"><span class="paramname"><em>source</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Duplicate a string. </p>
-<p>Creates a duplicate of the source string by allocating memory and copying the string contents. The returned pointer must be freed using free() when no longer needed.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">source</td><td>The null-terminated string to duplicate </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>Pointer to the duplicated string, or NULL on error or if source is NULL</dd></dl>
-<dl class="section note"><dt>Note</dt><dd>The caller is responsible for freeing the returned memory using free() </dd>
-<dd>
-Returns NULL if source is NULL or if memory allocation fails </dd>
-<dd>
-The returned string is guaranteed to be null-terminated</dd></dl>
-<div class="fragment"><div class="line"><span class="keyword">const</span> <span class="keywordtype">char</span>* original = <span class="stringliteral">&quot;Hello, World!&quot;</span>;</div>
-<div class="line"><span class="keywordtype">char</span>* copy = <a class="code hl_function" href="#acbc9f3f93d68db4ba89ed9da52158ee4">vmupro_strdup</a>(original);</div>
-<div class="line"><span class="keywordflow">if</span> (copy) {</div>
-<div class="line">    <span class="comment">// Use the copy</span></div>
-<div class="line">    <a class="code hl_function" href="vmupro__log_8h.html#aa9d7679f702f8bdfbd3d3ff0b2654656">vmupro_log</a>(<a class="code hl_enumvalue" href="vmupro__log_8h.html#a9712706598d53a2e669535d1f220a4a2af985b0a6e80e3ca9deb4ef818d852bd8">VMUPRO_LOG_INFO</a>, <span class="stringliteral">&quot;COPY&quot;</span>, <span class="stringliteral">&quot;%s&quot;</span>, copy);</div>
-<div class="line">    <span class="comment">// Remember to free when done</span></div>
-<div class="line">    free(copy);</div>
-<div class="line">}</div>
-<div class="ttc" id="avmupro__log_8h_html_a9712706598d53a2e669535d1f220a4a2af985b0a6e80e3ca9deb4ef818d852bd8"><div class="ttname"><a href="vmupro__log_8h.html#a9712706598d53a2e669535d1f220a4a2af985b0a6e80e3ca9deb4ef818d852bd8">VMUPRO_LOG_INFO</a></div><div class="ttdeci">@ VMUPRO_LOG_INFO</div><div class="ttdef"><b>Definition</b> <a href="vmupro__log_8h_source.html#l00033">vmupro_log.h:33</a></div></div>
-<div class="ttc" id="avmupro__log_8h_html_aa9d7679f702f8bdfbd3d3ff0b2654656"><div class="ttname"><a href="vmupro__log_8h.html#aa9d7679f702f8bdfbd3d3ff0b2654656">vmupro_log</a></div><div class="ttdeci">void vmupro_log(vmupro_log_level_t level, const char *tag, const char *fmt,...)</div><div class="ttdoc">Output a formatted log message.</div></div>
-<div class="ttc" id="avmupro__utils_8h_html_acbc9f3f93d68db4ba89ed9da52158ee4"><div class="ttname"><a href="#acbc9f3f93d68db4ba89ed9da52158ee4">vmupro_strdup</a></div><div class="ttdeci">char * vmupro_strdup(const char *source)</div><div class="ttdoc">Duplicate a string.</div></div>
 </div><!-- fragment --> 
 </div>
 </div>

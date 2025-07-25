@@ -1,5 +1,6 @@
 var vmupro__file_8h =
 [
+    [ "crc32", "vmupro__file_8h.html#aab4f8d3375675e9aec011322854e21b4", null ],
     [ "vmupro_file_exists", "vmupro__file_8h.html#ae0ad7d6de2326c8b078d74e131829f26", null ],
     [ "vmupro_folder_exists", "vmupro__file_8h.html#a4c9c48965ef0499006dc258fde5d6eb2", null ],
     [ "vmupro_get_file_size", "vmupro__file_8h.html#a983bbeaf2de0f40d4dc1f90fddeba1c6", null ],

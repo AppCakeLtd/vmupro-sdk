@@ -121,10 +121,12 @@ Functions</h2></td></tr>
 <tr class="memdesc:a959b8c3f29a161e4846440586d7d85a5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write data to a file completely.  <br /></td></tr>
 <tr class="memitem:acc9c95d93a0cd878f09587f137a0e167" id="r_acc9c95d93a0cd878f09587f137a0e167"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acc9c95d93a0cd878f09587f137a0e167">vmupro_write_file_bytes</a> (const char *filename, const uint8_t *data, uint32_t offset, size_t length)</td></tr>
 <tr class="memdesc:acc9c95d93a0cd878f09587f137a0e167"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write data to a file at a specific offset.  <br /></td></tr>
+<tr class="memitem:aab4f8d3375675e9aec011322854e21b4" id="r_aab4f8d3375675e9aec011322854e21b4"><td class="memItemLeft" align="right" valign="top">unsigned long&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aab4f8d3375675e9aec011322854e21b4">crc32</a> (int crc, uint8_t *buf, int len)</td></tr>
+<tr class="memdesc:aab4f8d3375675e9aec011322854e21b4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculate CRC32 checksum.  <br /></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>VMUPro File System Utilities. </p>
-<p>This header provides file system utility functions for the VMUPro SDK. It includes functions for file operations such as checking file existence, reading files, and getting file information.</p>
+<p>This header provides file system utility functions for the VMUPro SDK. It includes functions for file operations such as checking file existence, reading files, getting file information, and data integrity functions.</p>
 <dl class="section author"><dt>Author</dt><dd>8BitMods </dd></dl>
 <dl class="section version"><dt>Version</dt><dd>1.0.0 </dd></dl>
 <dl class="section date"><dt>Date</dt><dd>2025-06-29 </dd></dl>
@@ -132,6 +134,89 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition in file <a class="el" href="vmupro__file_8h_source.html">vmupro_file.h</a>.</p>
 </div><a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Function Documentation</h2>
+<a id="aab4f8d3375675e9aec011322854e21b4" name="aab4f8d3375675e9aec011322854e21b4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aab4f8d3375675e9aec011322854e21b4">&#9670;&#160;</a></span>crc32()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">unsigned long crc32 </td>
+          <td>(</td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>crc</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint8_t *</td>          <td class="paramname"><span class="paramname"><em>buf</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>len</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Calculate CRC32 checksum. </p>
+<p>Calculates a 32-bit cyclic redundancy check (CRC32) for the given data buffer. This function is available in the VMUPro SDK for data integrity verification.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">crc</td><td>Initial CRC value (use 0 for new calculation, or previous result for continuation) </td></tr>
+    <tr><td class="paramname">buf</td><td>Pointer to data buffer to calculate CRC for </td></tr>
+    <tr><td class="paramname">len</td><td>Number of bytes in the buffer </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>32-bit CRC checksum value</dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Pass 0 as initial CRC for new calculations </dd>
+<dd>
+Can be called multiple times with previous result to calculate CRC for large data </dd>
+<dd>
+Useful for verifying file integrity, ROM checksums, and data transmission </dd>
+<dd>
+Uses standard CRC32 polynomial (IEEE 802.3)</dd></dl>
+<div class="fragment"><div class="line"><span class="comment">// Calculate CRC32 for a file</span></div>
+<div class="line">FILE* file = fopen(<span class="stringliteral">&quot;/sdcard/rom.nes&quot;</span>, <span class="stringliteral">&quot;rb&quot;</span>);</div>
+<div class="line"><span class="keywordflow">if</span> (file != NULL) {</div>
+<div class="line">    uint8_t buffer[1024];</div>
+<div class="line">    <span class="keywordtype">unsigned</span> <span class="keywordtype">long</span> file_crc = 0;</div>
+<div class="line">    <span class="keywordtype">size_t</span> bytes_read;</div>
+<div class="line"> </div>
+<div class="line">    <span class="keywordflow">while</span> ((bytes_read = fread(buffer, 1, <span class="keyword">sizeof</span>(buffer), file)) &gt; 0) {</div>
+<div class="line">        file_crc = <a class="code hl_function" href="#aab4f8d3375675e9aec011322854e21b4">crc32</a>(file_crc, buffer, bytes_read);</div>
+<div class="line">    }</div>
+<div class="line">    fclose(file);</div>
+<div class="line"> </div>
+<div class="line">    <a class="code hl_function" href="vmupro__log_8h.html#aa9d7679f702f8bdfbd3d3ff0b2654656">vmupro_log</a>(<a class="code hl_enumvalue" href="vmupro__log_8h.html#a9712706598d53a2e669535d1f220a4a2af985b0a6e80e3ca9deb4ef818d852bd8">VMUPRO_LOG_INFO</a>, <span class="stringliteral">&quot;CRC&quot;</span>, <span class="stringliteral">&quot;File CRC32: 0x%08lX&quot;</span>, file_crc);</div>
+<div class="line">}</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Verify ROM integrity</span></div>
+<div class="line">uint8_t rom_data[32768];</div>
+<div class="line"><span class="keywordtype">size_t</span> rom_size;</div>
+<div class="line"><span class="keywordflow">if</span> (<a class="code hl_function" href="#a8ed2f6ca18cce2146abe0e138b5316fd">vmupro_read_file_complete</a>(<span class="stringliteral">&quot;/sdcard/game.nes&quot;</span>, rom_data, &amp;rom_size)) {</div>
+<div class="line">    <span class="keywordtype">unsigned</span> <span class="keywordtype">long</span> calculated_crc = <a class="code hl_function" href="#aab4f8d3375675e9aec011322854e21b4">crc32</a>(0, rom_data, rom_size);</div>
+<div class="line">    <span class="keywordtype">unsigned</span> <span class="keywordtype">long</span> expected_crc = 0x12345678; <span class="comment">// Known good CRC</span></div>
+<div class="line"> </div>
+<div class="line">    <span class="keywordflow">if</span> (calculated_crc == expected_crc) {</div>
+<div class="line">        <a class="code hl_function" href="vmupro__log_8h.html#aa9d7679f702f8bdfbd3d3ff0b2654656">vmupro_log</a>(<a class="code hl_enumvalue" href="vmupro__log_8h.html#a9712706598d53a2e669535d1f220a4a2af985b0a6e80e3ca9deb4ef818d852bd8">VMUPRO_LOG_INFO</a>, <span class="stringliteral">&quot;ROM&quot;</span>, <span class="stringliteral">&quot;ROM integrity verified&quot;</span>);</div>
+<div class="line">    } <span class="keywordflow">else</span> {</div>
+<div class="line">        <a class="code hl_function" href="vmupro__log_8h.html#aa9d7679f702f8bdfbd3d3ff0b2654656">vmupro_log</a>(<a class="code hl_enumvalue" href="vmupro__log_8h.html#a9712706598d53a2e669535d1f220a4a2a0f967fb85bf5226790a06242fd6553fd">VMUPRO_LOG_ERROR</a>, <span class="stringliteral">&quot;ROM&quot;</span>, <span class="stringliteral">&quot;ROM corruption detected!&quot;</span>);</div>
+<div class="line">    }</div>
+<div class="line">}</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Calculate CRC32 for small data</span></div>
+<div class="line"><span class="keyword">const</span> <span class="keywordtype">char</span>* text = <span class="stringliteral">&quot;Hello, VMUPro!&quot;</span>;</div>
+<div class="line"><span class="keywordtype">unsigned</span> <span class="keywordtype">long</span> text_crc = <a class="code hl_function" href="#aab4f8d3375675e9aec011322854e21b4">crc32</a>(0, (uint8_t*)text, strlen(text));</div>
+<div class="line"><a class="code hl_function" href="vmupro__log_8h.html#aa9d7679f702f8bdfbd3d3ff0b2654656">vmupro_log</a>(<a class="code hl_enumvalue" href="vmupro__log_8h.html#a9712706598d53a2e669535d1f220a4a2af985b0a6e80e3ca9deb4ef818d852bd8">VMUPRO_LOG_INFO</a>, <span class="stringliteral">&quot;CRC&quot;</span>, <span class="stringliteral">&quot;Text CRC32: 0x%08lX&quot;</span>, text_crc);</div>
+<div class="ttc" id="avmupro__file_8h_html_a8ed2f6ca18cce2146abe0e138b5316fd"><div class="ttname"><a href="#a8ed2f6ca18cce2146abe0e138b5316fd">vmupro_read_file_complete</a></div><div class="ttdeci">bool vmupro_read_file_complete(const char *filename, uint8_t *buffer, size_t *file_size)</div><div class="ttdoc">Read an entire file into memory.</div></div>
+<div class="ttc" id="avmupro__file_8h_html_aab4f8d3375675e9aec011322854e21b4"><div class="ttname"><a href="#aab4f8d3375675e9aec011322854e21b4">crc32</a></div><div class="ttdeci">unsigned long crc32(int crc, uint8_t *buf, int len)</div><div class="ttdoc">Calculate CRC32 checksum.</div></div>
+<div class="ttc" id="avmupro__log_8h_html_a9712706598d53a2e669535d1f220a4a2a0f967fb85bf5226790a06242fd6553fd"><div class="ttname"><a href="vmupro__log_8h.html#a9712706598d53a2e669535d1f220a4a2a0f967fb85bf5226790a06242fd6553fd">VMUPRO_LOG_ERROR</a></div><div class="ttdeci">@ VMUPRO_LOG_ERROR</div><div class="ttdef"><b>Definition</b> <a href="vmupro__log_8h_source.html#l00031">vmupro_log.h:31</a></div></div>
+<div class="ttc" id="avmupro__log_8h_html_a9712706598d53a2e669535d1f220a4a2af985b0a6e80e3ca9deb4ef818d852bd8"><div class="ttname"><a href="vmupro__log_8h.html#a9712706598d53a2e669535d1f220a4a2af985b0a6e80e3ca9deb4ef818d852bd8">VMUPRO_LOG_INFO</a></div><div class="ttdeci">@ VMUPRO_LOG_INFO</div><div class="ttdef"><b>Definition</b> <a href="vmupro__log_8h_source.html#l00033">vmupro_log.h:33</a></div></div>
+<div class="ttc" id="avmupro__log_8h_html_aa9d7679f702f8bdfbd3d3ff0b2654656"><div class="ttname"><a href="vmupro__log_8h.html#aa9d7679f702f8bdfbd3d3ff0b2654656">vmupro_log</a></div><div class="ttdeci">void vmupro_log(vmupro_log_level_t level, const char *tag, const char *fmt,...)</div><div class="ttdoc">Output a formatted log message.</div></div>
+</div><!-- fragment --> 
+</div>
+</div>
 <a id="ae0ad7d6de2326c8b078d74e131829f26" name="ae0ad7d6de2326c8b078d74e131829f26"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ae0ad7d6de2326c8b078d74e131829f26">&#9670;&#160;</a></span>vmupro_file_exists()</h2>
 
@@ -163,8 +248,6 @@ The path should be relative to the SD card root (e.g., "/sdcard/roms/game.nes")<
 <div class="line">    <a class="code hl_function" href="vmupro__log_8h.html#aa9d7679f702f8bdfbd3d3ff0b2654656">vmupro_log</a>(<a class="code hl_enumvalue" href="vmupro__log_8h.html#a9712706598d53a2e669535d1f220a4a2af985b0a6e80e3ca9deb4ef818d852bd8">VMUPRO_LOG_INFO</a>, <span class="stringliteral">&quot;GAME&quot;</span>, <span class="stringliteral">&quot;Mario ROM found!&quot;</span>);</div>
 <div class="line">}</div>
 <div class="ttc" id="avmupro__file_8h_html_ae0ad7d6de2326c8b078d74e131829f26"><div class="ttname"><a href="#ae0ad7d6de2326c8b078d74e131829f26">vmupro_file_exists</a></div><div class="ttdeci">bool vmupro_file_exists(const char *filename)</div><div class="ttdoc">Check if a file exists.</div></div>
-<div class="ttc" id="avmupro__log_8h_html_a9712706598d53a2e669535d1f220a4a2af985b0a6e80e3ca9deb4ef818d852bd8"><div class="ttname"><a href="vmupro__log_8h.html#a9712706598d53a2e669535d1f220a4a2af985b0a6e80e3ca9deb4ef818d852bd8">VMUPRO_LOG_INFO</a></div><div class="ttdeci">@ VMUPRO_LOG_INFO</div><div class="ttdef"><b>Definition</b> <a href="vmupro__log_8h_source.html#l00033">vmupro_log.h:33</a></div></div>
-<div class="ttc" id="avmupro__log_8h_html_aa9d7679f702f8bdfbd3d3ff0b2654656"><div class="ttname"><a href="vmupro__log_8h.html#aa9d7679f702f8bdfbd3d3ff0b2654656">vmupro_log</a></div><div class="ttdeci">void vmupro_log(vmupro_log_level_t level, const char *tag, const char *fmt,...)</div><div class="ttdoc">Output a formatted log message.</div></div>
 </div><!-- fragment --> 
 </div>
 </div>
@@ -201,7 +284,6 @@ The path should be relative to the SD card root (e.g., "/sdcard/roms/")</dd></dl
 <div class="line">    <a class="code hl_function" href="vmupro__log_8h.html#aa9d7679f702f8bdfbd3d3ff0b2654656">vmupro_log</a>(<a class="code hl_enumvalue" href="vmupro__log_8h.html#a9712706598d53a2e669535d1f220a4a2a0f967fb85bf5226790a06242fd6553fd">VMUPRO_LOG_ERROR</a>, <span class="stringliteral">&quot;FS&quot;</span>, <span class="stringliteral">&quot;ROMs folder missing!&quot;</span>);</div>
 <div class="line">}</div>
 <div class="ttc" id="avmupro__file_8h_html_a4c9c48965ef0499006dc258fde5d6eb2"><div class="ttname"><a href="#a4c9c48965ef0499006dc258fde5d6eb2">vmupro_folder_exists</a></div><div class="ttdeci">bool vmupro_folder_exists(const char *path)</div><div class="ttdoc">Check if a folder exists.</div></div>
-<div class="ttc" id="avmupro__log_8h_html_a9712706598d53a2e669535d1f220a4a2a0f967fb85bf5226790a06242fd6553fd"><div class="ttname"><a href="vmupro__log_8h.html#a9712706598d53a2e669535d1f220a4a2a0f967fb85bf5226790a06242fd6553fd">VMUPRO_LOG_ERROR</a></div><div class="ttdeci">@ VMUPRO_LOG_ERROR</div><div class="ttdef"><b>Definition</b> <a href="vmupro__log_8h_source.html#l00031">vmupro_log.h:31</a></div></div>
 </div><!-- fragment --> 
 </div>
 </div>
@@ -355,7 +437,6 @@ Memory is automatically cleaned up on failure</dd></dl>
 <div class="line">} <span class="keywordflow">else</span> {</div>
 <div class="line">    <a class="code hl_function" href="vmupro__log_8h.html#aa9d7679f702f8bdfbd3d3ff0b2654656">vmupro_log</a>(<a class="code hl_enumvalue" href="vmupro__log_8h.html#a9712706598d53a2e669535d1f220a4a2a0f967fb85bf5226790a06242fd6553fd">VMUPRO_LOG_ERROR</a>, <span class="stringliteral">&quot;ROM&quot;</span>, <span class="stringliteral">&quot;Failed to load ROM&quot;</span>);</div>
 <div class="line">}</div>
-<div class="ttc" id="avmupro__file_8h_html_a8ed2f6ca18cce2146abe0e138b5316fd"><div class="ttname"><a href="#a8ed2f6ca18cce2146abe0e138b5316fd">vmupro_read_file_complete</a></div><div class="ttdeci">bool vmupro_read_file_complete(const char *filename, uint8_t *buffer, size_t *file_size)</div><div class="ttdoc">Read an entire file into memory.</div></div>
 </div><!-- fragment --> 
 </div>
 </div>
@@ -422,7 +503,7 @@ Useful for updating specific sections without rewriting the entire file</dd></dl
 <div class="line"><span class="keyword">const</span> <span class="keywordtype">char</span>* log_entry = <span class="stringliteral">&quot;Application started\n&quot;</span>;</div>
 <div class="line"><span class="keywordtype">size_t</span> current_size = <a class="code hl_function" href="#a983bbeaf2de0f40d4dc1f90fddeba1c6">vmupro_get_file_size</a>(<span class="stringliteral">&quot;/sdcard/app.log&quot;</span>);</div>
 <div class="line"><span class="keywordflow">if</span> (current_size != (<span class="keywordtype">size_t</span>)-1) {</div>
-<div class="line">    <a class="code hl_function" href="#acc9c95d93a0cd878f09587f137a0e167">vmupro_write_file_bytes</a>(<span class="stringliteral">&quot;/sdcard/app.log&quot;</span>, (uint8_t*)log_entry, </div>
+<div class="line">    <a class="code hl_function" href="#acc9c95d93a0cd878f09587f137a0e167">vmupro_write_file_bytes</a>(<span class="stringliteral">&quot;/sdcard/app.log&quot;</span>, (uint8_t*)log_entry,</div>
 <div class="line">                          current_size, strlen(log_entry));</div>
 <div class="line">}</div>
 <div class="ttc" id="avmupro__file_8h_html_acc9c95d93a0cd878f09587f137a0e167"><div class="ttname"><a href="#acc9c95d93a0cd878f09587f137a0e167">vmupro_write_file_bytes</a></div><div class="ttdeci">bool vmupro_write_file_bytes(const char *filename, const uint8_t *data, uint32_t offset, size_t length)</div><div class="ttdoc">Write data to a file at a specific offset.</div></div>

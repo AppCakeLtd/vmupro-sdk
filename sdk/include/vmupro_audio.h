@@ -30,6 +30,16 @@ extern "C" {
 typedef int16_t vmupro_audio_sample_t;
 
 /**
+ * @brief Audio stereo mode enumeration
+ * 
+ * Specifies whether audio samples are mono or stereo.
+ */
+typedef enum { 
+    VMUPRO_AUDIO_MONO = 0,   ///< Mono audio (single channel)
+    VMUPRO_AUDIO_STEREO = 1  ///< Stereo audio (dual channel)
+} vmupro_stereo_mode_t;
+
+/**
  * @brief Start audio listen mode for streaming playback
  * 
  * Initializes the audio subsystem for streaming audio playback.
@@ -70,11 +80,12 @@ void vmupro_audio_exit_listen_mode(void);
  * regularly added to maintain smooth playback.
  * 
  * @param samples Pointer to array of 16-bit signed audio samples
- * @param count Number of samples to add (not bytes)
+ * @param numSamples Number of samples to add (not bytes)
+ * @param stereo_mode Audio channel mode (VMUPRO_AUDIO_MONO or VMUPRO_AUDIO_STEREO)
  * @param applyGlobalVolume If true, applies the firmware's global volume level to the samples.
  *                          If false, allows user to control their own volume levels.
  * 
- * @return Number of samples actually queued (may be less than count if buffer is full)
+ * @note This function does not return a value
  * 
  * @note Only 44.1kHz mono audio is supported
  * @note Samples should be 16-bit signed values (-32768 to 32767)
@@ -89,13 +100,15 @@ void vmupro_audio_exit_listen_mode(void);
  *     samples[i] = (int16_t)(sin(2.0 * M_PI * 440.0 * i / 44100.0) * 16000);
  * }
  * 
- * int queued = vmupro_audio_add_stream_samples(samples, 1024, true);
- * if (queued < 1024) {
- *     // Audio buffer is full, try again later
- * }
+ * vmupro_audio_add_stream_samples(samples, 1024, VMUPRO_AUDIO_MONO, true);
  * @endcode
  */
-int vmupro_audio_add_stream_samples(const vmupro_audio_sample_t *samples, int count, bool applyGlobalVolume);
+void vmupro_audio_add_stream_samples(
+    int16_t* samples,
+    int numSamples,
+    vmupro_stereo_mode_t stereo_mode,
+    bool applyGlobalVolume
+);
 
 /**
  * @brief Clear the audio ring buffer
@@ -138,7 +151,7 @@ void vmupro_audio_clear_ring_buffer(void);
  * }
  * @endcode
  */
-int vmupro_get_global_volume(void);
+uint8_t vmupro_get_global_volume(void);
 
 /**
  * @brief Set the global audio volume
@@ -164,7 +177,7 @@ int vmupro_get_global_volume(void);
  * vmupro_set_global_volume(100);
  * @endcode
  */
-void vmupro_set_global_volume(int volume);
+void vmupro_set_global_volume(uint8_t volume);
 
 #ifdef __cplusplus
 }
