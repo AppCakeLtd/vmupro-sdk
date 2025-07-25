@@ -3446,6 +3446,11 @@ bool IsGroundedOrCoyoteTime(Sprite *spr)
   return rVal;
 }
 
+bool IsInLiquid(Sprite *spr)
+{
+  return spr->inLiquid;
+}
+
 // the first part of the jump, triggering it
 void TryJump(Sprite *spr)
 {
@@ -3459,47 +3464,59 @@ void TryJump(Sprite *spr)
     }
   }
 
-  if (spr->mustReleaseJump)
-  {
-    return;
-  }
-
-  if (spr->jumpFrameNum != 0)
-  {
-    return;
-  }
-
   if (!spr->input.jump)
   {
     return;
   }
 
-  if (SpriteJumping(spr))
+  if (spr->mustReleaseJump)
   {
     return;
   }
 
-  bool grounded = IsGroundedOrCoyoteTime(spr);
+  bool inLiquid = IsInLiquid(spr);
 
-  if (!grounded)
+  if (!inLiquid)
   {
-    return;
+
+    if (spr->jumpFrameNum != 0)
+    {
+      return;
+    }
+
+    if (SpriteJumping(spr))
+    {
+      return;
+    }
+
+    bool grounded = IsGroundedOrCoyoteTime(spr);
+
+    if (!grounded)
+    {
+      return;
+    }
+    
   }
 
   SetMoveMode(spr, MM_JUMP);
   spr->mustReleaseJump = true;
+  // for water
+  spr->jumpFrameNum = 0;
 }
 
 void TryDash(Sprite *spr)
 {
 
-  if ( spr->mustReleaseDash ){
-    if (!spr->input.run){
+  if (spr->mustReleaseDash)
+  {
+    if (!spr->input.run)
+    {
       spr->mustReleaseDash = false;
     }
   }
 
-  if ( spr->mustReleaseDash ){
+  if (spr->mustReleaseDash)
+  {
     return;
   }
 
