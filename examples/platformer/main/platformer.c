@@ -51,6 +51,7 @@ const bool DEBUG_ONLY_MOVE_PLAYER = false;
 #define TILEMAP_HEIGHT_PIXELS (TILEMAP_HEIGHT_TILES * TILE_SIZE_PX)
 
 // the actual map
+// TODO: get rid
 #define MAP_WIDTH_TILES 128
 #define MAP_HEIGHT_TILES 64
 #define MAP_WIDTH_PIXELS (MAP_WIDTH_TILES * TILE_SIZE_PX)
@@ -61,8 +62,10 @@ const bool DEBUG_ONLY_MOVE_PLAYER = false;
 #define TILEMAP_ONEWAY_PLATFORM_ROW_11 11
 #define TILEMAP_TRANSPARENT_ROW_11 11
 #define TILEMAP_TRANSPARENT_ROW_12 12
+#define TILEMAP_SMASHABLE_COL_13 13
 #define TILEMAP_SPAWNDATA_ROW_13 13
 #define TILEMAP_ANIMATED_TRIGGER_COL_14 14
+
 //__TEST__ rename
 #define TILEMAP_LAVA_ID_14 14
 #define TILEMAP_LAVA_ID_30 30
@@ -2633,6 +2636,13 @@ Vec2 GetTileRowAndColFromSubPos(Vec2 *subPos)
   return returnVal;
 }
 
+int GetTileIndexFromSubPos(Vec2 *subPos)
+{
+  Vec2 vecVal = GetTileRowAndColFromSubPos(subPos);
+  int scalarVal = (vecVal.y * currentLevel->bgLayer->width) + vecVal.x;
+  return scalarVal;
+}
+
 Vec2 GetTileSubPosFromRowAndCol(Vec2 *rowAndcol)
 {
 
@@ -2640,6 +2650,24 @@ Vec2 GetTileSubPosFromRowAndCol(Vec2 *rowAndcol)
   returnVal.x = rowAndcol->x * TILE_SIZE_SUB;
   returnVal.y = rowAndcol->y * TILE_SIZE_SUB;
   return returnVal;
+}
+
+bool IsTileIDBreakable(int blockID)
+{
+
+  int colNum = blockID % TILEMAP_WIDTH_TILES;
+  if (colNum != TILEMAP_SMASHABLE_COL_13)
+  {
+    return false;
+  }
+
+  int rowNum = blockID / TILEMAP_WIDTH_TILES;
+  if (rowNum >= TILEMAP_SPAWNDATA_ROW_13)
+  {
+    return false;
+  }
+
+  return true;
 }
 
 // right side of
@@ -3985,6 +4013,53 @@ void StopKnockback(Sprite *spr, bool resetMoveMode, const char *cause)
   }
 }
 
+void ProcessSpriteTouches(Sprite *spr, HitInfo *info)
+{
+}
+
+void ProcessTileTouches(Sprite *spr, HitInfo *info, bool horz)
+{
+
+  for (int i = 0; i < 3; i++)
+  {
+    if (info->blockID[i] == -1)
+    {
+      continue;
+    }
+
+    int tileID = info->blockID[i];
+
+    if (!IsTileIDBreakable(tileID))
+    {
+      continue;
+    }
+
+    if (horz)
+    {
+      if (!SpriteDashing(spr))
+      {
+        continue;
+      }
+      if (info->whereWasCollision != DIR_RIGHT && info->whereWasCollision != DIR_LEFT)
+      {
+        continue;
+      }
+    }
+
+    uint8_t *tileData = GetTileLayerData(LAYER_COLS);
+
+    int idx = GetTileIndexFromSubPos(&info->subCheckPos[i]);
+    if (spr == player)
+    {
+      printf("bonked index %d\n", idx);
+    }
+
+    // destroy the tile in the tilemap, but not in the hitinfo
+    // since we might still be using it
+    tileData[idx] = BLOCK_NULL;
+  }
+}
+
 // basic order of operations
 // - use state from previous frame, since it's fully resolved
 // - check inputs
@@ -4387,6 +4462,11 @@ void SolveMovement(Sprite *spr)
   //
   TileTriggerInfo tileTrigInfo;
   GetTileTriggerOverlaps(spr, &tileTrigInfo);
+
+  //
+  // Then process stuff the sprite might be touching
+  //
+  ProcessTileTouches(spr, &xHitInfo, true);
 
   //
   // After any damage is dealt, etc
