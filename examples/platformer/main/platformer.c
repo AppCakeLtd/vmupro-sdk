@@ -3495,7 +3495,6 @@ void TryJump(Sprite *spr)
     {
       return;
     }
-    
   }
 
   SetMoveMode(spr, MM_JUMP);
@@ -3883,6 +3882,11 @@ bool SpriteCanRideSprite(Sprite *rider, Sprite *thingImRiding)
   }
   if (!AllowSpriteInput(rider) || !AllowSpriteInput(thingImRiding))
     return false;
+
+  if (rider->inLiquid)
+  {
+    return false;
+  }
 
   if (!(rider->profile.iMask & IMASK_CAN_RIDE_STUFF))
     return false;
