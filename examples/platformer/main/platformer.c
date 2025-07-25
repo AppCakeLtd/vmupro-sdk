@@ -364,10 +364,10 @@ const PhysParams physTestMob = {
 
     .max_subspeed_walk = 10,
     .max_subspeed_run = 140,
-    .subaccel_walk = 0, // make 'em slippery
+    .subaccel_walk = 1, // make 'em slippery
     .subaccel_run = 9,
     .subaccel_air = 6,
-    .subdamping_walk = 6,
+    .subdamping_walk = 0,
     .subdamping_run = 6,
     .subdamping_air = 4,
     .max_jump_boost_frames = 16,
