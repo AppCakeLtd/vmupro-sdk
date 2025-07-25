@@ -3334,18 +3334,10 @@ void GetEjectionInfo(Sprite *spr, HitInfo *info, bool horz)
 // returns the sign of the movement direction
 // e.g. -1 for jump, 1 for ground
 // e.g. -1 for left, 1 for right
-int CheckCollisionsAndEject(HitInfo *info, Sprite *spr, bool horz)
+int CheckCollisionsAndEject(HitInfo *info, Sprite *spr, bool horz, Vec2 platformDelta)
 {
 
   memset(info, 0, sizeof(HitInfo));
-
-  // Could include nonzero values
-  // but would need to prevent warping up when
-  // approaching sprites from the left
-  bool movingRight = spr->subVelo.x > 0;
-  bool movingLeft = spr->subVelo.x < 0;
-  bool movingDown = spr->subVelo.y > 0;
-  bool movingUp = spr->subVelo.y < 0;
 
   // We're not using prediction by default
   // but it could later be applied
@@ -3354,6 +3346,13 @@ int CheckCollisionsAndEject(HitInfo *info, Sprite *spr, bool horz)
   Direction dir = DIR_RIGHT;
   if (horz)
   {
+
+    // Could include nonzero values
+    // but would need to prevent warping up when
+    // approaching sprites from the left
+    bool movingRight = (spr->subVelo.x + platformDelta.x) > 0;
+    bool movingLeft = (spr->subVelo.x + platformDelta.x) < 0;
+
     if (movingRight)
     {
       dir = DIR_RIGHT;
@@ -3369,6 +3368,10 @@ int CheckCollisionsAndEject(HitInfo *info, Sprite *spr, bool horz)
   }
   else
   {
+
+    bool movingDown = (spr->subVelo.y + platformDelta.y) > 0;
+    bool movingUp = (spr->subVelo.y + platformDelta.y) < 0;
+
     if (movingDown)
     {
       dir = DIR_DOWN;
@@ -4210,6 +4213,15 @@ void SolveMovement(Sprite *spr)
     spr->subVelo.x = -maxSubSpeedX;
   }
 
+  /*
+  if ( ridingPlatformDelta.x > 0 && spr->subVelo.x < ridingPlatformDelta.x ){
+    spr->subVelo.x = ridingPlatformDelta.x;
+  }
+  if ( ridingPlatformDelta.x < 0 && spr->subVelo.x > ridingPlatformDelta.x ){
+    spr->subVelo.x = ridingPlatformDelta.x;
+  }
+  */
+
   // Sanity check
   if (Abs(spr->subVelo.x) > (TILE_SIZE_SUB))
   {
@@ -4227,7 +4239,7 @@ void SolveMovement(Sprite *spr)
     AddSubPos2(spr, spr->subVelo.x + ridingPlatformDelta.x, 0);
 
     // Eject from any X Collisions
-    hBonk = CheckCollisionsAndEject(&xHitInfo, spr, true);
+    hBonk = CheckCollisionsAndEject(&xHitInfo, spr, true, ridingPlatformDelta);
 
   } // DEBUG_NO_X
 
@@ -4291,7 +4303,7 @@ void SolveMovement(Sprite *spr)
     AddSubPos2(spr, 0, spr->subVelo.y + ridingPlatformDelta.y);
 
     // Eject from any Y collisions
-    vBonk = CheckCollisionsAndEject(&yHitInfo, spr, false);
+    vBonk = CheckCollisionsAndEject(&yHitInfo, spr, false, ridingPlatformDelta);
 
   } // DEBUG_NO_Y
 
@@ -4334,7 +4346,7 @@ void SolveMovement(Sprite *spr)
       spr->subVelo.x = 0;
 
       // re-run the Y hit
-      vBonk = CheckCollisionsAndEject(&yHitInfo, spr, false);
+      vBonk = CheckCollisionsAndEject(&yHitInfo, spr, false, ZeroVec());
       if (yHitInfo.hitMaskIsSolid)
       {
         printf("....Still got a Y collision to resolve: %d\n", yHitInfo.snapPoint.y);
@@ -4356,7 +4368,7 @@ void SolveMovement(Sprite *spr)
       spr->subVelo.y = 0;
 
       // re-run the X hit
-      hBonk = CheckCollisionsAndEject(&xHitInfo, spr, true);
+      hBonk = CheckCollisionsAndEject(&xHitInfo, spr, true, ZeroVec());
       if (xHitInfo.hitMaskIsSolid)
       {
         printf("....Still got a X collision to resolve: %d\n", xHitInfo.snapPoint.x);
