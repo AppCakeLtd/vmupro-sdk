@@ -3941,6 +3941,17 @@ void CheckFallen(Sprite *spr)
   }
 }
 
+bool DontLandCauseImJumping(Sprite *spr)
+{
+  // don't land if we clip the corner of a stair
+  // while jumping up
+  if (spr->moveMode == MM_JUMP && spr->subVelo.y < 0)
+  {
+    return true;
+  }
+  return false;
+}
+
 void CheckLanded(Sprite *spr)
 {
 
@@ -3963,11 +3974,10 @@ void CheckLanded(Sprite *spr)
     printf("__DBG__ Frame %d landed @ %d/%d\n", frameCounter, spr->subPos.y, spr->subPos.y >> SHIFT);
   }
 
-  // don't land if we clip the corner of a stair
-  // while jumping up
-  // if ( spr->moveMode == MM_JUMP && spr->subVelo.y < 0 ){
-  //   return;
-  // }
+  if (DontLandCauseImJumping(spr))
+  {
+    return;
+  }
 
   // we're on the ground
   // we weren't during the last frame
@@ -4776,7 +4786,8 @@ void SolveMovement(Sprite *spr)
   {
     // don't need to change move mode, checklanded will have set that
     // special case, clippin the edge of a stair while jumping up
-    if (!(spr->isGrounded && vBonk == 0 && spr->moveMode == MM_JUMP && spr->subVelo.y < 0))
+
+    if (!DontLandCauseImJumping(spr))
     {
       StopJumpBoost(spr, false, "LandedOrHeadBonk (v)");
     }
