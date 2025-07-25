@@ -3493,6 +3493,16 @@ void TryJump(Sprite *spr)
 void TryDash(Sprite *spr)
 {
 
+  if ( spr->mustReleaseDash ){
+    if (!spr->input.run){
+      spr->mustReleaseDash = false;
+    }
+  }
+
+  if ( spr->mustReleaseDash ){
+    return;
+  }
+
   // if we're in the delay phase, count up to 0
   // before allowing another dash
   if (spr->dashFrameNum < 0)
