@@ -294,15 +294,17 @@ typedef enum
 typedef enum
 {
   IMASK_NONE = 0x00,
-  IMASK_HURTS_HORZ = 0x01,     // hurty if you walk into it horizontally
-  IMASK_HURTS_VERT = 0x02,     // hurty if you land or bonk it
-  IMASK_CAN_BE_RIDDEN = 0x04,  //
-  IMASK_CAN_RIDE_STUFF = 0x08, //
-  IMASK_DRAW_FIRST = 0x10,     // doors n things, draw at the back
-  // IMASK_DRAW_LAST = 0x20,  // anything which should be drawn on top
-  IMASK_SKIP_INPUT = 0x40,     // don't bother processing input (doors, spikes, projectiles)
-  IMASK_SKIP_MOVEMENT = 0x80,  // static, don't process the movement steps (doors, spikes)
-  IMASK_SKIP_ANIMSETS = 0x100, // use only the IDLE anim set (no other move types)
+  IMASK_HURTS_HORZ = 0x01,            // hurty if you walk into it horizontally
+  IMASK_HURTS_VERT = 0x02,            // hurty if you land or bonk it
+  IMASK_CAN_BE_RIDDEN = 0x04,         //
+  IMASK_CAN_RIDE_STUFF = 0x08,        //
+  IMASK_DRAW_FIRST = 0x10,            // doors n things, draw at the back
+  IMASK_DRAW_LAST = 0x20,             // anything which should be drawn on top (not implemented)
+  IMASK_SKIP_INPUT = 0x40,            // don't bother processing input (doors, spikes, projectiles)
+  IMASK_SKIP_MOVEMENT = 0x80,         // static, don't process the movement steps (doors, spikes)
+  IMASK_SKIP_ANIMSETS = 0x100,        // use only the IDLE anim set (no other move types)
+  IMASK_TAKEDAMAGE_STUN = 0x200,      // when something hits me, i get stunned
+  IMASK_TAKEDAMAGE_KNOCKBACK = 0x400, // when something hits me, i bounce a bit
 } InteractionMask;
 
 typedef struct
@@ -472,7 +474,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->default_health = 10;
     p->damage_multiplier = 1;
     p->solid = SOLIDMASK_SPRITE_SOLID;
-    p->iMask = IMASK_CAN_BE_RIDDEN | IMASK_CAN_RIDE_STUFF;
+    p->iMask = IMASK_CAN_BE_RIDDEN | IMASK_CAN_RIDE_STUFF | IMASK_TAKEDAMAGE_KNOCKBACK;
     p->physParams = &physDefault;
     p->defaultAnimGroup = &animgroup_player;
   }
@@ -481,7 +483,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->default_health = 1;
     p->damage_multiplier = 1;
     p->solid = SOLIDMASK_PLATFORM;
-    p->iMask = IMASK_CAN_BE_RIDDEN | IMASK_CAN_RIDE_STUFF;
+    p->iMask = IMASK_CAN_BE_RIDDEN | IMASK_CAN_RIDE_STUFF | IMASK_TAKEDAMAGE_KNOCKBACK;
     p->physParams = &physTestMob;
     p->defaultAnimGroup = &animgroup_player;
   }
@@ -1276,7 +1278,10 @@ void OnSpriteDied(Sprite *spr, const char *cause)
   else
   {
 
-    MarkSpriteForDespawn(spr, cause);
+    //MarkSpriteForDespawn(spr, cause);
+    SetAnim(spr, ANIIMTYPE_DIE);
+    spr->despawnTimer = 64;
+    
   }
 }
 
@@ -4143,10 +4148,6 @@ void StopKnockback(Sprite *spr, bool resetMoveMode, const char *cause)
   }
 }
 
-void ProcessSpriteTouches(Sprite *spr, HitInfo *info)
-{
-}
-
 void DestroyBlock(Vec2 *rowAndCol)
 {
 
@@ -4217,6 +4218,68 @@ void ProcessTileTouches(Sprite *spr, HitInfo *info, bool horz)
 
     Vec2 rowAndCol = GetTileRowAndColFromSubPos(&info->subCheckPos[i]);
     DestroyBlock(&rowAndCol);
+  }
+}
+
+void OnSpriteGotTouched(Sprite *toucher, Sprite *target, bool horz)
+{
+
+  InteractionMask hvMask = horz ? IMASK_HURTS_HORZ : IMASK_HURTS_VERT;
+
+  // hurts to touch, do the damage, call it a day
+  if (target->profile.iMask & hvMask)
+  {
+
+    SpriteTakeDamage(toucher, target->profile.damage_multiplier, target, "touch a hurty");
+
+    return;
+  }
+
+  // doesn't hurt to touch
+  // are we charging it?
+  bool dashing = SpriteDashingAboveBonkThresh(toucher);
+
+  if (dashing)
+  {
+
+    bool takeDamage = (target->profile.iMask & IMASK_TAKEDAMAGE_KNOCKBACK);
+    if (takeDamage)
+    {
+      SpriteTakeDamage(target, toucher->profile.damage_multiplier, toucher, "Toucher Dashed damage taker");
+    }
+    else
+    {
+      // just apply a small knockback
+      TryKnockback(target, KNOCK_SOFT, "Toucheer dashed non-damage taker");
+    }
+  }
+  else
+  {
+    // doesn't hurt us, ignore
+  }
+}
+
+void ProcessSpriteTouches(Sprite *spr, HitInfo *info, bool horz)
+{
+
+  Sprite *lastTarget = NULL;
+  for (int i = 0; i < 3; i++)
+  {
+
+    if (info->otherSprites[i] == NULL)
+    {
+      continue;
+    }
+
+    // Don't need to process the same once twice
+    Sprite *targ = info->otherSprites[i];
+    if (targ == lastTarget)
+    {
+      continue;
+    }
+
+    OnSpriteGotTouched(spr, targ, horz);
+    lastTarget = targ;
   }
 }
 
@@ -4619,6 +4682,7 @@ void SolveMovement(Sprite *spr)
   // Then process stuff the sprite might be touching
   //
   ProcessTileTouches(spr, &xHitInfo, true);
+  ProcessSpriteTouches(spr, &xHitInfo, true);
 
   //
   // After any damage is dealt, etc
@@ -5134,8 +5198,8 @@ void app_main(void)
       // printf("Player grounded? %d\n", (int)player->isGrounded);
       // LoadLevel(1);
       // SpawnDuckAboveMe(player);
-      //Vec2 playerWorld = Sub2World(&player->subPos);
-      //CreateSprite(STYPE_PARTICLE_BROWN, playerWorld, "TEST PARTICLE");
+      // Vec2 playerWorld = Sub2World(&player->subPos);
+      // CreateSprite(STYPE_PARTICLE_BROWN, playerWorld, "TEST PARTICLE");
     }
 
     frameCounter++;
