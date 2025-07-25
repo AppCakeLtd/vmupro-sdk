@@ -62,14 +62,24 @@ const bool DEBUG_ONLY_MOVE_PLAYER = false;
 #define TILEMAP_TRANSPARENT_ROW_11 11
 #define TILEMAP_TRANSPARENT_ROW_12 12
 #define TILEMAP_SPAWNDATA_ROW_13 13
+#define TILEMAP_ANIMATED_TRIGGER_COL_14 14
+//__TEST__ rename
+#define TILEMAP_LAVA_ID_14 14
+#define TILEMAP_LAVA_ID_30 30
+#define TILEMAP_WATER_ID_44 46
+#define TILEMAP_WATER_ID_60 62
+#define TILEMAP_INSTAKILL_ID_76 78
 
 #define BLOCK_NULL 0xFF
+#define DMG_TILEMAP_LAVA 2
+#define DMG_INSTAKILL 0xFF
 
 // TODO: const a bunch of this
 const int DEFAULT_LIFE_COUNT = 3;
 // give it a few frames before you can continue
 const int POST_DEATH_FRAME_DELAY = 60;
 const int TRANSITION_FRAME_DELAY = 20;
+const int INVULN_FRAME_DELAY = 20;
 const int DOOR_THRESH_FRAMES = 15;
 const int DOOR_THRESH_SPEED = 30;
 const uint32_t COYOTE_TIME_FRAME_THRESH = 3;
@@ -249,12 +259,13 @@ typedef enum
 // Note: we do some >= on these, be careful changing them
 typedef enum
 {
-  SOLIDMASK_NONE = 0x0,      // non solid
-  SOLIDMASK_TRIGGER = 0x01,  // we can touch it, but doesn't block us (door, pickup, etc)
-  SOLIDMASK_TILE = 0x02,     // solid: tile
-  SOLIDMASK_SOLID = 0x04,    // solid: other creature
-  SOLIDMASK_ONESIDED = 0x08, // solid: one-way platform
-  SOLIDMASK_PLATFORM = 0x10  // solid: moving platform
+  SOLIDMASK_NONE = 0x0,            // non solid
+  SOLIDMASK_TILE_TRIGGER = 0x01,   // we can touch it, could be liquid, instadeath, etc
+  SOLIDMASK_SPRITE_TRIGGER = 0x02, // we can touch it, but doesn't block us (door, pickup, etc)
+  SOLIDMASK_TILE_SOLID = 0x04,     // solid: tile
+  SOLIDMASK_SPRITE_SOLID = 0x08,   // solid: other creature
+  SOLIDMASK_ONESIDED = 0x10,       // solid: one-way platform
+  SOLIDMASK_PLATFORM = 0x20        // solid: moving platform
 } Solidity;
 
 typedef enum
@@ -307,6 +318,7 @@ typedef struct
   int max_subfallspeed;
 
   int default_health;
+  int damage_multiplier;
 
   Solidity solid;
 
@@ -384,9 +396,11 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
   p->sub_gravity = 9;
   p->max_subfallspeed = 120;
 
-  p->solid = SOLIDMASK_SOLID;
+  p->solid = SOLIDMASK_SPRITE_SOLID;
 
-  p->default_health = 3;
+  p->default_health = 10;
+  p->damage_multiplier = 1;
+
   p->defaultAnimGroup = &animgroup_player;
 
   p->iMask = IMASK_CAN_BE_RIDDEN | IMASK_CAN_RIDE_STUFF;
@@ -406,14 +420,14 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
   }
   else if (inType >= STYPE_DOOR_0 && inType <= STYPE_DOOR_4)
   {
-    p->solid = SOLIDMASK_TRIGGER;
+    p->solid = SOLIDMASK_SPRITE_TRIGGER;
     p->defaultAnimGroup = &animgroup_door;
     p->skipMovement = true;
     p->iMask = IMASK_NONE;
   }
   else if (inType == STYPE_SPIKEBALL)
   {
-    p->solid = SOLIDMASK_SOLID;
+    p->solid = SOLIDMASK_SPRITE_SOLID;
     p->defaultAnimGroup = &animgroup_spikeball;
     p->skipMovement = true;
     p->iMask = IMASK_HURTS_HORZ | IMASK_HURTS_VERT;
@@ -473,9 +487,12 @@ typedef struct Sprite
   bool isOnWall;
   bool onGroundLastFrame;
   bool onWallLastFrame;
+  bool inLiquid;
+  bool inLiquidLastFrame;
   int jumpFrameNum;
   int dashFrameNum;
   int knockbackFrameNum;
+  int invulnFrameNum;
 
   // config options
   bool isPlayer;
@@ -754,6 +771,7 @@ void UnloadTileLayers();
 void DecompressAllTileLayers(Level *currentLevel, PersistentData *inData);
 void StopJumpBoost(Sprite *spr, bool resetMoveMode, const char *src);
 void StopDashBoost(Sprite *spr, bool resetMovemode, const char *src);
+void TryKnockback(Sprite *spr, KnockbackStrength inStr, const char *cause);
 void StopKnockback(Sprite *spr, bool resetMoveMode, const char *cause);
 
 void DrawBBoxScreen(BBox *box, uint16_t inCol)
@@ -1077,7 +1095,29 @@ Vec2 GetPlayerWorldStartPos()
   return rVal;
 }
 
-void OnSpriteDied(Sprite *spr)
+bool SpriteCanDie(Sprite *spr)
+{
+  if (spr->health < 0)
+    return false;
+  if (SpriteIsDead(spr))
+    return false;
+  return true;
+}
+
+bool SpriteCanTakeDamage(Sprite *spr)
+{
+  printf("__TEST__ iframe %d\n", spr->invulnFrameNum);
+  if (SpriteIsDead(spr))
+    return false;
+  if (SpriteIsKnockback(spr))
+    return false;
+  if (spr->invulnFrameNum > 0)
+    return false;
+
+  return true;
+}
+
+void OnSpriteDied(Sprite *spr, const char *cause)
 {
 
   if (spr == NULL)
@@ -1085,8 +1125,13 @@ void OnSpriteDied(Sprite *spr)
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "NULL sprites can't die");
     return;
   }
+  if (!SpriteCanDie(spr))
+  {
+    vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s you can't kill that which is already dead", frameCounter, spr->name);
+    return;
+  }
 
-  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s died. RIP", frameCounter, spr->name);
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s died. cause %s RIP", frameCounter, spr->name, cause);
 
   SetAnim(spr, ANIIMTYPE_DIE);
 
@@ -1112,10 +1157,26 @@ void OnSpriteDied(Sprite *spr)
   }
 }
 
-void SpriteTakeDamage(Sprite *spr, int value, Sprite *sourceOrNull)
+void SpriteTakeDamage(Sprite *spr, int value, Sprite *sourceOrNull, const char *cause)
 {
 
-  const char *srcName = sourceOrNull != NULL ? sourceOrNull->name : "WORLD";
+  const char *srcName = sourceOrNull != NULL ? sourceOrNull->name : "WORLD DMG";
+
+  if (value == 0)
+  {
+    return;
+  }
+
+  // if we can't take damage, ignore unless it's instakill
+  if (!SpriteCanTakeDamage(spr))
+  {
+    if (value != DMG_INSTAKILL)
+    {
+      return;
+    }
+  }
+
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s took %d damage (hp=%d) from %s, cause=%s", frameCounter, spr->name, value, spr->health, srcName, cause);
 
   if (value > spr->health)
   {
@@ -1126,12 +1187,17 @@ void SpriteTakeDamage(Sprite *spr, int value, Sprite *sourceOrNull)
 
   if (spr->health <= 0)
   {
-    OnSpriteDied(spr);
+    OnSpriteDied(spr, cause);
+    return;
   }
-  else
+
+  // maybe it's already invulnerable/doing knockback
+  if (!SpriteCanTakeDamage(spr))
   {
-    printf("TODO: pushback damage\n");
+    return;
   }
+
+  TryKnockback(spr, KNOCK_HARD, cause);
 }
 
 void CheckFellOffMap(Sprite *spr)
@@ -1145,7 +1211,7 @@ void CheckFellOffMap(Sprite *spr)
 
   vmupro_log(VMUPRO_LOG_WARN, TAG, "Frame %d Sprite %s fell off map at yPos %d\n", frameCounter, spr->name, spr->subPos.y);
 
-  SpriteTakeDamage(spr, spr->health, NULL);
+  SpriteTakeDamage(spr, DMG_INSTAKILL, NULL, "Fell off map");
 }
 
 void ResetSprite(Sprite *spr)
@@ -1174,9 +1240,12 @@ void ResetSprite(Sprite *spr)
   spr->isOnWall = false;
   spr->onGroundLastFrame = false;
   spr->onWallLastFrame = false;
+  spr->inLiquid = false;
+  spr->inLiquidLastFrame = false;
   spr->jumpFrameNum = 0;
   spr->dashFrameNum = 0;
   spr->knockbackFrameNum = 0;
+  spr->invulnFrameNum = 0;
 
   // temporary config stuff
   spr->subPos = spr->subSpawnPos;
@@ -1225,6 +1294,7 @@ bool IsTypeSpawnable(SpriteType inType)
   return false;
 }
 
+// TODO: rename to reflect spawn usage
 void HandleSpecialSpriteType(SpriteType inType, Vec2 worldStartPos)
 {
 
@@ -2210,6 +2280,7 @@ void EndFrameSprite(Sprite *inSpr)
   inSpr->lastSubPos = inSpr->subPos;
   inSpr->lastSubVelo = inSpr->subVelo;
   inSpr->onGroundLastFrame = inSpr->isGrounded;
+  inSpr->inLiquidLastFrame = inSpr->inLiquid;
   inSpr->onWallLastFrame = inSpr->isOnWall;
 }
 
@@ -2225,7 +2296,14 @@ void EndFrameAllSprites()
 int GetYSubAccel(Sprite *spr)
 {
 
-  return spr->isGrounded ? 0 : player->profile.sub_gravity;
+  int returnVal = spr->isGrounded ? 0 : player->profile.sub_gravity;
+
+  if (spr->inLiquid)
+  {
+    returnVal /= 2;
+  }
+
+  return returnVal;
 }
 
 int GetXSubAccel(Sprite *spr)
@@ -2234,25 +2312,34 @@ int GetXSubAccel(Sprite *spr)
   MoveMode mMode = spr->moveMode;
   SpriteProfile *prof = &spr->profile;
 
+  int returnVal;
+
   switch (mMode)
   {
   default:
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Accel: Unhandled movement mode: %d", (int)mMode);
-    return prof->subaccel_walk;
+    returnVal = prof->subaccel_walk;
     break;
 
   case MM_JUMP:
   case MM_KNOCKBACK:
   case MM_FALL:
-    return prof->subaccel_air;
+    returnVal = prof->subaccel_air;
     break;
   case MM_WALK:
-    return prof->subaccel_walk;
+    returnVal = prof->subaccel_walk;
     break;
   case MM_DASH:
-    return prof->subaccel_run;
+    returnVal = prof->subaccel_run;
     break;
   }
+
+  if (spr->inLiquid)
+  {
+    returnVal /= 2;
+  }
+
+  return returnVal;
 }
 
 int GetMaxXSubSpeed(Sprite *spr)
@@ -2262,35 +2349,57 @@ int GetMaxXSubSpeed(Sprite *spr)
   SpriteProfile *prof = &spr->profile;
   bool wasRunningWhenLastGrounded = spr->wasRunningLastTimeWasOnGround;
 
+  int returnVal = 0;
+
   switch (mMode)
   {
   default:
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Subspeed: Unhandled movement mode: %d", (int)mMode);
-    return prof->max_subspeed_walk;
+    returnVal = prof->max_subspeed_walk;
     break;
 
   case MM_JUMP:
   case MM_FALL:
     if (wasRunningWhenLastGrounded)
     {
-      return prof->max_subspeed_run;
+      returnVal = prof->max_subspeed_run;
     }
     else
     {
-      return prof->max_subspeed_walk;
+      returnVal = prof->max_subspeed_walk;
     }
 
     break;
 
   case MM_KNOCKBACK:
   case MM_WALK:
-    return prof->max_subspeed_walk;
+    returnVal = prof->max_subspeed_walk;
     break;
 
   case MM_DASH:
-    return prof->max_subspeed_run;
+    returnVal = prof->max_subspeed_run;
     break;
   }
+
+  if (spr->inLiquid)
+  {
+    returnVal /= 2;
+  }
+
+  return returnVal;
+}
+
+int GetMaxYSubSpeed(Sprite *spr)
+{
+
+  int returnVal = player->profile.max_subfallspeed;
+
+  if (spr->inLiquid)
+  {
+    returnVal /= 2;
+  }
+
+  return returnVal;
 }
 
 int GetXDamping(Sprite *spr)
@@ -2300,35 +2409,44 @@ int GetXDamping(Sprite *spr)
   SpriteProfile *prof = &spr->profile;
   bool wasRunningWhenLastGrounded = spr->wasRunningLastTimeWasOnGround;
 
+  int returnVal = 0;
+
   switch (mMode)
   {
   default:
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Damping: Unhandled movement mode: %d", (int)mMode);
-    return prof->subdamping_walk;
+    returnVal = prof->subdamping_walk;
     break;
 
   case MM_JUMP:
   case MM_FALL:
     if (wasRunningWhenLastGrounded)
     {
-      return prof->subdamping_run;
+      returnVal = prof->subdamping_run;
     }
     else
     {
-      return prof->subdamping_walk;
+      returnVal = prof->subdamping_walk;
     }
 
     break;
 
   case MM_KNOCKBACK:
   case MM_WALK:
-    return prof->subdamping_walk;
+    returnVal = prof->subdamping_walk;
     break;
 
   case MM_DASH:
-    return prof->subdamping_run;
+    returnVal = prof->subdamping_run;
     break;
   }
+
+  if (spr->inLiquid)
+  {
+    returnVal *= 2;
+  }
+
+  return returnVal;
 }
 
 // hitbox = false: return sprite box in world coords
@@ -2409,8 +2527,8 @@ Vec2 GetPointOnSprite(Sprite *spr, bool hitBox, Anchor_H anchorH, Anchor_V ancho
 typedef struct
 {
 
-  // Used to work out which pivot points
-  // to use
+  // relative to self
+  // e.g. which way are we ejecting, etc
   Direction whereWasCollision;
 
   // the points we'll look up
@@ -2420,16 +2538,16 @@ typedef struct
   Anchor_H anchorH[3];
   Anchor_V anchorV[3];
 
+  // the point(s) we're checking for collision
+  // e.g. for moving down we'd use 3:
+  // bottom left, bottom middle, bottom right
+  Vec2 subCheckPos[3];
+
   //
   // Block hit info
   //
 
   int lastBlockHitIndex; // 0-2
-
-  // the point(s) we're checking for collision
-  // e.g. for moving down we'd use 3:
-  // bottom left, bottom middle, bottom right
-  Vec2 subCheckPos[3];
 
   // top left to bottom right
   // e.g. top left, top middle, top right
@@ -2437,17 +2555,17 @@ typedef struct
   // -1 for nothing
   int blockID[3];
 
-  //
-  // Sprite hit info:
-  //
-
-  int lastSpriteHitIndex; // 0-2
-
   // the ejection edge for the block we hit
   // e.g. if we're moving right, it'll be
   // - the x coord of the block's left edge
   // - the y coord of the hitbox point we're checking
   Vec2 blockSubEjectPoint[3];
+
+  //
+  // Sprite hit info:
+  //
+
+  int lastSpriteHitIndex; // 0-2
 
   // other sprites we might have hit
   Sprite *otherSprites[3];
@@ -2494,6 +2612,27 @@ Vec2 GetTileSubPosFromRowAndCol(Vec2 *rowAndcol)
   returnVal.x = rowAndcol->x * TILE_SIZE_SUB;
   returnVal.y = rowAndcol->y * TILE_SIZE_SUB;
   return returnVal;
+}
+
+// right side of
+bool IsTriggerTile(int blockID)
+{
+
+  // the last to cols are special cols
+  int colNum = blockID % TILEMAP_WIDTH_TILES;
+  if (colNum != TILEMAP_ANIMATED_TRIGGER_COL_14)
+  {
+    return false;
+  }
+
+  // except if it's spawndata tiles, ignore that.
+  int rowNum = blockID / TILEMAP_WIDTH_TILES;
+  if (rowNum >= TILEMAP_SPAWNDATA_ROW_13)
+  {
+    return false;
+  }
+
+  return true;
 }
 
 // Solid one-way platform or not?
@@ -2566,14 +2705,15 @@ bool IsBlockingCollision(Solidity inSolid)
   switch (inSolid)
   {
   case SOLIDMASK_NONE:
-  case SOLIDMASK_TRIGGER:
+  case SOLIDMASK_TILE_TRIGGER:
+  case SOLIDMASK_SPRITE_TRIGGER:
     return false;
     break;
 
   case SOLIDMASK_ONESIDED:
   case SOLIDMASK_PLATFORM:
-  case SOLIDMASK_SOLID:
-  case SOLIDMASK_TILE:
+  case SOLIDMASK_SPRITE_SOLID:
+  case SOLIDMASK_TILE_SOLID:
     return true;
     break;
 
@@ -2584,12 +2724,100 @@ bool IsBlockingCollision(Solidity inSolid)
   }
 }
 
-Sprite *GetTriggerOverlaps(Sprite *srcSprite)
+typedef struct
+{
+
+  // the point(s) we're checking for collision
+  // e.g. for moving down we'd use 3:
+  // bottom left, bottom middle, bottom right
+  Vec2 subCheckPos[3];
+
+  // Did we hit any lava, death triggers, etc
+  int lastTriggertileIndex; // 0-2
+  int triggerTileID[3];
+
+} TileTriggerInfo;
+
+// check for lava, instadeath, water, etc
+void HandleTileTriggers(Sprite *spr, TileTriggerInfo *info)
+{
+
+  if (spr == NULL || info == NULL)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Null param passed to HandleTileTriggers");
+    return;
+  }
+  int index = info->lastTriggertileIndex;
+
+  if (index == -1)
+    return;
+
+  // Clear and we'll build up/merge damage, etc
+  spr->inLiquid = false;
+  int outDamage = 0;
+
+  int tileID = info->triggerTileID[index];
+  if (tileID == TILEMAP_LAVA_ID_14 || tileID == TILEMAP_LAVA_ID_30)
+  {
+    if (outDamage < DMG_TILEMAP_LAVA)
+    {
+      outDamage = DMG_TILEMAP_LAVA;
+    }
+    spr->inLiquid = true;
+  }
+  if (tileID == TILEMAP_WATER_ID_44 || tileID == TILEMAP_WATER_ID_60)
+  {
+    spr->inLiquid = true;
+  }
+  if (tileID == TILEMAP_INSTAKILL_ID_76)
+  {
+    outDamage = DMG_INSTAKILL;
+  }
+
+  // Any kinda damage?
+
+  if (outDamage != 0)
+  {
+    SpriteTakeDamage(spr, outDamage, NULL, "World damage");
+  }
+}
+
+void GetTileTriggerOverlaps(Sprite *spr, TileTriggerInfo *info)
+{
+
+  memset(info, 0, sizeof(TileTriggerInfo));
+
+  info->subCheckPos[0] = GetPointOnSprite(spr, true, ANCHOR_HLEFT, ANCHOR_VBOTTOM);
+  info->subCheckPos[1] = GetPointOnSprite(spr, true, ANCHOR_HRIGHT, ANCHOR_VBOTTOM);
+  info->subCheckPos[2] = GetPointOnSprite(spr, true, ANCHOR_HMID, ANCHOR_VTOP);
+
+  for (int i = 0; i < 3; i++)
+  {
+    info->triggerTileID[i] = BLOCK_NULL;
+
+    Vec2 tileRowAndCol = GetTileRowAndColFromSubPos(&info->subCheckPos[i]);
+    int blockId = GetBlockIDAtColRow(tileRowAndCol.x, tileRowAndCol.y, LAYER_COLS);
+    if (blockId == BLOCK_NULL)
+      continue;
+
+    Vec2 tileSubPos = GetTileSubPosFromRowAndCol(&tileRowAndCol);
+
+    bool isTriggerTile = IsTriggerTile(blockId);
+    if (!isTriggerTile)
+      return;
+
+    info->triggerTileID[i] = blockId;
+    info->lastTriggertileIndex = i;
+  }
+  HandleTileTriggers(spr, info);
+}
+
+Sprite *GetSpriteTriggerOverlaps(Sprite *srcSprite)
 {
 
   if (srcSprite == NULL)
   {
-    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Null sprite passed to GetTriggerOverlaps");
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Null sprite passed to GetSpriteTriggerOverlaps");
     return NULL;
   }
 
@@ -2604,7 +2832,7 @@ Sprite *GetTriggerOverlaps(Sprite *srcSprite)
     if (otherSprite == srcSprite)
       continue;
 
-    if (otherSprite->profile.solid != SOLIDMASK_TRIGGER)
+    if (otherSprite->profile.solid != SOLIDMASK_SPRITE_TRIGGER)
       continue;
 
     Vec2 *srcSubPos = &srcSprite->subPos;
@@ -2780,15 +3008,16 @@ void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull
       // to an exact tile ID
       Vec2 tileSubPos = GetTileSubPosFromRowAndCol(&tileRowAndCol);
 
-      bool ignore = !IsOneWayPlatformSolid(blockId, LAYER_COLS, spr, &tileSubPos);
+      bool ignore1 = !IsOneWayPlatformSolid(blockId, LAYER_COLS, spr, &tileSubPos);
+      bool ignore2 = IsTriggerTile(blockId);
 
-      if (ignore)
+      if (ignore1 || ignore2)
       {
         // printf("ignoring 2 sided block\n");
         continue;
       }
 
-      rVal->hitMask |= SOLIDMASK_TILE;
+      rVal->hitMask |= SOLIDMASK_TILE_SOLID;
       rVal->hitMaskIsSolid = true;
 
       rVal->blockID[i] = blockId;
@@ -2920,7 +3149,8 @@ void GetEjectionInfo(Sprite *spr, HitInfo *info, bool horz)
 {
 
   // simple early exit
-  if (!info->hitMask)
+  // we don't need to eject from liquids, instadeath, triggers
+  if (!info->hitMaskIsSolid)
   {
     return;
   }
@@ -3530,12 +3760,12 @@ void HandleDoorTransition(Sprite *activator, Sprite *door)
   GotoGameState(GSTATE_TRANSITION);
 }
 
-void HandleTriggers(Sprite *srcSprite, Sprite *trigger)
+void HandleSpriteTriggers(Sprite *srcSprite, Sprite *trigger)
 {
 
   if (srcSprite == NULL || trigger == NULL)
   {
-    vmupro_log(VMUPRO_LOG_ERROR, TAG, "HandleTriggers got a null sprite ref or trigger ref");
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "HandleSpriteTriggers got a null sprite ref or trigger ref");
     return;
   }
 
@@ -3554,7 +3784,7 @@ void HandleTriggers(Sprite *srcSprite, Sprite *trigger)
     break;
 
   default:
-    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Unhandled sprite type %d in HandleTriggers!", sType);
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Unhandled sprite type %d in HandleSpriteTriggers!", sType);
     return;
     break;
   }
@@ -3607,6 +3837,12 @@ void TryKnockback(Sprite *spr, KnockbackStrength inStr, const char *cause)
 
   vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d, Sprite %s knockback! str= %d, cause = '%s'", frameCounter, spr->name, (int)inStr, cause);
 
+  if (SpriteIsKnockback(spr))
+  {
+    printf("__TEST__ can't knockback, already doing knockback\n");
+    return;
+  }
+
   int yKnock = 0;
   int xKnock = 0;
   switch (inStr)
@@ -3620,8 +3856,12 @@ void TryKnockback(Sprite *spr, KnockbackStrength inStr, const char *cause)
     break;
 
   case KNOCK_HARD:
-    xKnock = -spr->profile.sub_gravity; // TODO: something usable for now
-    yKnock = -spr->profile.sub_gravity / 2;
+    xKnock = spr->profile.max_subspeed_run; // TODO: something usable for now
+    xKnock = spr->facingRight ? -xKnock : xKnock;
+    yKnock = -spr->profile.sub_gravity;
+    spr->invulnFrameNum = INVULN_FRAME_DELAY;
+    // wipe any builtup velo, to avoid gravity preventing us escaping lava
+    spr->subVelo.y = 0;
     break;
   }
   spr->subKnockbackAccel.x = xKnock;
@@ -3717,7 +3957,7 @@ void SolveMovement(Sprite *spr)
   bool isJumping = SpriteJumping(spr);
 
   int maxSubSpeedX = GetMaxXSubSpeed(spr);
-  int maxSubSpeedY = player->profile.max_subfallspeed;
+  int maxSubSpeedY = GetMaxYSubSpeed(spr);
 
   int subAccelX = GetXSubAccel(spr);
   int subAccelY = GetYSubAccel(spr);
@@ -4056,6 +4296,16 @@ void SolveMovement(Sprite *spr)
     }
   }
 
+  //
+  // Handle tile triggers (liquid, lava, instadeath, etc)
+  //
+  TileTriggerInfo tileTrigInfo;
+  GetTileTriggerOverlaps(spr, &tileTrigInfo);
+
+  //
+  // After any damage is dealt, etc
+  //
+
   GroundHitInfo ghi;
   spr->isGrounded = CheckGrounded(spr, &ghi);
 
@@ -4129,11 +4379,16 @@ void SolveMovement(Sprite *spr)
   // check triggers
   // let's not allow both on the same frame
   // to avoid e.g. double door transitions
-  Sprite *trigger = GetTriggerOverlaps(spr);
+  Sprite *trigger = GetSpriteTriggerOverlaps(spr);
 
   if (trigger != NULL)
   {
-    HandleTriggers(spr, trigger);
+    HandleSpriteTriggers(spr, trigger);
+  }
+
+  if (spr->invulnFrameNum > 0)
+  {
+    spr->invulnFrameNum--;
   }
 }
 
