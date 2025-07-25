@@ -1278,10 +1278,9 @@ void OnSpriteDied(Sprite *spr, const char *cause)
   else
   {
 
-    //MarkSpriteForDespawn(spr, cause);
+    // MarkSpriteForDespawn(spr, cause);
     SetAnim(spr, ANIIMTYPE_DIE);
     spr->despawnTimer = 64;
-    
   }
 }
 
@@ -4206,19 +4205,30 @@ void ProcessTileTouches(Sprite *spr, HitInfo *info, bool horz)
 
     if (horz)
     {
-      if (!SpriteDashingAboveBonkThresh(spr))
-      {
-        continue;
-      }
+
       if (info->whereWasCollision != DIR_RIGHT && info->whereWasCollision != DIR_LEFT)
       {
         continue;
       }
-    }
 
-    Vec2 rowAndCol = GetTileRowAndColFromSubPos(&info->subCheckPos[i]);
-    DestroyBlock(&rowAndCol);
-  }
+      if (SpriteDashingAboveBonkThresh(spr))
+      {
+
+        if (IsTileIDBreakable(tileID))
+        {
+          // destroy it
+          Vec2 rowAndCol = GetTileRowAndColFromSubPos(&info->subCheckPos[i]);
+          DestroyBlock(&rowAndCol);
+        }
+        else
+        {
+          // bounce off it
+          OnDashBonk(spr);
+        }
+      } // above thresh
+    } // horz
+
+  } // foreach
 }
 
 void OnSpriteGotTouched(Sprite *toucher, Sprite *target, bool horz)
@@ -4319,6 +4329,8 @@ void SolveMovement(Sprite *spr)
 
     return;
   }
+
+  bool knockbackAtStartofFrame = SpriteIsKnockback(spr);
 
   Inputs *inp = &spr->input;
 
@@ -4684,6 +4696,10 @@ void SolveMovement(Sprite *spr)
   ProcessTileTouches(spr, &xHitInfo, true);
   ProcessSpriteTouches(spr, &xHitInfo, true);
 
+  bool knockbackAfterProcessingTouches = SpriteIsKnockback(spr);
+
+  bool knockbackThisFrame = knockbackAfterProcessingTouches && !knockbackAtStartofFrame;
+
   //
   // After any damage is dealt, etc
   //
@@ -4727,11 +4743,8 @@ void SolveMovement(Sprite *spr)
   }
   if (hBonk != 0 || vBonk < 0)
   {
-    if (SpriteDashing(spr))
-    {
-      OnDashBonk(spr);
-    }
-    else if (SpriteIsKnockback(spr))
+
+    if (SpriteIsKnockback(spr) && !knockbackThisFrame)
     {
       // we're dash bouncing, but we hit something new
       // stop
