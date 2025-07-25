@@ -496,6 +496,9 @@ typedef struct Sprite
   int knockbackFrameNum;
   int invulnFrameNum;
 
+  bool mustReleaseJump;
+  bool mustReleaseDash;
+
   // config options
   bool isPlayer;
   Anchor_H anchorH;
@@ -1249,6 +1252,9 @@ void ResetSprite(Sprite *spr)
   spr->knockbackFrameNum = 0;
   spr->invulnFrameNum = 0;
 
+  spr->mustReleaseDash = false;
+  spr->mustReleaseJump = false;
+
   // temporary config stuff
   spr->subPos = spr->subSpawnPos;
   spr->isPlayer = true;
@@ -1347,23 +1353,25 @@ void HandleSpecialSpriteType(SpriteType inType, Vec2 worldStartPos)
   }
 }
 
-void AddToSpriteList(Sprite * inSprite ){
+void AddToSpriteList(Sprite *inSprite)
+{
 
-  if ( inSprite->profile.iMask & IMASK_DRAW_FIRST ){
+  if (inSprite->profile.iMask & IMASK_DRAW_FIRST)
+  {
     printf("__TEST__ draw at start!\n");
     // shuffle every sprite up by one
     numSprites++;
-    for( int i = numSprites; i > 0; i-- ){
-      sprites[i] = sprites[i-1];
+    for (int i = numSprites; i > 0; i--)
+    {
+      sprites[i] = sprites[i - 1];
     }
     sprites[0] = inSprite;
-
-
-  }else{
+  }
+  else
+  {
     sprites[numSprites] = inSprite;
     numSprites++;
   }
-
 }
 
 Sprite *CreateSprite(SpriteType inType, Vec2 worldStartPos, const char *inName)
@@ -3442,6 +3450,20 @@ bool IsGroundedOrCoyoteTime(Sprite *spr)
 void TryJump(Sprite *spr)
 {
 
+  // reset jump state if user released
+  if (spr->mustReleaseJump)
+  {
+    if (!spr->input.jump)
+    {
+      spr->mustReleaseJump = false;
+    }
+  }
+
+  if (spr->mustReleaseJump)
+  {
+    return;
+  }
+
   if (spr->jumpFrameNum != 0)
   {
     return;
@@ -3465,6 +3487,7 @@ void TryJump(Sprite *spr)
   }
 
   SetMoveMode(spr, MM_JUMP);
+  spr->mustReleaseJump = true;
 }
 
 void TryDash(Sprite *spr)
