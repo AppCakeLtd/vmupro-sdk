@@ -1703,7 +1703,7 @@ void PrintBytes(const char *tag, uint8_t *bytes, uint32_t len)
   printf("\n");
 }
 
-bool RLE16BitDecode(uint8_t *inBytes, uint32_t inLength, uint8_t *outBytes, uint32_t outLength)
+bool RLE16BitDecode(const uint8_t *inBytes, uint32_t inLength, uint8_t *outBytes, uint32_t outLength)
 {
 
   uint32_t writePos = 0;
@@ -1741,7 +1741,7 @@ bool RLE16BitDecode(uint8_t *inBytes, uint32_t inLength, uint8_t *outBytes, uint
   return false;
 }
 
-bool RLE8BitDecode(uint8_t *inBytes, uint32_t inLength, uint8_t *outBytes, uint32_t outLength)
+bool RLE8BitDecode(const uint8_t *inBytes, uint32_t inLength, uint8_t *outBytes, uint32_t outLength)
 {
 
   uint32_t writePos = 0;
@@ -1778,7 +1778,7 @@ bool RLE8BitDecode(uint8_t *inBytes, uint32_t inLength, uint8_t *outBytes, uint3
   return false;
 }
 
-void DecompressImage(Img *img)
+void DecompressImage(const Img *img)
 {
 
   vmupro_log(VMUPRO_LOG_INFO, TAG, "Decompressing Image '%s'...", img->name);
@@ -1812,7 +1812,7 @@ void DecompressImage(Img *img)
 // Return the decompressed img data
 // from a runtime-generated table
 // involves a little pointer hopping
-uint8_t *ImgData(Img *img)
+uint8_t *ImgData(const Img *img)
 {
 
   int index = img->index;
@@ -1838,7 +1838,7 @@ void DecompressAllImages()
 // used for layer 0 and 1 - background and collision
 // which are RLE encoded
 // the spawn layer is sparesely encoded
-uint8_t *DecompressTileLayer(TileLayer *inLayer)
+uint8_t *DecompressTileLayer(const TileLayer *inLayer)
 {
 
   vmupro_log(VMUPRO_LOG_INFO, TAG, "Decompressing tile layer: %s");
@@ -2347,7 +2347,7 @@ void SolveCamera()
 void DrawBackground()
 {
 
-  Img *img = &img_bg_0;
+  const Img *img = &img_bg_0;
 
   int bgScrollX = (camX * 4) / 5;
   int bgScrollY = (camY * 4) / 5;
@@ -2421,7 +2421,7 @@ int GetXSubAccel(Sprite *spr)
 {
 
   MoveMode mMode = spr->moveMode;
-  PhysParams *prof = spr->phys;
+  const PhysParams *prof = spr->phys;
 
   int returnVal;
 
@@ -2457,7 +2457,7 @@ int GetMaxXSubSpeed(Sprite *spr)
 {
 
   MoveMode mMode = spr->moveMode;
-  PhysParams *prof = spr->phys;
+  const PhysParams *prof = spr->phys;
   bool wasRunningWhenLastGrounded = spr->wasRunningLastTimeWasOnGround;
 
   int returnVal = 0;
@@ -2517,7 +2517,7 @@ int GetXDamping(Sprite *spr)
 {
 
   MoveMode mMode = spr->moveMode;
-  PhysParams *prof = spr->phys;
+  const PhysParams *prof = spr->phys;
   bool wasRunningWhenLastGrounded = spr->wasRunningLastTimeWasOnGround;
 
   int returnVal = 0;
@@ -2780,8 +2780,8 @@ bool IsOneWayPlatformSolid(int blockId, int layer, Sprite *spr, Vec2 *tileSubPos
     return true;
 
   bool movingUp = spr->subVelo.y < 0;
-  bool movingDown = spr->subVelo.y > 0;
-  bool movingHorz = spr->subVelo.x != 0;
+  //bool movingDown = spr->subVelo.y > 0;
+  //bool movingHorz = spr->subVelo.x != 0;
   bool movingVert = spr->subVelo.y != 0;
 
   Vec2 subFootPos = GetPointOnSprite(spr, true, ANCHOR_HMID, ANCHOR_VBOTTOM);
@@ -2935,8 +2935,6 @@ void GetTileTriggerOverlaps(Sprite *spr, TileTriggerInfo *info)
     int blockId = GetBlockIDAtColRow(tileRowAndCol.x, tileRowAndCol.y, LAYER_COLS);
     if (blockId == BLOCK_NULL)
       continue;
-
-    Vec2 tileSubPos = GetTileSubPosFromRowAndCol(&tileRowAndCol);
 
     bool isTriggerTile = IsTriggerTile(blockId);
     if (!isTriggerTile)
@@ -4194,10 +4192,6 @@ void SolveMovement(Sprite *spr)
   // i.e. we don't want to check the grounded state now
   // then perform a jump + land in the same frame.
 
-  MoveMode mm = spr->moveMode;
-  bool inAir = MoveModeInAir(spr);
-  bool isJumping = SpriteJumping(spr);
-
   int maxSubSpeedX = GetMaxXSubSpeed(spr);
   int maxSubSpeedY = GetMaxYSubSpeed(spr);
 
@@ -4653,7 +4647,7 @@ void FixSpriteIndices(Sprite *rider, Sprite *thingBeingRidden)
   int riderIndex = GetIndexOfSprite(rider);
   int thingBeingRiddenIndex = GetIndexOfSprite(thingBeingRidden);
 
-  if (riderIndex == -1 || thingBeingRidden == -1)
+  if (riderIndex == -1 || thingBeingRiddenIndex == -1)
   {
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Can't find sprite indices to swap!");
     return;
