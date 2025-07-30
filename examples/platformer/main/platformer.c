@@ -85,6 +85,8 @@ const int INVULN_FRAME_DELAY = 20;
 const int DOOR_THRESH_FRAMES = 15;
 const int DOOR_THRESH_SPEED = 30;
 const int DASHBONK_THRESH_SPEED = 64;
+const int BUTTSTOMP_THRESH_SPEED = 100;
+const int HEADBUTT_THRESH_SPEED = 64;
 const uint32_t COYOTE_TIME_FRAME_THRESH = 3;
 
 // not stored on the sprite
@@ -214,6 +216,7 @@ typedef enum
   MM_DASH,
   MM_JUMP,
   MM_KNOCKBACK,
+  MM_BUTTSTOMP,
 
 } MoveMode;
 
@@ -241,6 +244,9 @@ const char *MoveModetoString(MoveMode inMode)
     break;
   case MM_KNOCKBACK:
     return "KNOCKBACK";
+    break;
+  case MM_BUTTSTOMP:
+    return "BUTTSTOMP";
     break;
   }
 }
@@ -697,6 +703,12 @@ void SetAnim(Sprite *spr, AnimTypes inType)
     break;
   case ANIMTYPE_KNOCKBACK:
     spr->activeFrameSet = &spr->anims->knockbackFrames;
+    break;
+  case ANIMTYPE_BUTTBOUNCE:
+    spr->activeFrameSet = &spr->anims->buttBounceFrames;
+    break;
+  case ANIMTYPE_BUTTSTOMP:
+    spr->activeFrameSet = &spr->anims->buttstompFrames;
     break;
   default:
     // we'll patch this in a sec
@@ -1160,6 +1172,11 @@ bool SpriteDashing(Sprite *spr)
   return spr->moveMode == MM_DASH;
 }
 
+bool SpriteButtStomping(Sprite *spr)
+{
+  return spr->moveMode == MM_BUTTSTOMP;
+}
+
 bool SpriteDashingAboveBonkThresh(Sprite *spr)
 {
 
@@ -1167,6 +1184,18 @@ bool SpriteDashingAboveBonkThresh(Sprite *spr)
     return false;
 
   if (Abs(spr->lastSubVelo.x) < DASHBONK_THRESH_SPEED)
+    return false;
+
+  return true;
+}
+
+bool SpriteButtStompingAboveThresh(Sprite *spr)
+{
+
+  if (!SpriteButtStomping(spr))
+    return false;
+
+  if (Abs(spr->lastSubVelo.y) < BUTTSTOMP_THRESH_SPEED)
     return false;
 
   return true;
@@ -2203,6 +2232,13 @@ bool IsBlockOneWay(int blockId)
 {
 
   int rowNum = blockId / TILEMAP_WIDTH_TILES;
+  int colNum = blockId % TILEMAP_WIDTH_TILES;
+
+  // ignore smashables, liquid, etc
+  if (colNum >= TILEMAP_SMASHABLE_COL_13)
+  {
+    return false;
+  }
 
   // Top row of the tilemap are one-way platforms
   if (rowNum == TILEMAP_ONEWAY_PLATFORM_ROW_0)
@@ -2498,6 +2534,11 @@ int GetYSubAccel(Sprite *spr)
     returnVal /= 2;
   }
 
+  if (SpriteButtStomping(spr))
+  {
+    returnVal *= 2;
+  }
+
   return returnVal;
 }
 
@@ -2518,6 +2559,7 @@ int GetXSubAccel(Sprite *spr)
 
   case MM_JUMP:
   case MM_KNOCKBACK:
+  case MM_BUTTSTOMP:
   case MM_FALL:
     returnVal = prof->subaccel_air;
     break;
@@ -2566,6 +2608,7 @@ int GetMaxXSubSpeed(Sprite *spr)
 
     break;
 
+  case MM_BUTTSTOMP:
   case MM_KNOCKBACK:
   case MM_WALK:
     returnVal = prof->max_subspeed_walk;
@@ -2626,6 +2669,7 @@ int GetXDamping(Sprite *spr)
 
     break;
 
+  case MM_BUTTSTOMP:
   case MM_KNOCKBACK:
   case MM_WALK:
     returnVal = prof->subdamping_walk;
@@ -3765,6 +3809,56 @@ void TryDash(Sprite *spr)
   spr->dashFrameNum = 0;
 }
 
+void TryButtStomp(Sprite *spr)
+{
+
+  if (spr->mustReleaseDash)
+  {
+    if (!spr->input.run)
+    {
+      spr->mustReleaseDash = false;
+    }
+  }
+
+  if (spr->mustReleaseDash)
+  {
+    return;
+  }
+
+  if (!spr->input.run)
+  {
+    return;
+  }
+
+  if (IsGroundedOrCoyoteTime(spr))
+  {
+    return;
+  }
+
+  if (!SpriteJumping(spr))
+  {
+    return;
+  }
+
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d sprite %s, starting buttstomp", frameCounter, spr->name);
+  SetMoveMode(spr, MM_BUTTSTOMP, "TryButtStomp");
+  spr->mustReleaseDash = true;
+}
+
+void TryContinueButtStomp(Sprite *spr)
+{
+
+  if (!SpriteButtStomping(spr))
+  {
+    return;
+  }
+
+  if (!spr->input.run)
+  {
+    SetMoveMode(spr, MM_FALL, "Stomp Released");
+  }
+}
+
 // prevent the jump button applying further up force
 // doesn't change move state!
 // possible causes:
@@ -3969,15 +4063,18 @@ void CheckLanded(Sprite *spr)
     return;
   }
 
-  if (false)
-  {
-    printf("__DBG__ Frame %d landed @ %d/%d\n", frameCounter, spr->subPos.y, spr->subPos.y >> SHIFT);
-  }
-
   if (DontLandCauseImJumping(spr))
   {
     return;
   }
+
+  if (SpriteButtStompingAboveThresh(spr))
+  {
+    // bounce back with some good height
+    spr->subVelo.y = -spr->lastSubVelo.y;
+    return;
+  }
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s below speed %d below thresh %d for butt stomp", frameCounter, spr->name, spr->lastSubVelo.y, BUTTSTOMP_THRESH_SPEED);
 
   // we're on the ground
   // we weren't during the last frame
@@ -4275,6 +4372,32 @@ void ProcessTileTouches(Sprite *spr, HitInfo *info, bool horz)
       } // above thresh
     } // horz
 
+    if (!horz)
+    {
+
+      if (info->whereWasCollision != DIR_UP && info->whereWasCollision != DIR_DOWN)
+      {
+        continue;
+      }
+
+      if (IsTileIDBreakable(tileID))
+      {
+        if (SpriteButtStompingAboveThresh(spr))
+        {
+
+          // Destroy it
+          Vec2 rowAndCol = GetTileRowAndColFromSubPos(&info->subCheckPos[i]);
+          DestroyBlock(&rowAndCol);
+        }
+        else if (spr->lastSubVelo.y < -HEADBUTT_THRESH_SPEED)
+        {
+          // headbutt it
+          Vec2 rowAndCol = GetTileRowAndColFromSubPos(&info->subCheckPos[i]);
+          DestroyBlock(&rowAndCol);
+        }
+      }
+    }
+
   } // foreach
 }
 
@@ -4294,9 +4417,9 @@ void OnSpriteGotTouched(Sprite *toucher, Sprite *target, bool horz)
 
   // doesn't hurt to touch
   // are we charging it?
-  bool dashing = SpriteDashingAboveBonkThresh(toucher);
+  bool dashingOrButStomping = SpriteDashingAboveBonkThresh(toucher) || SpriteButtStompingAboveThresh(toucher);
 
-  if (dashing)
+  if (dashingOrButStomping)
   {
 
     bool takeDamage = (target->profile.iMask & IMASK_TAKEDAMAGE_KNOCKBACK);
@@ -4307,7 +4430,7 @@ void OnSpriteGotTouched(Sprite *toucher, Sprite *target, bool horz)
     else
     {
       // just apply a small knockback
-      TryKnockback(target, KNOCK_SOFT, "Toucheer dashed non-damage taker");
+      TryKnockback(target, KNOCK_SOFT, "Toucher dashed non-damage taker");
     }
   }
   else
@@ -4399,6 +4522,8 @@ void SolveMovement(Sprite *spr)
   TryContinueJump(spr);
   TryDash(spr);
   TryContinueDash(spr);
+  TryButtStomp(spr);
+  TryContinueButtStomp(spr);
   TryContinueKnockback(spr);
 
   bool spriteXInput = false;
@@ -4741,7 +4866,9 @@ void SolveMovement(Sprite *spr)
   // Then process stuff the sprite might be touching
   //
   ProcessTileTouches(spr, &xHitInfo, true);
+  ProcessTileTouches(spr, &yHitInfo, false);
   ProcessSpriteTouches(spr, &xHitInfo, true);
+  ProcessSpriteTouches(spr, &yHitInfo, false);
 
   bool knockbackAfterProcessingTouches = SpriteIsKnockback(spr);
 
@@ -4969,6 +5096,17 @@ void DrawSprite(Sprite *spr)
     else
     {
       SetAnim(spr, ANIMTYPE_FALL);
+    }
+  }
+  else if (spr->moveMode == MM_BUTTSTOMP)
+  {
+    if (goingUp)
+    {
+      SetAnim(spr, ANIMTYPE_BUTTBOUNCE);
+    }
+    else
+    {
+      SetAnim(spr, ANIMTYPE_BUTTSTOMP);
     }
   }
   else if (spr->moveMode == MM_FALL)
