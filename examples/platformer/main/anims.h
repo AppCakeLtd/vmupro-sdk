@@ -181,8 +181,9 @@ const AnimGroup animgroup_player = {
     .stunFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_player_stun), .images = imgs_player_stun},
     .dieFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_player_die), .images = imgs_player_die}};
 
-
-
+//
+// MOB1
+//
 
 // pad it out a bit with some delays
 const Img *imgs_mob1_idle[] = {
@@ -237,15 +238,6 @@ const Img *imgs_mob1_stun[] = {
 const Img *imgs_mob1_die[] = {
     &img_mob1_die_0};
 
-// e.g.
-/*
-AnimFrames frames_mob1_idle = {
-    .frameSpeed = 2,
-    .numImages = ARRAYSIZE(imgs_mob1_idle),
-    .images = imgs_mob1_idle
-};
-*/
-
 // C++ would be nice here
 const AnimGroup animgroup_mob1 = {
 
@@ -260,6 +252,80 @@ const AnimGroup animgroup_mob1 = {
     .stunFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_mob1_stun), .images = imgs_mob1_stun},
     .dieFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_mob1_die), .images = imgs_mob1_die}};
 
+//
+// MOB2
+//
+
+// pad it out a bit with some delays
+const Img *imgs_mob2_idle[] = {
+    &img_mob2_idle_0,
+    &img_mob2_idle_0,
+    &img_mob2_idle_0,
+    &img_mob2_idle_1,
+    &img_mob2_idle_0,
+    &img_mob2_idle_0,
+    &img_mob2_idle_0,
+    &img_mob2_idle_2,
+    &img_mob2_idle_3,
+    &img_mob2_idle_3,
+    &img_mob2_idle_4,
+    &img_mob2_idle_3,
+    &img_mob2_idle_4,
+    &img_mob2_idle_3,
+};
+
+const Img *imgs_mob2_fall[] = {
+    &img_mob2_fall_0, &img_mob2_fall_1, &img_mob2_fall_2, &img_mob2_fall_1};
+
+const Img *imgs_mob2_walk[] = {
+    &img_mob2_walk_0,
+    &img_mob2_walk_1,
+    &img_mob2_walk_2,
+    &img_mob2_walk_3,
+    &img_mob2_walk_4,
+    &img_mob2_walk_5,
+    &img_mob2_walk_6,
+    &img_mob2_walk_7,
+};
+
+const Img *imgs_mob2_jump[] = {
+    &img_mob2_jump_0, &img_mob2_jump_1};
+
+const Img *imgs_mob2_dash[] = {
+    &img_mob2_dash_0};
+
+const Img *imgs_mob2_buttdash[] = {
+    &img_mob2_buttdash_0};
+
+const Img *imgs_mob2_buttbounce[] = {
+    &img_mob2_buttbounce_0};
+
+const Img *imgs_mob2_knockback[] = {
+    &img_mob2_knockback_0};
+
+const Img *imgs_mob2_stun[] = {
+    &img_mob2_stun_0};
+
+const Img *imgs_mob2_die[] = {
+    &img_mob2_die_0};
+
+// C++ would be nice here
+const AnimGroup animgroup_mob2 = {
+
+    .idleFrames = {.frameSpeed = 20, .numImages = ARRAYSIZE(imgs_mob2_idle), .images = imgs_mob2_idle},
+    .fallFrames = {.frameSpeed = 4, .numImages = ARRAYSIZE(imgs_mob2_fall), .images = imgs_mob2_fall},
+    .walkFrames = {.frameSpeed = 3, .numImages = ARRAYSIZE(imgs_mob2_walk), .images = imgs_mob2_walk},
+    .jumpFrames = {.frameSpeed = 7, .numImages = ARRAYSIZE(imgs_mob2_jump), .images = imgs_mob2_jump},
+    .dashFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_mob2_dash), .images = imgs_mob2_dash},
+    .buttstompFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_mob2_buttdash), .images = imgs_mob2_buttdash},
+    .buttBounceFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_mob2_buttbounce), .images = imgs_mob2_buttbounce},
+    .knockbackFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_mob2_knockback), .images = imgs_mob2_knockback},
+    .stunFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_mob2_stun), .images = imgs_mob2_stun},
+    .dieFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_mob2_die), .images = imgs_mob2_die}};
+
+//
+// Various
+//
 
 const Img *imgs_door_all[] = {&img_door_0};
 const AnimGroup animgroup_door = {.idleFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_door_all), .images = imgs_door_all}};

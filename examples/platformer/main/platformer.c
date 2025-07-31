@@ -327,7 +327,8 @@ typedef enum
   STYPE_ROW2_14,
   STYPE_ROW2_15,
   // third row of sprites in the tilemap
-  STYPE_TESTMOB,
+  STYPE_GREENDUCK,
+  STYPE_REDDUCK,
   STYPE_SPIKEBALL,
   STYPE_MAX
 } SpriteType;
@@ -537,7 +538,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->physParams = &physDefault;
     p->defaultAnimGroup = &animgroup_player;
   }
-  else if (inType == STYPE_TESTMOB)
+  else if (inType == STYPE_GREENDUCK)
   {
     p->default_health = 1;
     p->damage_multiplier = 1;
@@ -545,6 +546,15 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->iMask = IMASK_CAN_BE_RIDDEN | IMASK_CAN_RIDE_STUFF | IMASK_TAKEDAMAGE_STUN;
     p->physParams = &physTestMob;
     p->defaultAnimGroup = &animgroup_mob1;
+  }
+  else if (inType == STYPE_REDDUCK)
+  {
+    p->default_health = 2;
+    p->damage_multiplier = 1;
+    p->solid = SOLIDMASK_PLATFORM;
+    p->iMask = IMASK_CAN_BE_RIDDEN | IMASK_TAKEDAMAGE_KNOCKBACK | IMASK_HURTS_HORZ | IMASK_HURTS_VERT;
+    p->physParams = &physTestMob;
+    p->defaultAnimGroup = &animgroup_mob2;
   }
   else if (inType == STYPE_DOOR)
   {
@@ -939,7 +949,7 @@ typedef struct
 //__TEST__ This can be scrubbed when things are moved to headers
 bool CheckGrounded(Sprite *spr, GroundHitInfo *groundHitInfoOrNull);
 Vec2 GetPointOnSprite(Sprite *spr, bool hitBox, Anchor_H anchorH, Anchor_V anchorV);
-Solidity CheckSpriteCollision(Sprite *spr, Direction dir, Vec2 *subOffset, const char *src);
+Solidity CheckSpriteCollision(Sprite *spr, Direction dir, Vec2 *subOffset, const char *src, bool ignorePlayer);
 void GotoGameState(GameState inState);
 void UnloadTileLayers();
 void DecompressAllTileLayers(Level *currentLevel, PersistentData *inData);
@@ -1576,7 +1586,7 @@ bool IsTypeSpawnable(SpriteType inType)
     return true;
   }
 
-  if (inType >= STYPE_TESTMOB)
+  if (inType >= STYPE_GREENDUCK || inType == STYPE_REDDUCK)
   {
     return true;
   }
@@ -1596,16 +1606,16 @@ void HandleNonSpawnableSpriteType(SpriteType inType, Vec2 worldStartPos)
   switch (inType)
   {
 
-    // set the global indexer to pass vals to the spawned sprite
-    case STYPE_INDEXER_0:
-    case STYPE_INDEXER_1:
-    case STYPE_INDEXER_2:
-    case STYPE_INDEXER_3:
-    case STYPE_INDEXER_4:
-    case STYPE_INDEXER_5:
-    case STYPE_INDEXER_6:    
-      globalIndexer = (int)inType - STYPE_INDEXER_0;
-      break;
+  // set the global indexer to pass vals to the spawned sprite
+  case STYPE_INDEXER_0:
+  case STYPE_INDEXER_1:
+  case STYPE_INDEXER_2:
+  case STYPE_INDEXER_3:
+  case STYPE_INDEXER_4:
+  case STYPE_INDEXER_5:
+  case STYPE_INDEXER_6:
+    globalIndexer = (int)inType - STYPE_INDEXER_0;
+    break;
 
   case STYPE_ROOM_MARKER:
 
@@ -1638,8 +1648,6 @@ void HandleNonSpawnableSpriteType(SpriteType inType, Vec2 worldStartPos)
     }
 
     break;
-
-  
 
   default:
     vmupro_log(VMUPRO_LOG_WARN, TAG, "Unhandled spawn special sprite type %d", inType);
@@ -2169,9 +2177,9 @@ uint32_t GetBlockIDAtColRow(int blockCol, int blockRow, int layer)
   return block;
 }
 
-void UpdatePatrollInputs(Sprite *spr)
+void UpdatePatrollInputs(Sprite *spr, bool ignorePlayer)
 {
-
+  
   // might lose ground and bonk on the same frame
   // don't want to trigger both
   bool originallyFacingRight = spr->facingRight;
@@ -2182,13 +2190,13 @@ void UpdatePatrollInputs(Sprite *spr)
   // a tile should do, since it gives time
   // to dampen and change direction smoothly
   Vec2 subOffset = {originallyFacingRight ? TILE_SIZE_SUB : -TILE_SIZE_SUB, 1};
-  bool groundAhead = CheckSpriteCollision(spr, DIR_DOWN, &subOffset, "patrol_ground") != SOLIDMASK_NONE;
+  bool groundAhead = CheckSpriteCollision(spr, DIR_DOWN, &subOffset, "patrol_ground", true) != SOLIDMASK_NONE;
 
   // 2: check if we'd bonk into something
 
   Direction dir = spr->facingRight ? DIR_RIGHT : DIR_LEFT;
   Vec2 wallSubOffset = {dir == DIR_RIGHT ? TILE_SIZE_SUB / 2 : -TILE_SIZE_SUB / 2, 0};
-  bool bonk = CheckSpriteCollision(spr, dir, &wallSubOffset, "patrol_wall") != SOLIDMASK_NONE;
+  bool bonk = CheckSpriteCollision(spr, dir, &wallSubOffset, "patrol_wall", ignorePlayer) != SOLIDMASK_NONE;
 
   // Turn around
   if (bonk || !groundAhead)
@@ -2303,10 +2311,15 @@ void UpdateSpriteInputs(Sprite *spr)
     inp->jump = vmupro_btn_held(Btn_B) ? inp->jump + 1 : 0;
     inp->run = vmupro_btn_held(Btn_A) ? inp->run + 1 : 0;
   }
-  else if (spr->sType == STYPE_TESTMOB)
+  else if (spr->sType == STYPE_GREENDUCK)
   {
     ClearSpriteInputs(spr);
-    UpdatePatrollInputs(spr);
+    UpdatePatrollInputs(spr, false);
+  }
+  else if (spr->sType == STYPE_REDDUCK)
+  {
+    ClearSpriteInputs(spr);
+    UpdatePatrollInputs(spr, true);
   }
   else
   {
@@ -2881,6 +2894,7 @@ typedef struct
   // relative to self
   // e.g. which way are we ejecting, etc
   Direction whereWasCollision;
+  bool ignorePlayer;
 
   // the points we'll look up
   // e.g. top row, bottom row, etc
@@ -3450,6 +3464,11 @@ void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull
       if (otherSprite == spr)
         continue;
 
+      if (rVal->ignorePlayer && otherSprite == player)
+      {
+        continue;        
+      }
+
       Solidity otherSolid = otherSprite->profile.solid;
 
       // It's non solid, and not a trigger/no collision
@@ -3765,13 +3784,13 @@ int CheckCollisionsAndEject(HitInfo *info, Sprite *spr, bool horz, Vec2 platform
 // Apply an offset to check for stuff ahead, behind, above, below, etc
 // Note: for a ground check, add 1 to y, since the hitbox ends on the last
 //       subpixel before the next ground tile
-Solidity CheckSpriteCollision(Sprite *spr, Direction dir, Vec2 *subOffset, const char *src)
+Solidity CheckSpriteCollision(Sprite *spr, Direction dir, Vec2 *subOffset, const char *src, bool ignorePlayer)
 {
 
   HitInfo nhi;
   memset(&nhi, 0, sizeof(HitInfo));
+  nhi.ignorePlayer = ignorePlayer;
   GetHitInfo(&nhi, spr, dir, subOffset, src);
-
   return nhi.hitMask;
 }
 
@@ -3784,7 +3803,8 @@ bool CheckGrounded(Sprite *spr, GroundHitInfo *groundHitInfoOrNull)
   }
 
   // prevent being knocked back and landing on something in the same frame
-  if ( SpriteIsKnockback(spr) && spr->knockbackFrameNum < 10 ){
+  if (SpriteIsKnockback(spr) && spr->knockbackFrameNum < 10)
+  {
     return false;
   }
 
@@ -3994,7 +4014,7 @@ void TryContinueButtStomp(Sprite *spr)
     {
       SetMoveMode(spr, MM_BUTTDASH, "apex");
       return;
-    }    
+    }
   }
 
   // then focus primarily on the butt bounce
@@ -4039,7 +4059,8 @@ bool TryButtBounce(Sprite *spr, ButtStrength inStr, const char *cause)
 
   // e.g. a butt bounce off a mob may register as both
   // a butt bounce and a ground bounce
-  if (SpriteIsButtBouncing(spr)){
+  if (SpriteIsButtBouncing(spr))
+  {
     printf("Preventing double butt bounce due to %s\n", cause);
     // return true since we're actually still butt bouncing
     return true;
@@ -4063,9 +4084,10 @@ bool TryButtBounce(Sprite *spr, ButtStrength inStr, const char *cause)
 
   int bounceVel = Abs(delta) / 250; // Abs(spr->lastSubVelo.y);
   // bouncing off a mob should let you jump sliiightly higher
-  if (inStr == BUTTSTR_ENEMY ){
+  if (inStr == BUTTSTR_ENEMY)
+  {
     // enough to clear slightly higher than usual
-    bounceVel = spr->phys->sub_gravity +2;
+    bounceVel = spr->phys->sub_gravity + 2;
   }
 
   if (bounceVel > BUTTBOUNCE_MAX_VEL)
@@ -4076,7 +4098,7 @@ bool TryButtBounce(Sprite *spr, ButtStrength inStr, const char *cause)
 
   // we gonna butt stomp
   // reset the y velo since it's still going to be something nuts
-  spr->subVelo.y = -Abs(spr->lastSubVelo.y) /2;
+  spr->subVelo.y = -Abs(spr->lastSubVelo.y) / 2;
   spr->buttstompSubVelo = bounceVel;
   spr->numButtStomps++;
   spr->buttBounceFrameNum = 0; // reload!
@@ -4340,8 +4362,10 @@ Sprite *FindSpriteOfType(SpriteType inType, int indexerOrNeg, Sprite *excludeOrN
     if (spr == excludeOrNull)
       continue;
 
-    if ( indexerOrNeg > -1 ){
-      if ( spr->indexer != indexerOrNeg ){
+    if (indexerOrNeg > -1)
+    {
+      if (spr->indexer != indexerOrNeg)
+      {
         continue;
       }
     }
@@ -5600,7 +5624,7 @@ void SpawnDuckAboveMe(Sprite *srcSprite)
 
   Vec2 srcHeadWorld = GetPointOnSprite(srcSprite, false, ANCHOR_HMID, ANCHOR_VTOP);
   srcHeadWorld.y -= TILE_SIZE_PX * 3;
-  CreateSprite(STYPE_TESTMOB, srcHeadWorld, "TEST DUCK");
+  CreateSprite(STYPE_GREENDUCK, srcHeadWorld, "TEST DUCK");
 }
 
 void DespawnSprite(Sprite *spr)
