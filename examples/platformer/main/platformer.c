@@ -348,17 +348,18 @@ typedef enum
 typedef enum
 {
   IMASK_NONE = 0x00,
-  IMASK_HURTS_HORZ = 0x01,            // hurty if you walk into it horizontally
-  IMASK_HURTS_VERT = 0x02,            // hurty if you land or bonk it
-  IMASK_CAN_BE_RIDDEN = 0x04,         //
-  IMASK_CAN_RIDE_STUFF = 0x08,        //
-  IMASK_DRAW_FIRST = 0x10,            // doors n things, draw at the back
-  IMASK_DRAW_LAST = 0x20,             // anything which should be drawn on top (not implemented)
-  IMASK_SKIP_INPUT = 0x40,            // don't bother processing input (doors, spikes, projectiles)
-  IMASK_SKIP_MOVEMENT = 0x80,         // static, don't process the movement steps (doors, spikes)
-  IMASK_SKIP_ANIMSETS = 0x100,        // use only the IDLE anim set (no other move types)
-  IMASK_TAKEDAMAGE_STUN = 0x200,      // when something hits me, i get stunned (no dmg)
-  IMASK_TAKEDAMAGE_KNOCKBACK = 0x400, // when something hits me, i bounce a bit (w/ dmg)
+  IMASK_DMGOUT_HORZ = 0x01,                  // hurty if you walk into it horizontally
+  IMASK_DMGOUT_VERT = 0x02,                  // hurty if you land or bonk it
+  IMASK_CAN_BE_RIDDEN = 0x04,                //
+  IMASK_CAN_RIDE_STUFF = 0x08,               //
+  IMASK_DRAW_FIRST = 0x10,                   // doors n things, draw at the back
+  IMASK_DRAW_LAST = 0x20,                    // anything which should be drawn on top (not implemented)
+  IMASK_SKIP_INPUT = 0x40,                   // don't bother processing input (doors, spikes, projectiles)
+  IMASK_SKIP_MOVEMENT = 0x80,                // static, don't process the movement steps (doors, spikes)
+  IMASK_SKIP_ANIMSETS = 0x100,               // use only the IDLE anim set (no other move types)
+  IMASK_DMGIN_STUNSME = 0x200,               // when something hits me, i get stunned (no dmg unless stunned)
+  IMASK_DMGIN_KNOCKSME = 0x400,              // when something hits me, i bounce a bit (w/ dmg)
+  IMASK_DMGOUT_IGNORED_WHEN_BOUNCED = 0x800, // don't deal damage if the player buttstomps me
 } InteractionMask;
 
 typedef struct
@@ -534,7 +535,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->default_health = 10;
     p->damage_multiplier = 1;
     p->solid = SOLIDMASK_SPRITE_SOLID;
-    p->iMask = IMASK_CAN_BE_RIDDEN | IMASK_CAN_RIDE_STUFF | IMASK_TAKEDAMAGE_KNOCKBACK;
+    p->iMask = IMASK_CAN_BE_RIDDEN | IMASK_CAN_RIDE_STUFF | IMASK_DMGIN_KNOCKSME;
     p->physParams = &physDefault;
     p->defaultAnimGroup = &animgroup_player;
   }
@@ -543,16 +544,16 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->default_health = 1;
     p->damage_multiplier = 1;
     p->solid = SOLIDMASK_PLATFORM;
-    p->iMask = IMASK_CAN_BE_RIDDEN | IMASK_CAN_RIDE_STUFF | IMASK_TAKEDAMAGE_STUN;
+    p->iMask = IMASK_CAN_BE_RIDDEN | IMASK_CAN_RIDE_STUFF | IMASK_DMGIN_STUNSME;
     p->physParams = &physTestMob;
     p->defaultAnimGroup = &animgroup_mob1;
   }
   else if (inType == STYPE_REDDUCK)
   {
-    p->default_health = 2;
+    p->default_health = 1;
     p->damage_multiplier = 1;
     p->solid = SOLIDMASK_PLATFORM;
-    p->iMask = IMASK_CAN_BE_RIDDEN | IMASK_TAKEDAMAGE_KNOCKBACK | IMASK_HURTS_HORZ | IMASK_HURTS_VERT;
+    p->iMask = IMASK_DMGIN_KNOCKSME | IMASK_DMGOUT_HORZ | IMASK_DMGOUT_VERT | IMASK_DMGOUT_IGNORED_WHEN_BOUNCED;
     p->physParams = &physTestMob;
     p->defaultAnimGroup = &animgroup_mob2;
   }
@@ -566,7 +567,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
   {
     p->solid = SOLIDMASK_SPRITE_SOLID;
     p->defaultAnimGroup = &animgroup_spikeball;
-    p->iMask = IMASK_SKIP_ANIMSETS | IMASK_SKIP_INPUT | IMASK_SKIP_MOVEMENT | IMASK_HURTS_HORZ | IMASK_HURTS_VERT;
+    p->iMask = IMASK_SKIP_ANIMSETS | IMASK_SKIP_INPUT | IMASK_SKIP_MOVEMENT | IMASK_DMGOUT_HORZ | IMASK_DMGOUT_VERT;
   }
   else if (inType == STYPE_PARTICLE_BROWN)
   {
@@ -2179,7 +2180,7 @@ uint32_t GetBlockIDAtColRow(int blockCol, int blockRow, int layer)
 
 void UpdatePatrollInputs(Sprite *spr, bool ignorePlayer)
 {
-  
+
   // might lose ground and bonk on the same frame
   // don't want to trigger both
   bool originallyFacingRight = spr->facingRight;
@@ -3466,7 +3467,7 @@ void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull
 
       if (rVal->ignorePlayer && otherSprite == player)
       {
-        continue;        
+        continue;
       }
 
       Solidity otherSolid = otherSprite->profile.solid;
@@ -4688,15 +4689,20 @@ void ProcessTileTouches(Sprite *spr, HitInfo *info, bool horz)
 void OnSpriteGotTouched(Sprite *toucher, Sprite *target, bool horz)
 {
 
-  InteractionMask hvMask = horz ? IMASK_HURTS_HORZ : IMASK_HURTS_VERT;
+  InteractionMask hvMask = horz ? IMASK_DMGOUT_HORZ : IMASK_DMGOUT_VERT;
+  InteractionMask targetMask = target->profile.iMask;
 
   // hurts to touch, do the damage, call it a day
-  if (target->profile.iMask & hvMask)
+  if (targetMask & hvMask)
   {
 
-    SpriteTakeDamage(toucher, target->profile.damage_multiplier, target, "touch a hurty");
+    bool ignoreDamageDueToBeingButtBounced = !horz && (targetMask & IMASK_DMGOUT_IGNORED_WHEN_BOUNCED) && SpriteDoingButtStuff(toucher);
+     
+    if (!ignoreDamageDueToBeingButtBounced ){
+      SpriteTakeDamage(toucher, target->profile.damage_multiplier, target, "touch a hurty");
+      return;
+    }
 
-    return;
   }
 
   // doesn't hurt to touch
@@ -4707,12 +4713,12 @@ void OnSpriteGotTouched(Sprite *toucher, Sprite *target, bool horz)
   if (dashing || buttstomping)
   {
 
-    bool takeDamage = (target->profile.iMask & IMASK_TAKEDAMAGE_KNOCKBACK);
+    bool takeDamage = (target->profile.iMask & IMASK_DMGIN_KNOCKSME);
     if (takeDamage)
     {
       SpriteTakeDamage(target, toucher->profile.damage_multiplier, toucher, "Toucher Dashed damage taker");
     }
-    else if (target->profile.iMask & IMASK_TAKEDAMAGE_STUN)
+    else if (target->profile.iMask & IMASK_DMGIN_STUNSME)
     {
 
       if (SpriteStunned(target))
