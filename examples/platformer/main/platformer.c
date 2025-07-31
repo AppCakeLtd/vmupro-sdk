@@ -75,6 +75,7 @@ const bool DEBUG_ONLY_MOVE_PLAYER = false;
 #define BLOCK_NULL 0xFF
 #define DMG_TILEMAP_LAVA 2
 #define DMG_INSTAKILL 0xFF
+#define DMG_ALWAYS_STUN 0xFF
 
 // TODO: const a bunch of this
 const int DEFAULT_LIFE_COUNT = 3;
@@ -217,6 +218,7 @@ typedef enum
   MM_JUMP,
   MM_KNOCKBACK,
   MM_BUTTSTOMP,
+  MM_STUNNED,
 
 } MoveMode;
 
@@ -247,6 +249,9 @@ const char *MoveModetoString(MoveMode inMode)
     break;
   case MM_BUTTSTOMP:
     return "BUTTSTOMP";
+    break;
+  case MM_STUNNED:
+    return "STUNNED";
     break;
   }
 }
@@ -337,8 +342,8 @@ typedef enum
   IMASK_SKIP_INPUT = 0x40,            // don't bother processing input (doors, spikes, projectiles)
   IMASK_SKIP_MOVEMENT = 0x80,         // static, don't process the movement steps (doors, spikes)
   IMASK_SKIP_ANIMSETS = 0x100,        // use only the IDLE anim set (no other move types)
-  IMASK_TAKEDAMAGE_STUN = 0x200,      // when something hits me, i get stunned
-  IMASK_TAKEDAMAGE_KNOCKBACK = 0x400, // when something hits me, i bounce a bit
+  IMASK_TAKEDAMAGE_STUN = 0x200,      // when something hits me, i get stunned (no dmg)
+  IMASK_TAKEDAMAGE_KNOCKBACK = 0x400, // when something hits me, i bounce a bit (w/ dmg)
 } InteractionMask;
 
 typedef struct
@@ -517,7 +522,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->default_health = 1;
     p->damage_multiplier = 1;
     p->solid = SOLIDMASK_PLATFORM;
-    p->iMask = IMASK_CAN_BE_RIDDEN | IMASK_CAN_RIDE_STUFF | IMASK_TAKEDAMAGE_KNOCKBACK;
+    p->iMask = IMASK_CAN_BE_RIDDEN | IMASK_CAN_RIDE_STUFF | IMASK_TAKEDAMAGE_STUN;
     p->physParams = &physTestMob;
     p->defaultAnimGroup = &animgroup_player;
   }
@@ -709,6 +714,9 @@ void SetAnim(Sprite *spr, AnimTypes inType)
     break;
   case ANIMTYPE_BUTTSTOMP:
     spr->activeFrameSet = &spr->anims->buttstompFrames;
+    break;
+  case ANIMTYPE_STUNNED:
+    spr->activeFrameSet = &spr->anims->stunFrames;
     break;
   default:
     // we'll patch this in a sec
@@ -1177,6 +1185,11 @@ bool SpriteButtStomping(Sprite *spr)
   return spr->moveMode == MM_BUTTSTOMP;
 }
 
+bool SpriteStunned(Sprite *spr)
+{
+  return spr->moveMode == MM_STUNNED;
+}
+
 bool SpriteDashingAboveBonkThresh(Sprite *spr)
 {
 
@@ -1277,11 +1290,23 @@ bool SpriteCanDie(Sprite *spr)
 bool SpriteCanTakeDamage(Sprite *spr)
 {
 
-  if (SpriteIsDead(spr))
+  if (!SpriteCanDie(spr))
     return false;
   if (SpriteIsKnockback(spr))
     return false;
   if (spr->invulnFrameNum > 0)
+    return false;
+
+  return true;
+}
+
+bool SpriteCanBeStunned(Sprite *spr)
+{
+
+  if (!SpriteCanTakeDamage(spr))
+    return false;
+
+  if (SpriteStunned(spr))
     return false;
 
   return true;
@@ -1341,6 +1366,26 @@ void OnSpriteDied(Sprite *spr, const char *cause)
     SetAnim(spr, ANIIMTYPE_DIE);
     spr->despawnTimer = 64;
   }
+}
+
+// returns: was the stun successful
+bool StunSprite(Sprite *spr, int strength, Sprite *sourceOrNull, const char *cause)
+{
+
+  const char *srcName = sourceOrNull != NULL ? sourceOrNull->name : "WORLD DMG";
+
+  if (!SpriteCanBeStunned(spr))
+  {
+    if (strength != DMG_ALWAYS_STUN)
+    {
+      false;
+    }
+  }
+
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s stunned with str %d from %s, cause=%s", frameCounter, spr->name, strength, spr->name, cause);
+
+  SetMoveMode(spr, MM_STUNNED, cause);
+  return true;
 }
 
 void SpriteTakeDamage(Sprite *spr, int value, Sprite *sourceOrNull, const char *cause)
@@ -1552,7 +1597,6 @@ void AddToSpriteList(Sprite *inSprite)
 
   if (inSprite->profile.iMask & IMASK_DRAW_FIRST)
   {
-    printf("__TEST__ draw at start!\n");
     // shuffle every sprite up by one
     numSprites++;
     for (int i = numSprites; i > 0; i--)
@@ -2557,6 +2601,9 @@ int GetXSubAccel(Sprite *spr)
     returnVal = prof->subaccel_walk;
     break;
 
+  case MM_STUNNED:
+    returnVal = 0;
+    break;
   case MM_JUMP:
   case MM_KNOCKBACK:
   case MM_BUTTSTOMP:
@@ -2593,6 +2640,10 @@ int GetMaxXSubSpeed(Sprite *spr)
   default:
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Subspeed: Unhandled movement mode: %d", (int)mMode);
     returnVal = prof->max_subspeed_walk;
+    break;
+
+  case MM_STUNNED:
+    returnVal = 0;
     break;
 
   case MM_JUMP:
@@ -2656,6 +2707,7 @@ int GetXDamping(Sprite *spr)
     returnVal = prof->subdamping_walk;
     break;
 
+  case MM_STUNNED:
   case MM_JUMP:
   case MM_FALL:
     if (wasRunningWhenLastGrounded)
@@ -4230,7 +4282,7 @@ void TryKnockback(Sprite *spr, KnockbackStrength inStr, const char *cause)
 
   if (SpriteIsKnockback(spr))
   {
-    printf("__TEST__ can't knockback, already doing knockback\n");
+    vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d, Sprite %s is already in knockback sate! cause='%s'", frameCounter, spr->name, cause);
     return;
   }
 
@@ -4426,6 +4478,21 @@ void OnSpriteGotTouched(Sprite *toucher, Sprite *target, bool horz)
     if (takeDamage)
     {
       SpriteTakeDamage(target, toucher->profile.damage_multiplier, toucher, "Toucher Dashed damage taker");
+    }
+    else if (target->profile.iMask & IMASK_TAKEDAMAGE_STUN)
+    {
+
+      if (SpriteStunned(target))
+      {
+        // already stunned, take damage
+        SpriteTakeDamage(target, toucher->profile.damage_multiplier, toucher, "toucher dashed pre-stunned stunnable");
+      }
+      else
+      {
+        bool didStun = StunSprite(target, toucher->profile.damage_multiplier, toucher, "toucher dashed stunnable");
+        // knock back the player a bit
+        TryKnockback(toucher, KNOCK_SOFT, "Stunned a thing");
+      }
     }
     else
     {
@@ -5112,6 +5179,10 @@ void DrawSprite(Sprite *spr)
   else if (spr->moveMode == MM_FALL)
   {
     SetAnim(spr, ANIMTYPE_FALL);
+  }
+  else if (spr->moveMode == MM_STUNNED)
+  {
+    SetAnim(spr, ANIMTYPE_STUNNED);
   }
   else
   {
