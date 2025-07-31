@@ -544,7 +544,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->solid = SOLIDMASK_PLATFORM;
     p->iMask = IMASK_CAN_BE_RIDDEN | IMASK_CAN_RIDE_STUFF | IMASK_TAKEDAMAGE_STUN;
     p->physParams = &physTestMob;
-    p->defaultAnimGroup = &animgroup_player;
+    p->defaultAnimGroup = &animgroup_mob1;
   }
   else if (inType == STYPE_DOOR)
   {
