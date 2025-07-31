@@ -930,6 +930,7 @@ void StopDashBoost(Sprite *spr, bool resetMovemode, const char *src);
 void TryKnockback(Sprite *spr, KnockbackStrength inStr, const char *cause);
 void StopKnockback(Sprite *spr, bool resetMoveMode, const char *cause);
 void StopButtstomp(Sprite *spr, bool resetMoveMode, const char *cause);
+bool TryButtstompBounce(Sprite *spr, const char * cause);
 
 void DrawBBoxScreen(BBox *box, uint16_t inCol)
 {
@@ -1355,7 +1356,10 @@ void OnSpriteDied(Sprite *spr, const char *cause)
   vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s died. cause %s RIP", frameCounter, spr->name, cause);
 
   SetAnim(spr, ANIIMTYPE_DIE);
-
+  // prevent collisions, other interactions
+  spr->profile.iMask = IMASK_SKIP_INPUT;
+  spr->profile.solid = SOLIDMASK_NONE;
+  
   // little up boost for the death anim
   spr->subVelo.x = 0;
   // idk magic number, make it look dramatic
@@ -3734,6 +3738,11 @@ Solidity CheckSpriteCollision(Sprite *spr, Direction dir, Vec2 *subOffset, const
 
 bool CheckGrounded(Sprite *spr, GroundHitInfo *groundHitInfoOrNull)
 {
+
+  if (spr->profile.solid == SOLIDMASK_NONE){
+    return false;
+  }
+
   // hitbox ends on the very last subpixel
   // so adding one takes you into the next tile
   Vec2 offset = {0, 1};
@@ -3935,14 +3944,15 @@ void TryContinueButtStomp(Sprite *spr)
   {
     return;
   }
-  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s, applying buttstomp velo", frameCounter, spr->name, spr->buttstompSubVelo);
+  // Expected to be 0 until we actually bounce
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s, applying butt bounce velo: %d", frameCounter, spr->name, spr->buttstompSubVelo);
 
   spr->subVelo.y -= spr->buttstompSubVelo;
   spr->buttstompFrameNum++;
 }
 
 // return: did buttstomp bounce off ground?
-bool TryButtstompBounce(Sprite *spr)
+bool TryButtstompBounce(Sprite *spr, const char * cause)
 {
 
   if (!SpriteButtStompingAboveThresh(spr))
@@ -3961,7 +3971,7 @@ bool TryButtstompBounce(Sprite *spr)
     vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s, bounce vel below min, %d vs %d", frameCounter, spr->name, bounceVel, BUTTSTOMP_MIN_BOUNCE_VEL);
     return false;
   }
-  if ( bounceVel < BUTTSTOMP_MAX_BOUNCE_VEL ){    
+  if ( bounceVel > BUTTSTOMP_MAX_BOUNCE_VEL ){    
     vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s, clamping bounce vel from %d to %d\n", frameCounter, spr->name, bounceVel, BUTTSTOMP_MAX_BOUNCE_VEL);
     bounceVel = BUTTSTOMP_MAX_BOUNCE_VEL;
   }
@@ -3971,7 +3981,7 @@ bool TryButtstompBounce(Sprite *spr)
   spr->numButtStomps++;
   spr->buttstompFrameNum = 0; // reload!
   
-  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s, continued buttstomp #%d with velo %d", frameCounter, spr->name, spr->buttstompFrameNum, spr->buttstompSubVelo);
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s, continued buttstomp #%d with velo %d cause %s", frameCounter, spr->name, spr->buttstompFrameNum, spr->buttstompSubVelo, cause);
   return true;
 }
 
@@ -4206,12 +4216,11 @@ void CheckLanded(Sprite *spr)
     return;
   }
 
-  if (TryButtstompBounce(spr))
-  {    
+  if (TryButtstompBounce(spr, "checklanded"))
+  { 
     return;
   }
-
-  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s below speed %d below thresh %d for butt stomp", frameCounter, spr->name, spr->lastSubVelo.y, BUTTSTOMP_THRESH_SPEED);
+  // vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s speed %d below thresh %d for butt stomp", frameCounter, spr->name, spr->lastSubVelo.y, BUTTSTOMP_THRESH_SPEED);
 
   // we're on the ground
   // we weren't during the last frame
@@ -4533,6 +4542,9 @@ void ProcessTileTouches(Sprite *spr, HitInfo *info, bool horz)
           // Destroy it
           Vec2 rowAndCol = GetTileRowAndColFromSubPos(&info->subCheckPos[i]);
           DestroyBlock(&rowAndCol);
+
+          TryButtstompBounce(spr, "breakable tile");
+
         }
         else if (spr->lastSubVelo.y < -HEADBUTT_THRESH_SPEED)
         {
@@ -4562,9 +4574,10 @@ void OnSpriteGotTouched(Sprite *toucher, Sprite *target, bool horz)
 
   // doesn't hurt to touch
   // are we charging it?
-  bool dashingOrButStomping = SpriteDashingAboveBonkThresh(toucher) || SpriteButtStompingAboveThresh(toucher);
+  bool dashing = SpriteDashingAboveBonkThresh(toucher);
+  bool buttstomping = SpriteButtStompingAboveThresh(toucher);
 
-  if (dashingOrButStomping)
+  if (dashing || buttstomping)
   {
 
     bool takeDamage = (target->profile.iMask & IMASK_TAKEDAMAGE_KNOCKBACK);
@@ -4583,9 +4596,9 @@ void OnSpriteGotTouched(Sprite *toucher, Sprite *target, bool horz)
       else
       {
         bool didStun = StunSprite(target, toucher->profile.damage_multiplier, toucher, "toucher dashed stunnable");
-        if (didStun)
+        if (didStun && !SpriteButtStomping(toucher))
         {
-          // knock back the player a bit
+          // knock back the player a bit, if they're not already buttstomping
           TryKnockback(toucher, KNOCK_MINIMAL, "Stunned a thing");
         }
       }
@@ -4595,6 +4608,11 @@ void OnSpriteGotTouched(Sprite *toucher, Sprite *target, bool horz)
       // just apply a small knockback
       TryKnockback(target, KNOCK_SOFT, "Toucher dashed non-damage taker");
     }
+
+    if ( buttstomping ){
+      TryButtstompBounce(toucher, "sprite touch");
+    }
+
   }
   else
   {
@@ -4697,6 +4715,7 @@ void SolveMovement(Sprite *spr)
   bool movingDown = spr->subVelo.y > 0;
 
   bool inControl = AllowSpriteInput(spr);
+  bool isSolid = IsBlockingCollision(spr->profile.solid);
 
   if (inControl)
   {
@@ -5022,16 +5041,21 @@ void SolveMovement(Sprite *spr)
   //
   // Handle tile triggers (liquid, lava, instadeath, etc)
   //
-  TileTriggerInfo tileTrigInfo;
-  GetTileTriggerOverlaps(spr, &tileTrigInfo);
+  if ( isSolid ){
+    // player can check against triggers
+    // triggers can sit idle
 
-  //
-  // Then process stuff the sprite might be touching
-  //
-  ProcessTileTouches(spr, &xHitInfo, true);
-  ProcessTileTouches(spr, &yHitInfo, false);
-  ProcessSpriteTouches(spr, &xHitInfo, true);
-  ProcessSpriteTouches(spr, &yHitInfo, false);
+    TileTriggerInfo tileTrigInfo;
+    GetTileTriggerOverlaps(spr, &tileTrigInfo);
+
+    //
+    // Then process stuff the sprite might be touching
+    //
+    ProcessTileTouches(spr, &xHitInfo, true);
+    ProcessTileTouches(spr, &yHitInfo, false);
+    ProcessSpriteTouches(spr, &xHitInfo, true);
+    ProcessSpriteTouches(spr, &yHitInfo, false);
+  }
 
   bool knockbackAfterProcessingTouches = SpriteIsKnockback(spr);
 
@@ -5066,8 +5090,11 @@ void SolveMovement(Sprite *spr)
   // printf("Frame %d is grounded %d yVel = %d\n", frameCounter, spr->isGrounded, spr->subVelo.y);
   spr->isOnWall = (vBonk != 0);
 
-  CheckLanded(spr);
-  CheckFallen(spr);
+
+  if (isSolid){
+    CheckLanded(spr);
+    CheckFallen(spr);
+  }
   CheckFellOffMap(spr);
 
   // head or feet bonked
@@ -5558,7 +5585,7 @@ void app_main(void)
 
     if (vmupro_btn_held(Btn_Mode))
     {
-      break;
+      Retry();
     }
 
     // test: cycle through sprite offsets
