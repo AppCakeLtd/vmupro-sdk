@@ -4534,18 +4534,18 @@ void TryKnockback(Sprite *spr, KnockbackStrength inStr, const char *cause)
 
   case KNOCK_MINIMAL:
     xKnock = spr->facingRight ? -DASHBONK_MINIMAL_KNOCKBACK : DASHBONK_MINIMAL_KNOCKBACK;
-    yKnock = -spr->phys->sub_gravity / 2;
+    yKnock = -(spr->phys->sub_gravity +2);
     break;
 
   case KNOCK_SOFT:
     xKnock = -spr->lastSubVelo.x / 5;
-    yKnock = -spr->phys->sub_gravity / 2;
+    yKnock = -(spr->phys->sub_gravity +2);
     break;
 
   case KNOCK_HARD:
     xKnock = spr->phys->max_subspeed_run; // TODO: something usable for now
     xKnock = spr->facingRight ? -xKnock : xKnock;
-    yKnock = -spr->phys->sub_gravity;
+    yKnock = -(spr->phys->sub_gravity + 4);
     spr->invulnFrameNum = INVULN_FRAME_DELAY;
     // wipe any builtup velo, to avoid gravity preventing us escaping lava
     spr->subVelo.y = 0;
@@ -4888,10 +4888,11 @@ void SolveMovement(Sprite *spr)
   else
   {
 
-    if (SpriteIsKnockback(spr) || SpriteStunned(spr))
+    if (SpriteIsKnockback(spr))
     {
       spriteXInput = true;
       spriteYInput = true;
+      // TODO: can jam up if you never leave the ground
       subAccelX += spr->subKnockbackAccel.x;
       subAccelY += spr->subKnockbackAccel.y;
     }
