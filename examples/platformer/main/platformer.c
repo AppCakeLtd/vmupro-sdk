@@ -88,7 +88,7 @@ const int DOOR_THRESH_SPEED = 30;
 const int DASHBONK_THRESH_SPEED = 64;
 const int DASHBONK_MINIMAL_KNOCKBACK = 8;
 const int BUTTSTOMP_THRESH_SPEED = 100;  // how fast you should be hitting the ground before a buttstomp happens
-const int BUTTSTOMP_MIN_BOUNCE_VEL = 20; // min upwards vel your bounce should produce, before giving up
+//const int BUTTSTOMP_MIN_BOUNCE_VEL = 20; // min upwards vel your bounce should produce, before giving up
 const int BUTTSTOMP_MAX_BOUNCE_VEL = 46;  // how much uppy bounce before we clamp it
 const int HEADBUTT_THRESH_SPEED = 64;
 const uint32_t COYOTE_TIME_FRAME_THRESH = 3;
@@ -3940,18 +3940,18 @@ void TryContinueButtStomp(Sprite *spr)
     SetMoveMode(spr, MM_FALL, "Stomp Released");
   }
 
-  if (spr->buttstompFrameNum >= spr->phys->max_jump_boost_frames)
+  if (spr->buttstompFrameNum >= 8)
   {
     return;
   }
-  // Expected to be 0 until we actually bounce
-  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s, applying butt bounce velo: %d", frameCounter, spr->name, spr->buttstompSubVelo);
+  // Expected to be 0 until we actually bounce  
+  // vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s, applying butt bounce velo: %d", frameCounter, spr->name, spr->buttstompSubVelo);
 
   spr->subVelo.y -= spr->buttstompSubVelo;
   spr->buttstompFrameNum++;
 }
 
-// return: did buttstomp bounce off ground?
+// return: did we bounce or were already bouncing
 bool TryButtstompBounce(Sprite *spr, const char * cause)
 {
 
@@ -3960,21 +3960,31 @@ bool TryButtstompBounce(Sprite *spr, const char * cause)
     return false;
   }
 
-  int bounceVel = Abs(spr->lastSubVelo.y);
-  // 5 8th's?
-  bounceVel *= 2;
-  bounceVel /= 6;
-  bounceVel -= (spr->numButtStomps * 4);
-
-  if (bounceVel < BUTTSTOMP_MIN_BOUNCE_VEL)
-  {
-    vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s, bounce vel below min, %d vs %d", frameCounter, spr->name, bounceVel, BUTTSTOMP_MIN_BOUNCE_VEL);
-    return false;
+  // prevent any double bounces due to e.g.
+  // hittin 2 things 1 frame after the other
+  if (spr->buttstompFrameNum < 1){
+    printf("__TEST__ preventing double bounce");
+    // return true since we're technically already bouncing
+    return true;
   }
+
+  int bounceVel = Abs(spr->lastSubVelo.y);
+
+  // redundant duplication
+  // if (bounceVel < BUTTSTOMP_MIN_BOUNCE_VEL)
+  // {
+  //   vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s, bounce vel below min, %d vs %d", frameCounter, spr->name, bounceVel, BUTTSTOMP_MIN_BOUNCE_VEL);
+  //   return false;
+  // }
   if ( bounceVel > BUTTSTOMP_MAX_BOUNCE_VEL ){    
     vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s, clamping bounce vel from %d to %d\n", frameCounter, spr->name, bounceVel, BUTTSTOMP_MAX_BOUNCE_VEL);
     bounceVel = BUTTSTOMP_MAX_BOUNCE_VEL;
   }
+
+  // some sort of fraction of the original, after clamping
+  bounceVel *= 9;
+  bounceVel /= 12;
+  bounceVel -= (spr->numButtStomps * 8);
 
   // we gonna butt stomp
   spr->buttstompSubVelo = bounceVel;
