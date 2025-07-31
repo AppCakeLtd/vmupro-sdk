@@ -108,6 +108,7 @@ PersistentData pData;
 int camX = 0;
 int camY = 0;
 int frameCounter = 0;
+int globalIndexer = 0;
 
 uint32_t CalcDJB2(uint8_t *inBytes, uint32_t inLength)
 {
@@ -296,11 +297,11 @@ typedef enum
   STYPE_CHECKPOINT,
   STYPE_FIN,
   STYPE_RESERVED_3,
-  STYPE_DOOR_0,
-  STYPE_DOOR_1,
-  STYPE_DOOR_2,
-  STYPE_DOOR_3,
-  STYPE_DOOR_4,
+  STYPE_DOOR,
+  STYPE_RESERVED_4,
+  STYPE_RESERVED_5,
+  STYPE_RESERVED_6,
+  STYPE_RESERVED_7,
   STYPE_RESERVED_9,
   STYPE_PARTICLE_BROWN,
   STYPE_RESERVED_11,
@@ -545,7 +546,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->physParams = &physTestMob;
     p->defaultAnimGroup = &animgroup_player;
   }
-  else if (inType >= STYPE_DOOR_0 && inType <= STYPE_DOOR_4)
+  else if (inType == STYPE_DOOR)
   {
     p->solid = SOLIDMASK_SPRITE_TRIGGER;
     p->defaultAnimGroup = &animgroup_door;
@@ -604,6 +605,8 @@ typedef struct Sprite
 
   // the frame we spawned on
   int spawnFrame;
+  // indexer for e.g. move types, room coords, ids, etc
+  int indexer;
 
   // despawn at the end of the frame
   // so we don't screw with collision/loop logic
@@ -1493,6 +1496,7 @@ void ResetSprite(Sprite *spr)
 
   spr->markedForDespawn = false;
   spr->spawnFrame = frameCounter;
+  spr->indexer = globalIndexer;
 
   // update other struct vals
   spr->facingRight = true;
@@ -1567,7 +1571,7 @@ bool IsTypeSpawnable(SpriteType inType)
   }
 
   // could've handled this better, my bad
-  if (inType >= STYPE_PLAYER && inType <= STYPE_DOOR_4)
+  if (inType >= STYPE_PLAYER && inType <= STYPE_DOOR)
   {
     return true;
   }
@@ -1880,6 +1884,8 @@ void LoadLevel(int inLevelNum)
   // TODO: bounds checking?
   // but then we wouldn't get minus worlds.
   currentLevel = allLevels[inLevelNum];
+  frameCounter = 0;
+  globalIndexer = 0;
 
   pData.levelNum = inLevelNum;
   DecompressAllTileLayers(currentLevel, &pData);
@@ -4318,7 +4324,7 @@ void CheckLanded(Sprite *spr)
   spr->jumpFrameNum = 0;
 }
 
-Sprite *FindSpriteOfType(SpriteType inType, Sprite *excludeOrNull)
+Sprite *FindSpriteOfType(SpriteType inType, int indexerOrNeg, Sprite *excludeOrNull)
 {
 
   for (int i = 0; i < numSprites; i++)
@@ -4326,6 +4332,13 @@ Sprite *FindSpriteOfType(SpriteType inType, Sprite *excludeOrNull)
     Sprite *spr = sprites[i];
     if (spr == excludeOrNull)
       continue;
+
+    if ( indexerOrNeg > -1 ){
+      if ( spr->indexer != indexerOrNeg ){
+        continue;
+      }
+    }
+
     if (spr->sType == inType)
       return spr;
   }
@@ -4359,7 +4372,7 @@ void HandleDoorTransition(Sprite *activator, Sprite *door)
   // let's do the door thing!
 
   // find the other door with the same ID
-  Sprite *connectedDoor = FindSpriteOfType(door->sType, door);
+  Sprite *connectedDoor = FindSpriteOfType(door->sType, door->indexer, door);
 
   if (connectedDoor == NULL)
   {
@@ -4396,12 +4409,7 @@ void HandleSpriteTriggers(Sprite *srcSprite, Sprite *trigger)
   switch (sType)
   {
 
-  case STYPE_DOOR_0:
-  case STYPE_DOOR_1:
-  case STYPE_DOOR_2:
-  case STYPE_DOOR_3:
-  case STYPE_DOOR_4:
-
+  case STYPE_DOOR:
     HandleDoorTransition(srcSprite, trigger);
     break;
 
