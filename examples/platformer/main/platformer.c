@@ -329,6 +329,8 @@ typedef enum
   // third row of sprites in the tilemap
   STYPE_GREENDUCK,
   STYPE_REDDUCK,
+  STYPE_ROW3_2,
+  STYPE_ROW3_3,
   STYPE_SPIKEBALL,
   STYPE_MAX
 } SpriteType;
@@ -1286,6 +1288,13 @@ void SetMoveMode(Sprite *spr, MoveMode inMode, const char *cause)
     vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %d set movemode to %d while dead!", frameCounter, spr, (int)inMode);
   }
 
+  if (SpriteStunned(spr))
+  {
+    // ignore movement changes
+    printf("__TEST__ ignoring state changes due to stunnedness\n");
+    return;
+  }
+
   MoveMode oldMode = spr->moveMode;
   const char *modeString = MoveModetoString(inMode);
   if (oldMode != inMode)
@@ -2229,6 +2238,11 @@ bool AllowSpriteInput(Sprite *spr)
     return false;
   }
 
+  if (SpriteStunned(spr))
+  {
+    return false;
+  }
+
   switch (gState)
   {
 
@@ -2715,7 +2729,7 @@ int GetMaxXSubSpeed(Sprite *spr)
     break;
 
   case MM_STUNNED:
-    returnVal = 0;
+    returnVal = 120;
     break;
 
   case MM_JUMP:
@@ -4697,12 +4711,12 @@ void OnSpriteGotTouched(Sprite *toucher, Sprite *target, bool horz)
   {
 
     bool ignoreDamageDueToBeingButtBounced = !horz && (targetMask & IMASK_DMGOUT_IGNORED_WHEN_BOUNCED) && SpriteDoingButtStuff(toucher);
-     
-    if (!ignoreDamageDueToBeingButtBounced ){
+
+    if (!ignoreDamageDueToBeingButtBounced)
+    {
       SpriteTakeDamage(toucher, target->profile.damage_multiplier, target, "touch a hurty");
       return;
     }
-
   }
 
   // doesn't hurt to touch
@@ -4750,6 +4764,12 @@ void OnSpriteGotTouched(Sprite *toucher, Sprite *target, bool horz)
   else
   {
     // doesn't hurt us, ignore
+
+    // if i'm stunned, i can be pushed
+    if (SpriteStunned(target))
+    {
+      TryKnockback(target, KNOCK_MINIMAL, "nudged while stunned");
+    }
   }
 }
 
@@ -4868,13 +4888,12 @@ void SolveMovement(Sprite *spr)
   else
   {
 
-    if (SpriteIsKnockback(spr))
+    if (SpriteIsKnockback(spr) || SpriteStunned(spr))
     {
-      // force bounce left/right
       spriteXInput = true;
       spriteYInput = true;
-      subAccelX = spr->subKnockbackAccel.x;
-      subAccelY = spr->subKnockbackAccel.y;
+      subAccelX += spr->subKnockbackAccel.x;
+      subAccelY += spr->subKnockbackAccel.y;
     }
   }
 
@@ -5090,6 +5109,11 @@ void SolveMovement(Sprite *spr)
   {
     // Apply Y velo to Y movement + update bounding boxes
     AddSubPos2(spr, 0, spr->subVelo.y + ridingPlatformDelta.y);
+
+    if (SpriteStunned(spr))
+    {
+      printf("__TEST__ stun stuff %d %d grounded = %d\n", spr->subVelo.x, spr->subVelo.y, (int)spr->isGrounded);
+    }
 
     // Eject from any Y collisions
     vBonk = CheckCollisionsAndEject(&yHitInfo, spr, false, ridingPlatformDelta);
