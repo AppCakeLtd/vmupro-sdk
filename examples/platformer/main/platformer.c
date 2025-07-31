@@ -298,7 +298,7 @@ typedef enum
   STYPE_FIN,
   STYPE_RESERVED_3,
   STYPE_DOOR,
-  STYPE_RESERVED_4,
+  STYPE_ROOM_MARKER,
   STYPE_RESERVED_5,
   STYPE_RESERVED_6,
   STYPE_RESERVED_7,
@@ -310,13 +310,13 @@ typedef enum
   STYPE_RESERVED_14,
   STYPE_RESERVED_15,
   // second row of sprites in tilemap
-  STYPE_ROOM_MARKER_0,
-  STYPE_ROOM_MARKER_1,
-  STYPE_ROOM_MARKER_2,
-  STYPE_ROOM_MARKER_3,
-  STYPE_ROOM_MARKER_4,
-  STYPE_ROOM_MARKER_5,
-  STYPE_ROOM_MARKER_6,
+  STYPE_INDEXER_0,
+  STYPE_INDEXER_1,
+  STYPE_INDEXER_2,
+  STYPE_INDEXER_3,
+  STYPE_INDEXER_4,
+  STYPE_INDEXER_5,
+  STYPE_INDEXER_6,
   STYPE_ROW2_7,
   STYPE_ROW2_8,
   STYPE_ROW2_9,
@@ -1596,17 +1596,22 @@ void HandleNonSpawnableSpriteType(SpriteType inType, Vec2 worldStartPos)
   switch (inType)
   {
 
-  case STYPE_ROOM_MARKER_0:
-  case STYPE_ROOM_MARKER_1:
-  case STYPE_ROOM_MARKER_2:
-  case STYPE_ROOM_MARKER_3:
-  case STYPE_ROOM_MARKER_4:
-  case STYPE_ROOM_MARKER_5:
-  case STYPE_ROOM_MARKER_6:
+    // set the global indexer to pass vals to the spawned sprite
+    case STYPE_INDEXER_0:
+    case STYPE_INDEXER_1:
+    case STYPE_INDEXER_2:
+    case STYPE_INDEXER_3:
+    case STYPE_INDEXER_4:
+    case STYPE_INDEXER_5:
+    case STYPE_INDEXER_6:    
+      globalIndexer = (int)inType - STYPE_INDEXER_0;
+      break;
 
-    int markerIndex = inType - STYPE_ROOM_MARKER_0;
+  case STYPE_ROOM_MARKER:
 
-    vmupro_log(VMUPRO_LOG_INFO, TAG, "Add room position indicator: %d, %d", worldStartPos.x, worldStartPos.y);
+    int markerIndex = globalIndexer;
+
+    vmupro_log(VMUPRO_LOG_INFO, TAG, "Add room position indicator: %d, %d idx %d", worldStartPos.x, worldStartPos.y, markerIndex);
 
     bool isBottomRight = hasTopLeftRoomPosition[markerIndex];
 
@@ -1633,6 +1638,8 @@ void HandleNonSpawnableSpriteType(SpriteType inType, Vec2 worldStartPos)
     }
 
     break;
+
+  
 
   default:
     vmupro_log(VMUPRO_LOG_WARN, TAG, "Unhandled spawn special sprite type %d", inType);
