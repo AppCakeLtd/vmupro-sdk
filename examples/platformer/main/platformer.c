@@ -87,7 +87,9 @@ const int DOOR_THRESH_FRAMES = 15;
 const int DOOR_THRESH_SPEED = 30;
 const int DASHBONK_THRESH_SPEED = 64;
 const int DASHBONK_MINIMAL_KNOCKBACK = 8;
-const int BUTTSTOMP_THRESH_SPEED = 100;
+const int BUTTSTOMP_THRESH_SPEED = 100;  // how fast you should be hitting the ground before a buttstomp happens
+const int BUTTSTOMP_MIN_BOUNCE_VEL = 20; // min upwards vel your bounce should produce, before giving up
+const int BUTTSTOMP_MAX_BOUNCE_VEL = 46;  // how much uppy bounce before we clamp it
 const int HEADBUTT_THRESH_SPEED = 64;
 const uint32_t COYOTE_TIME_FRAME_THRESH = 3;
 
@@ -626,6 +628,10 @@ typedef struct Sprite
   int knockbackFrameNum;
   int invulnFrameNum;
 
+  int buttstompFrameNum;
+  int numButtStomps;
+  int buttstompSubVelo;
+
   bool mustReleaseJump;
   bool mustReleaseDash;
 
@@ -923,6 +929,7 @@ void StopJumpBoost(Sprite *spr, bool resetMoveMode, const char *src);
 void StopDashBoost(Sprite *spr, bool resetMovemode, const char *src);
 void TryKnockback(Sprite *spr, KnockbackStrength inStr, const char *cause);
 void StopKnockback(Sprite *spr, bool resetMoveMode, const char *cause);
+void StopButtstomp(Sprite *spr, bool resetMoveMode, const char *cause);
 
 void DrawBBoxScreen(BBox *box, uint16_t inCol)
 {
@@ -1259,6 +1266,10 @@ void SetMoveMode(Sprite *spr, MoveMode inMode, const char *cause)
   {
     StopKnockback(spr, false, modeString);
   }
+  if (inMode != MM_BUTTSTOMP)
+  {
+    StopButtstomp(spr, false, modeString);
+  }
 
   //
   // Finally, apply the new mode
@@ -1380,7 +1391,7 @@ bool StunSprite(Sprite *spr, int strength, Sprite *sourceOrNull, const char *cau
   {
     if (strength != DMG_ALWAYS_STUN)
     {
-      false;
+      return false;
     }
   }
 
@@ -1482,6 +1493,10 @@ void ResetSprite(Sprite *spr)
   spr->dashFrameNum = 0;
   spr->knockbackFrameNum = 0;
   spr->invulnFrameNum = 0;
+
+  spr->buttstompFrameNum = 0;
+  spr->numButtStomps = 0;
+  spr->buttstompSubVelo = 0;
 
   spr->mustReleaseDash = false;
   spr->mustReleaseJump = false;
@@ -3863,7 +3878,7 @@ void TryDash(Sprite *spr)
   spr->dashFrameNum = 0;
 }
 
-void TryButtStomp(Sprite *spr)
+bool TryInitButtstomp(Sprite *spr)
 {
 
   if (spr->mustReleaseDash)
@@ -3876,27 +3891,31 @@ void TryButtStomp(Sprite *spr)
 
   if (spr->mustReleaseDash)
   {
-    return;
+    return false;
   }
 
   if (!spr->input.run)
   {
-    return;
+    return false;
   }
 
   if (IsGroundedOrCoyoteTime(spr))
   {
-    return;
+    return false;
   }
 
   if (!SpriteJumping(spr))
   {
-    return;
+    return false;
   }
 
   vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d sprite %s, starting buttstomp", frameCounter, spr->name);
   SetMoveMode(spr, MM_BUTTSTOMP, "TryButtStomp");
   spr->mustReleaseDash = true;
+  spr->buttstompFrameNum = 0;
+  spr->subVelo.y = spr->buttstompSubVelo;
+  spr->numButtStomps = 0;
+  return true;
 }
 
 void TryContinueButtStomp(Sprite *spr)
@@ -3911,6 +3930,49 @@ void TryContinueButtStomp(Sprite *spr)
   {
     SetMoveMode(spr, MM_FALL, "Stomp Released");
   }
+
+  if (spr->buttstompFrameNum >= spr->phys->max_jump_boost_frames)
+  {
+    return;
+  }
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s, applying buttstomp velo", frameCounter, spr->name, spr->buttstompSubVelo);
+
+  spr->subVelo.y -= spr->buttstompSubVelo;
+  spr->buttstompFrameNum++;
+}
+
+// return: did buttstomp bounce off ground?
+bool TryButtstompBounce(Sprite *spr)
+{
+
+  if (!SpriteButtStompingAboveThresh(spr))
+  {    
+    return false;
+  }
+
+  int bounceVel = Abs(spr->lastSubVelo.y);
+  // 5 8th's?
+  bounceVel *= 2;
+  bounceVel /= 6;
+  bounceVel -= (spr->numButtStomps * 4);
+
+  if (bounceVel < BUTTSTOMP_MIN_BOUNCE_VEL)
+  {
+    vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s, bounce vel below min, %d vs %d", frameCounter, spr->name, bounceVel, BUTTSTOMP_MIN_BOUNCE_VEL);
+    return false;
+  }
+  if ( bounceVel < BUTTSTOMP_MAX_BOUNCE_VEL ){    
+    vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s, clamping bounce vel from %d to %d\n", frameCounter, spr->name, bounceVel, BUTTSTOMP_MAX_BOUNCE_VEL);
+    bounceVel = BUTTSTOMP_MAX_BOUNCE_VEL;
+  }
+
+  // we gonna butt stomp
+  spr->buttstompSubVelo = bounceVel;
+  spr->numButtStomps++;
+  spr->buttstompFrameNum = 0; // reload!
+  
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s, continued buttstomp #%d with velo %d", frameCounter, spr->name, spr->buttstompFrameNum, spr->buttstompSubVelo);
+  return true;
 }
 
 // prevent the jump button applying further up force
@@ -3933,6 +3995,26 @@ void StopJumpBoost(Sprite *spr, bool resetMoveMode, const char *src)
   if (resetMoveMode)
   {
     SetMoveMode(spr, MM_WALK, "StopJumpBoostWithReset");
+  }
+}
+
+void StopButtstomp(Sprite *spr, bool resetMoveMode, const char *cause)
+{
+
+  if (!SpriteButtStomping(spr))
+  {
+    return;
+  }
+
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s cancelling buttsomp on %d/%d due to %s\n", frameCounter, spr->name, spr->numButtStomps, spr->buttstompFrameNum, cause);
+
+  spr->buttstompFrameNum = 0;
+  spr->buttstompSubVelo = 0;
+  spr->numButtStomps = 0;
+
+  if (resetMoveMode)
+  {
+    SetMoveMode(spr, MM_WALK, "StopButtStompWithReset");
   }
 }
 
@@ -4111,6 +4193,8 @@ void CheckLanded(Sprite *spr)
   // in case the character jumped and landed on the
   // same frame due to odd geometry, etc
 
+  // TODO: bug: if a bounce doesn't produce any velo it doesn't trigger
+  // the last vs now check, and could fail to land
   bool someKindaOffTheGround = (!spr->onGroundLastFrame) || MoveModeInAir(spr);
   if (!someKindaOffTheGround)
   {
@@ -4122,16 +4206,16 @@ void CheckLanded(Sprite *spr)
     return;
   }
 
-  if (SpriteButtStompingAboveThresh(spr))
-  {
-    // bounce back with some good height
-    spr->subVelo.y = -spr->lastSubVelo.y;
+  if (TryButtstompBounce(spr))
+  {    
     return;
   }
+
   vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s below speed %d below thresh %d for butt stomp", frameCounter, spr->name, spr->lastSubVelo.y, BUTTSTOMP_THRESH_SPEED);
 
   // we're on the ground
   // we weren't during the last frame
+  // note: will cancel buttstomp
   SetMoveMode(spr, MM_WALK, "CheckLanded");
   spr->jumpFrameNum = 0;
 }
@@ -4321,6 +4405,7 @@ void TryKnockback(Sprite *spr, KnockbackStrength inStr, const char *cause)
   SetMoveMode(spr, MM_KNOCKBACK, "TryKnockback");
 }
 
+// TODO: is this vs world only?
 void OnDashBonk(Sprite *spr)
 {
 
@@ -4600,7 +4685,7 @@ void SolveMovement(Sprite *spr)
   TryContinueJump(spr);
   TryDash(spr);
   TryContinueDash(spr);
-  TryButtStomp(spr);
+  TryInitButtstomp(spr);
   TryContinueButtStomp(spr);
   TryContinueKnockback(spr);
 
