@@ -3770,6 +3770,11 @@ bool CheckGrounded(Sprite *spr, GroundHitInfo *groundHitInfoOrNull)
     return false;
   }
 
+  // prevent being knocked back and landing on something in the same frame
+  if ( SpriteIsKnockback(spr) && spr->knockbackFrameNum < 10 ){
+    return false;
+  }
+
   // hitbox ends on the very last subpixel
   // so adding one takes you into the next tile
   Vec2 offset = {0, 1};
@@ -5143,13 +5148,14 @@ void SolveMovement(Sprite *spr)
 
   bool knockbackAfterProcessingTouches = SpriteIsKnockback(spr);
 
+  // prevent being knocked back then landing on that thing on the same frame
   bool knockbackThisFrame = knockbackAfterProcessingTouches && !knockbackAtStartofFrame;
 
   //
   // After any damage is dealt, etc
   //
 
-  GroundHitInfo ghi;
+  GroundHitInfo ghi = {0};
   spr->isGrounded = CheckGrounded(spr, &ghi);
 
   // Are we riding anything?
