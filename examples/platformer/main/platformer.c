@@ -86,6 +86,7 @@ const int INVULN_FRAME_DELAY = 20;
 const int DOOR_THRESH_FRAMES = 15;
 const int DOOR_THRESH_SPEED = 30;
 const int DASHBONK_THRESH_SPEED = 64;
+const int DASHBONK_MINIMAL_KNOCKBACK = 8;
 const int BUTTSTOMP_THRESH_SPEED = 100;
 const int HEADBUTT_THRESH_SPEED = 64;
 const uint32_t COYOTE_TIME_FRAME_THRESH = 3;
@@ -258,8 +259,9 @@ const char *MoveModetoString(MoveMode inMode)
 
 typedef enum
 {
-  KNOCK_SOFT, // dashed into a wall or something
-  KNOCK_HARD, // bumped into something spiky
+  KNOCK_MINIMAL, // dashed into an enemy, knock back a tiiiny amount for visual flare
+  KNOCK_SOFT,    // dashed into a wall or something
+  KNOCK_HARD,    // bumped into something spiky
 } KnockbackStrength;
 
 typedef enum
@@ -4293,6 +4295,12 @@ void TryKnockback(Sprite *spr, KnockbackStrength inStr, const char *cause)
   default:
     vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d unhandled knockback strength %d", frameCounter, (int)inStr);
     break;
+
+  case KNOCK_MINIMAL:
+    xKnock = spr->facingRight ? -DASHBONK_MINIMAL_KNOCKBACK : DASHBONK_MINIMAL_KNOCKBACK;
+    yKnock = -spr->phys->sub_gravity / 2;
+    break;
+
   case KNOCK_SOFT:
     xKnock = -spr->lastSubVelo.x / 5;
     yKnock = -spr->phys->sub_gravity / 2;
@@ -4490,8 +4498,11 @@ void OnSpriteGotTouched(Sprite *toucher, Sprite *target, bool horz)
       else
       {
         bool didStun = StunSprite(target, toucher->profile.damage_multiplier, toucher, "toucher dashed stunnable");
-        // knock back the player a bit
-        TryKnockback(toucher, KNOCK_SOFT, "Stunned a thing");
+        if (didStun)
+        {
+          // knock back the player a bit
+          TryKnockback(toucher, KNOCK_MINIMAL, "Stunned a thing");
+        }
       }
     }
     else
