@@ -363,6 +363,8 @@ typedef enum
   IMASK_DMGIN_STUNSME = 0x200,               // when something hits me, i get stunned (no dmg unless stunned)
   IMASK_DMGIN_KNOCKSME = 0x400,              // when something hits me, i bounce a bit (w/ dmg)
   IMASK_DMGOUT_IGNORED_WHEN_BOUNCED = 0x800, // don't deal damage if the player buttstomps me
+  IMASK_IGNORE_COLLISIONS = 0x1000,          // e.g. moving platforms
+  IMASK_SPECIAL_MOVES = 0x2000,              // buttstomp etc
 } InteractionMask;
 
 typedef struct
@@ -565,7 +567,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->default_health = 10;
     p->damage_multiplier = 1;
     p->solid = SOLIDMASK_SPRITE_SOLID;
-    p->iMask = IMASK_CAN_BE_RIDDEN | IMASK_CAN_RIDE_STUFF | IMASK_DMGIN_KNOCKSME;
+    p->iMask = IMASK_CAN_BE_RIDDEN | IMASK_CAN_RIDE_STUFF | IMASK_DMGIN_KNOCKSME | IMASK_SPECIAL_MOVES;
     p->physParams = &physDefault;
     p->defaultAnimGroup = &animgroup_player;
   }
@@ -592,7 +594,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->solid = SOLIDMASK_ONESIDED;
     p->defaultAnimGroup = &animgroup_platform0;
     p->physParams = &physPlatform;
-    p->iMask = IMASK_SKIP_ANIMSETS | IMASK_CAN_BE_RIDDEN;
+    p->iMask = IMASK_SKIP_ANIMSETS | IMASK_CAN_BE_RIDDEN | IMASK_IGNORE_COLLISIONS;
   }
   else if (inType == STYPE_DOOR)
   {
@@ -2383,7 +2385,7 @@ void UpdateSpriteInputs(Sprite *spr)
     //UpdatePatrollInputs(spr, true);
     Inputs *inp = &spr->input;    
     int framesPassed = frameCounter - spr->spawnFrame;
-    int phase = (framesPassed / 80) % 2;
+    int phase = (framesPassed / 580) % 2;
     inp->right = phase == 0 ? inp->right + 1 : 0;
     inp->left = phase == 1 ? inp->left + 1 : 0; 
   }
@@ -3781,6 +3783,9 @@ int CheckCollisionsAndEject(HitInfo *info, Sprite *spr, bool horz, Vec2 platform
   {
     return 0;
   }
+  if ( spr->profile.iMask & IMASK_IGNORE_COLLISIONS){
+    return 0;
+  }
 
   // We're not using prediction by default
   // but it could later be applied
@@ -4902,6 +4907,7 @@ void SolveMovement(Sprite *spr)
   bool knockbackAtStartofFrame = SpriteIsKnockback(spr);
 
   Inputs *inp = &spr->input;
+  InteractionMask iMask = spr->profile.iMask;
 
   // read in all of our state values
   // (the result of the previous frame)
@@ -4917,13 +4923,16 @@ void SolveMovement(Sprite *spr)
   int subDampX = GetXDamping(spr);
   int subDampY = 0;
 
-  TryJump(spr);
-  TryContinueJump(spr);
-  TryDash(spr);
-  TryContinueDash(spr);
-  TryInitButtDash(spr);
-  TryContinueButtStomp(spr);
+  if (iMask & IMASK_SPECIAL_MOVES){
+    TryJump(spr);
+    TryContinueJump(spr);
+    TryDash(spr);
+    TryContinueDash(spr);
+    TryInitButtDash(spr);
+    TryContinueButtStomp(spr);
+  }
   TryContinueKnockback(spr);
+  
 
   bool spriteXInput = false;
   bool spriteYInput = false;
@@ -5060,11 +5069,6 @@ void SolveMovement(Sprite *spr)
   //
 
   // Damp X Velo
-
-  if (SpriteStunned(spr))
-  {
-    // printf("__TEST__stunned %d %ld %d %ld  sdx %d velx %d\n", (int)movingRight, inp->right, (int)movingLeft, inp->left, subDampX, spr->subVelo.x);
-  }
 
   if (movingRight && !inp->right)
   {
