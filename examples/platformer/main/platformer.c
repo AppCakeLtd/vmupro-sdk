@@ -671,7 +671,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->default_health = 10;
     p->damage_multiplier = 1;
     p->solid = SOLIDMASK_SPRITE_SOLID;
-    p->iMask = IMASK_CAN_BE_RIDDEN | IMASK_CAN_RIDE_STUFF | IMASK_DMGIN_KNOCKSME | IMASK_SPECIAL_MOVES;
+    p->iMask = IMASK_CAN_BE_RIDDEN | IMASK_CAN_RIDE_STUFF | IMASK_DMGIN_KNOCKSME | IMASK_SPECIAL_MOVES | IMASK_UPDATE_OFFSCREEN;
     p->physParams = &physDefault;
     p->defaultAnimGroup = &animgroup_player;
   }
@@ -764,6 +764,8 @@ typedef struct Sprite
   // 2nd param for e.g. horz/vert movement
   int dirIndexer;
 
+  bool isOnScreen;
+
   // despawn at the end of the frame
   // so we don't screw with collision/loop logic
   bool markedForDespawn;
@@ -790,7 +792,7 @@ typedef struct Sprite
   // for coyote time
   uint32_t lastGroundedFrame;
   // see usage
-  Sprite *thingImRiding;
+  Sprite *thingImRiding;  
   bool isGrounded;
   bool isOnWall;
   bool onGroundLastFrame;
@@ -1671,6 +1673,8 @@ void ResetSprite(Sprite *spr)
   spr->spawnFrame = frameCounter;
   spr->indexer = globalIndexer;
   spr->dirIndexer = dirIndexer;
+
+  spr->isOnScreen = false;
 
   // update other struct vals
   spr->facingRight = true;
@@ -5200,6 +5204,57 @@ void ProcessSpriteTouches(Sprite *spr, HitInfo *info, bool horz)
   }
 }
 
+bool SpriteOnScreenOrAlwaysEnabled(Sprite *spr){
+
+  if (spr == NULL)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Null sprites can't be visible...");
+    return false;
+  }
+
+  if( spr->isOnScreen ) return true;
+  if ( spr->profile.iMask & IMASK_UPDATE_OFFSCREEN ) return true;
+
+  return false;
+
+}
+
+
+// TODO: not very efficient
+bool CalcIfSpriteOnScreen(Sprite *spr)
+{
+
+  if (spr == NULL)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Null sprites can't be on screen");
+    return false;
+  }
+
+  // TODO: omg cache this.
+  BBox camWorldBBox = CameraBBoxWorld();
+  // stretch the bbox a bit
+  camWorldBBox.x -= TILE_SIZE_PX *2;
+  camWorldBBox.y -= TILE_SIZE_PX *2;
+  camWorldBBox.width += (TILE_SIZE_PX*4);
+  camWorldBBox.height += (TILE_SIZE_PX*4);
+
+  // TODO: should we check other points?
+  Vec2 testPoint = GetPointOnSprite(spr, false, ANCHOR_HLEFT, ANCHOR_VTOP);
+  bool inside = IsPointInsideBox(&testPoint, &camWorldBBox);
+  if (inside)
+  {
+    return true;
+  }
+
+  testPoint = GetPointOnSprite(spr, false, ANCHOR_HRIGHT, ANCHOR_VBOTTOM);
+  inside = IsPointInsideBox(&testPoint, &camWorldBBox);
+  if (inside)
+  {
+    return true;
+  }
+  return false;
+}
+
 // basic order of operations
 // - use state from previous frame, since it's fully resolved
 // - check inputs
@@ -5223,6 +5278,12 @@ void SolveMovement(Sprite *spr)
   // skip the whole loop if it's a door or something
   if (spr->profile.iMask & IMASK_SKIP_MOVEMENT)
   {
+    return;
+  }
+
+  spr->isOnScreen = CalcIfSpriteOnScreen(spr);
+
+  if( !SpriteOnScreenOrAlwaysEnabled(spr) ){
     return;
   }
 
@@ -5786,40 +5847,6 @@ void FixSpriteIndices(Sprite *rider, Sprite *thingBeingRidden)
 }
 
 
-// TODO: not very efficient
-bool IsSpriteOnScreen(Sprite *spr)
-{
-
-  if (spr == NULL)
-  {
-    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Null sprites can't be on screen");
-  }
-
-  // TODO: omg cache this.
-  BBox camWorldBBox = CameraBBoxWorld();
-  // stretch the bbox a bit
-  //camWorldBBox.x -= TILE_SIZE_PX *2;
-  //camWorldBBox.y -= TILE_SIZE_PX *2;
-  //camWorldBBox.width += (TILE_SIZE_PX*4);
-  //camWorldBBox.height += (TILE_SIZE_PX*4);
-
-  // TODO: should we check other points?
-  Vec2 testPoint = GetPointOnSprite(spr, false, ANCHOR_HLEFT, ANCHOR_VTOP);
-  bool inside = IsPointInsideBox(&testPoint, &camWorldBBox);
-  if (inside)
-  {
-    return true;
-  }
-
-  testPoint = GetPointOnSprite(spr, false, ANCHOR_HRIGHT, ANCHOR_VBOTTOM);
-  inside = IsPointInsideBox(&testPoint, &camWorldBBox);
-  if (inside)
-  {
-    return true;
-  }
-  return false;
-}
-
 void MoveAllSprites()
 {
   
@@ -5924,9 +5951,8 @@ void DrawSprite(Sprite *spr)
   UpdateAnimation(spr);
   OnSpriteMoved(spr);
 
-  // Still update, but, don't draw if off screen
-  bool onScreen = IsSpriteOnScreen(spr);
-  if (!onScreen)
+  // Still update, but, don't draw if off screen  
+  if (!spr->isOnScreen)
   {
     // vmupro_log(VMUPRO_LOG_WARN, TAG, "Frame %d Sprite %s is off screen", frameCounter, spr->name);
     return;
