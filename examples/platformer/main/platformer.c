@@ -3204,8 +3204,6 @@ bool IsOneWayPlatformSolid(int blockId, int layer, Sprite *spr, Vec2 *tileSubPos
     return true;
 
   bool movingUp = spr->subVelo.y < 0;
-  // bool movingDown = spr->subVelo.y > 0;
-  // bool movingHorz = spr->subVelo.x != 0;
   bool movingVert = spr->subVelo.y != 0;
 
   Vec2 subFootPos = GetPointOnSprite(spr, true, ANCHOR_HMID, ANCHOR_VBOTTOM);
@@ -3228,6 +3226,50 @@ bool IsOneWayPlatformSolid(int blockId, int layer, Sprite *spr, Vec2 *tileSubPos
   // so we're moving down
   // it's only solid as long as we've been higher than it during the last/current jump
   bool playerHasBeenHigher = spr->highestYSubPosInJump < tileSubPos->y;
+  if (playerHasBeenHigher)
+  {
+    return true;
+  }
+
+  // else, we might be walking into it sideways
+  // i.e. it's halfway up the sprite's body
+
+  return false;
+}
+
+bool IsOneWaySpriteSolid(Sprite *jumper, Sprite *platform)
+{
+
+  // if it's not 2-sideable, just early exit
+  if (!(platform->profile.solid & SOLIDMASK_ONESIDED))
+  {
+    return true;
+  }
+
+  bool movingUp = jumper->subVelo.y < 0;
+  bool movingVert = jumper->subVelo.y != 0;
+
+  Vec2 jumperFootPos = GetPointOnSprite(jumper, true, ANCHOR_HMID, ANCHOR_VBOTTOM);
+  Vec2 platformHeadPos = GetPointOnSprite(platform, true, ANCHOR_HMID, ANCHOR_VTOP);  
+  bool playerHigher = jumperFootPos.y < platformHeadPos.y;
+
+  // Walking along the top
+  if (playerHigher && !movingVert)
+  {
+    // it's solid
+
+    return true;
+  }
+
+  // else, we only care if moving down
+  if (movingUp || !movingVert)
+  {
+    return false;
+  }
+
+  // so we're moving down
+  // it's only solid as long as we've been higher than it during the last/current jump
+  bool playerHasBeenHigher = jumper->highestYSubPosInJump < platformHeadPos.y;
   if (playerHasBeenHigher)
   {
     return true;
@@ -3635,6 +3677,12 @@ void GetHitInfo(HitInfo *rVal, Sprite *spr, Direction dir, Vec2 *subOffsetOrNull
         continue;
 
       if (rVal->ignorePlayer && otherSprite == player)
+      {
+        continue;
+      }
+
+      bool ignore1 = !IsOneWaySpriteSolid(spr, otherSprite);
+      if (ignore1)
       {
         continue;
       }
