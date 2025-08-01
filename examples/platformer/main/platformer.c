@@ -89,7 +89,7 @@ const int DASHBONK_THRESH_SPEED = 64;
 const int DASHBONK_MINIMAL_KNOCKBACK = 8;
 const int BUTTDASH_THRESH_SPEED = 100;        // how fast you should be hitting the ground before a buttstomp happens
 const int BUTTBOUNCE_MAX_VEL = TILE_SIZE_SUB; // how much uppy bounce before we clamp it
-const int HEADBUTT_THRESH_SPEED = 64;
+const int HEADBUTT_THRESH_SPEED = 16;         // much lower than butt stomp, it should virtually always pass
 const uint32_t COYOTE_TIME_FRAME_THRESH = 3;
 
 // not stored on the sprite
@@ -319,7 +319,7 @@ typedef enum
   STYPE_INDEXER_5,
   STYPE_INDEXER_6,
   STYPE_ROW2_7,
-  STYPE_ROW2_8,
+  STYPE_PLATFORM_0,
   STYPE_ROW2_9,
   STYPE_ROW2_10,
   STYPE_ROW2_11,
@@ -562,6 +562,11 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->iMask = IMASK_DMGIN_KNOCKSME | IMASK_DMGOUT_HORZ | IMASK_DMGOUT_VERT | IMASK_DMGOUT_IGNORED_WHEN_BOUNCED;
     p->physParams = &physTestMob;
     p->defaultAnimGroup = &animgroup_mob2;
+  }
+  else if (inType == STYPE_PLATFORM_0){
+    p->solid = SOLIDMASK_ONESIDED;
+    p->defaultAnimGroup = &animgroup_platform0;
+    p->iMask = IMASK_SKIP_ANIMSETS | IMASK_SKIP_INPUT | IMASK_SKIP_INPUT | IMASK_CAN_BE_RIDDEN;
   }
   else if (inType == STYPE_DOOR)
   {
@@ -1583,6 +1588,7 @@ void ResetSprite(Sprite *spr)
   OnSpriteMoved(spr);
 }
 
+// TODO: let's move this to a table
 // Some stuff is spawnable: doors, players, mobs, etc
 // Some stuff isn't: e.g. markers to denote room boundaries
 bool IsTypeSpawnable(SpriteType inType)
@@ -1607,6 +1613,10 @@ bool IsTypeSpawnable(SpriteType inType)
 
   if (inType == STYPE_PARTICLE_BROWN)
   {
+    return true;
+  }
+
+  if(inType == STYPE_PLATFORM_0){
     return true;
   }
 

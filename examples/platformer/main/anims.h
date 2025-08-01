@@ -330,6 +330,9 @@ const AnimGroup animgroup_mob2 = {
 const Img *imgs_door_all[] = {&img_door_0};
 const AnimGroup animgroup_door = {.idleFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_door_all), .images = imgs_door_all}};
 
+const Img *imgs_platform0_all[] = {&img_platform0_0};
+const AnimGroup animgroup_platform0 = {.idleFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_platform0_all), .images = imgs_platform0_all}};
+
 const Img *imgs_spikeball_all[] = {&img_spikeball_idle_0, &img_spikeball_idle_1};
 const AnimGroup animgroup_spikeball = {.idleFrames = {.frameSpeed = 20, .numImages = ARRAYSIZE(imgs_spikeball_all), .images = imgs_spikeball_all}};
 
