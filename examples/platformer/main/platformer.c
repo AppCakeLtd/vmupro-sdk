@@ -272,6 +272,7 @@ const char *MoveModetoString(MoveMode inMode)
   }
 }
 
+
 typedef enum
 {
   KNOCK_NUDGE,   // nudged while stunned
@@ -344,6 +345,43 @@ typedef enum
   STYPE_SPIKEBALL,
   STYPE_MAX
 } SpriteType;
+
+
+
+const char * STypeToString(SpriteType inType){
+
+
+  switch (inType)
+  {
+  default:
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "UNNAMED SPRITE TYPE %d\n", (int)inType);
+    return "UNKNOWN MOVVE MODE";
+    break;
+
+  case STYPE_PLAYER:
+    return "PLAYER";
+    break;
+
+  case STYPE_PLATFORM_0:
+    return "PLATFORM_0";
+    break;
+
+  case STYPE_DOOR:
+    return "DOOR";
+    break;
+
+  case STYPE_GREENDUCK:
+    return "GREENDUCK";
+    break;
+
+  case STYPE_REDDUCK:
+    return "REDDUCK";
+    break;
+
+  }
+
+
+}
 
 // Note: we do some >= on these, be careful changing them
 typedef enum
@@ -487,6 +525,11 @@ const PhysParams physPlatform = {
 
 };
 
+typedef struct {
+  int framesRidden; // how many frames i've been stood on for
+  int hideCount;    // >0 = hide offscreen, wait for respawn
+} PlatformData;
+
 // profile of spite behaviour
 // such as runspeed, can it walk
 // off edges, etc
@@ -505,6 +548,8 @@ typedef struct
   const AnimGroup *defaultAnimGroup;
 
   Vec2 startVelo;
+
+  PlatformData * platDataOrNull;
 
 } SpriteProfile;
 // TODO: rename to spriteblueprint?
@@ -571,6 +616,8 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
   p->startVelo.x = 0;
   p->startVelo.y = 0;
 
+  p->platDataOrNull = NULL;
+
   if (inType == STYPE_PLAYER)
   {
     // default
@@ -605,6 +652,10 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->defaultAnimGroup = &animgroup_platform0;
     p->physParams = &physPlatform;
     p->iMask = IMASK_SKIP_ANIMSETS | IMASK_CAN_BE_RIDDEN | IMASK_IGNORE_COLLISIONS | IMASK_PLATFORM_MOVEMENT;
+
+    p->platDataOrNull = malloc(sizeof(PlatformData));
+    memset(p->platDataOrNull, 0, sizeof(PlatformData));
+
   }
   else if (inType == STYPE_DOOR)
   {
@@ -1678,6 +1729,7 @@ void HandleNonSpawnableSpriteType(SpriteType inType, Vec2 worldStartPos)
   case STYPE_DIRECTION_1_V:
   case STYPE_DIRECTION_2_D:
   case STYPE_DIRECTION_3_NONE:
+    // corresponds to type DirIndices, e.g. DIRINDEX_HORZ
     dirIndexer = (int)inType - STYPE_DIRECTION_0_H;
     break;
 
@@ -1755,11 +1807,6 @@ void AddToSpriteList(Sprite *inSprite)
 Sprite *CreateSprite(SpriteType inType, Vec2 worldStartPos, const char *inName)
 {
 
-  if (numSprites == MAX_SPRITES)
-  {
-    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Out of sprite slots");
-    return NULL;
-  }
 
   if (inType < 0 || inType >= STYPE_MAX)
   {
@@ -1770,6 +1817,12 @@ Sprite *CreateSprite(SpriteType inType, Vec2 worldStartPos, const char *inName)
   if (!IsTypeSpawnable(inType))
   {
     HandleNonSpawnableSpriteType(inType, worldStartPos);
+    return NULL;
+  }
+
+  if (numSprites == MAX_SPRITES)
+  {
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Out of sprite slots");
     return NULL;
   }
 
@@ -1867,6 +1920,14 @@ int UnloadSprite(Sprite *spr)
   }
 
   vmupro_log(VMUPRO_LOG_WARN, TAG, "Frame %d Sprite %s unloading", frameCounter, spr->name);
+
+  
+  if (spr->profile.platDataOrNull != NULL){
+    memset(spr->profile.platDataOrNull, 0, sizeof(PlatformData));
+    free(spr->profile.platDataOrNull);
+    spr->profile.platDataOrNull = NULL;
+  }
+  
   // wipe the mem before freeing it
   memset(spr, 0, sizeof(Sprite));
   free(spr);
@@ -1963,7 +2024,7 @@ void ReadSpawnLayer(Level *inLevel, PersistentData *inData)
 
     vmupro_log(VMUPRO_LOG_INFO, TAG, "Found spawn marker block ID %d at tile: %ld, %ld world: %d, %d \n", newID, xPos, yPos, worldPos.x, worldPos.y);
 
-    const char *tag = newID == STYPE_PLAYER ? "Player" : "Mob";
+    const char *tag = STypeToString(newID);
     CreateSprite(newID, worldPos, tag);
   }
 }
@@ -2405,8 +2466,7 @@ void UpdateSpriteInputs(Sprite *spr)
   }
   else if (spr->sType == STYPE_PLATFORM_0)
   {
-    ClearSpriteInputs(spr);
-    // UpdatePatrollInputs(spr, true);
+    ClearSpriteInputs(spr);    
     Inputs *inp = &spr->input;
 
     if (spr->dirIndexer == DIRINDEX_HORZ)
@@ -2486,7 +2546,25 @@ void UpdateSpriteInputs(Sprite *spr)
 
       inp->down = pressDown ? inp->down + 1 : 0;
       inp->up = pressUp ? inp->up + 1 : 0;
-    }
+    } // dirindex vert
+
+    if( spr->dirIndexer == DIRINDEX_DOWN ){
+      bool pressDown = false;
+      /*
+      if (spr->thingImRiding->profile.platDataOrNull != NULL ){
+
+        if (spr->thingImRiding->profile.platDataOrNull->framesRidden > 10 ){
+          pressDown = true;
+        }
+
+        inp->down = pressDown ? inp->down + 1 : 0;
+      } else {
+        vmupro_log(VMUPRO_LOG_ERROR, TAG, "Falling platform with no platform data!");
+      }
+      */
+      
+    } // dirindex down
+
   }
   else
   {
@@ -5116,8 +5194,9 @@ void SolveMovement(Sprite *spr)
   bool movingDown = spr->subVelo.y > 0;
 
   bool inControl = AllowSpriteInput(spr);
-  bool isSolid = IsBlockingCollision(spr->profile.solid);
-
+  bool isWorldSolidToMe = !(iMask & IMASK_IGNORE_COLLISIONS);
+  bool isSolidToWorld = IsBlockingCollision(spr->profile.solid);
+  
   if (inControl)
   {
 
@@ -5210,6 +5289,13 @@ void SolveMovement(Sprite *spr)
       // this way its movement is bundled into our own
       // movement calcs and helps preven glitching into stuff
       ridingPlatformDelta = SubNewVec(&spr->thingImRiding->subPos, &spr->thingImRiding->lastSubPos);
+
+      /*
+      if (spr->thingImRiding->profile.platDataOrNull != NULL){
+        spr->thingImRiding->profile.platDataOrNull->framesRidden +=1;
+      }
+      */
+
     }
     else
     {
@@ -5446,7 +5532,7 @@ void SolveMovement(Sprite *spr)
   //
   // Handle tile triggers (liquid, lava, instadeath, etc)
   //
-  if (isSolid)
+  if (isSolidToWorld)
   {
     // player can check against triggers
     // triggers can sit idle
@@ -5497,7 +5583,7 @@ void SolveMovement(Sprite *spr)
   // printf("Frame %d is grounded %d yVel = %d\n", frameCounter, spr->isGrounded, spr->subVelo.y);
   spr->isOnWall = (vBonk != 0);
 
-  if (isSolid)
+  if (isWorldSolidToMe)
   {
     CheckLanded(spr);
     CheckFallen(spr);
