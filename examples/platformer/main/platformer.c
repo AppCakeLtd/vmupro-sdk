@@ -409,6 +409,7 @@ typedef enum
   IMASK_SPECIAL_MOVES = 0x2000,              // buttstomp etc
   IMASK_PLATFORM_MOVEMENT = 0x4000,          // e.g. platforms 'walking' accross the sky
   IMASK_NEVER_DIES = 0x8000,                 // unkillable
+  IMASK_UPDATE_OFFSCREEN = 0x10000,          // platforms and the likes
 } InteractionMask;
 
 typedef struct
@@ -697,7 +698,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->solid = SOLIDMASK_ONESIDED;
     p->defaultAnimGroup = &animgroup_platform0;
     p->physParams = &physPlatform;
-    p->iMask = IMASK_SKIP_ANIMSETS | IMASK_CAN_BE_RIDDEN | IMASK_IGNORE_COLLISIONS | IMASK_PLATFORM_MOVEMENT | IMASK_NEVER_DIES;
+    p->iMask = IMASK_SKIP_ANIMSETS | IMASK_CAN_BE_RIDDEN | IMASK_IGNORE_COLLISIONS | IMASK_PLATFORM_MOVEMENT | IMASK_NEVER_DIES | IMASK_UPDATE_OFFSCREEN;
   }
   else if (inType == STYPE_DOOR)
   {
@@ -832,6 +833,7 @@ typedef struct Sprite
   AnimTypes animID;
 
   int health;
+  bool onScreenOrAlwaysActive;
 
   // to simplify one-way platforms
   // we'll make sure the player
@@ -1439,7 +1441,7 @@ void SetMoveMode(Sprite *spr, MoveMode inMode, const char *cause)
 
   if (SpriteStunned(spr))
   {
-    // ignore movement changes    
+    // ignore movement changes
     vmupro_log(VMUPRO_LOG_WARN, TAG, "Frame %d Sprite %s ignoring state change due to stunnedness", frameCounter, spr->name);
     return;
   }
@@ -1730,6 +1732,8 @@ void ResetSprite(Sprite *spr)
 
   spr->platstate = PS_NORMAL;
   spr->platCounter = 0;
+
+  spr->onScreenOrAlwaysActive = false;
 
   // update the hitbox, bounding box, etc
   OnSpriteMoved(spr);
@@ -5784,28 +5788,6 @@ void FixSpriteIndices(Sprite *rider, Sprite *thingBeingRidden)
   sprites[thingBeingRiddenIndex] = rider;
 }
 
-void MoveAllSprites()
-{
-
-  for (int i = 0; i < numSprites; i++)
-  {
-    Sprite *spr = sprites[i];
-    if (spr != player && DEBUG_ONLY_MOVE_PLAYER)
-    {
-      continue;
-    }
-    SolveMovement(spr);
-  }
-
-  for (int i = 0; i < numSprites; i++)
-  {
-    Sprite *spr = sprites[i];
-    if (spr->thingImRiding != NULL)
-    {
-      FixSpriteIndices(spr, spr->thingImRiding);
-    }
-  }
-}
 
 // TODO: not very efficient
 bool IsSpriteOnScreen(Sprite *spr)
@@ -5816,7 +5798,13 @@ bool IsSpriteOnScreen(Sprite *spr)
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Null sprites can't be on screen");
   }
 
+  // TODO: omg cache this.
   BBox camWorldBBox = CameraBBoxWorld();
+  // stretch the bbox a bit
+  camWorldBBox.x -= TILE_SIZE_PX *2;
+  camWorldBBox.y -= TILE_SIZE_PX *2;
+  camWorldBBox.width += (TILE_SIZE_PX*4);
+  camWorldBBox.height += (TILE_SIZE_PX*4);
 
   // TODO: should we check other points?
   Vec2 testPoint = GetPointOnSprite(spr, false, ANCHOR_HLEFT, ANCHOR_VTOP);
@@ -5835,12 +5823,49 @@ bool IsSpriteOnScreen(Sprite *spr)
   return false;
 }
 
+void MoveAllSprites()
+{
+
+  for (int i = 0; i < numSprites; i++)
+  {
+    Sprite *spr = sprites[i];
+    if (spr != player && DEBUG_ONLY_MOVE_PLAYER)
+    {
+      continue;
+    }
+
+    // don't draw offscreen sprites unless they're marked for it
+    spr->onScreenOrAlwaysActive = IsSpriteOnScreen(spr) || (spr->profile.iMask & IMASK_UPDATE_OFFSCREEN);
+    if (!spr->onScreenOrAlwaysActive)
+    {
+      continue;
+    }
+
+    SolveMovement(spr);
+  }
+
+  for (int i = 0; i < numSprites; i++)
+  {
+    Sprite *spr = sprites[i];
+    if (spr->thingImRiding != NULL)
+    {
+      FixSpriteIndices(spr, spr->thingImRiding);
+    }
+  }
+}
+
+
 void DrawSprite(Sprite *spr)
 {
 
   if (spr == NULL)
   {
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Null sprite passed to DrawSprite");
+    return;
+  }
+
+  if (!spr->onScreenOrAlwaysActive)
+  {
     return;
   }
 
@@ -5916,12 +5941,12 @@ void DrawSprite(Sprite *spr)
   OnSpriteMoved(spr);
 
   // Still update, but, don't draw if off screen
-  bool onScreen = IsSpriteOnScreen(spr);
-  if (!onScreen)
-  {
-    // vmupro_log(VMUPRO_LOG_WARN, TAG, "Frame %d Sprite %s is off screen", frameCounter, spr->name);
-    return;
-  }
+  // bool onScreen = IsSpriteOnScreen(spr);
+  // if (!onScreen)
+  // {
+  //   // vmupro_log(VMUPRO_LOG_WARN, TAG, "Frame %d Sprite %s is off screen", frameCounter, spr->name);
+  //   return;
+  // }
 
   // update the img pointer, in case it's changed due to anims
   const Img *img = GetActiveImage(spr);
@@ -5947,6 +5972,7 @@ void DrawAllSprites()
 
     DrawSprite(spr);
   }
+
   DrawSprite(player);
 }
 
