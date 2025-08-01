@@ -109,6 +109,7 @@ int camX = 0;
 int camY = 0;
 int frameCounter = 0;
 int globalIndexer = 0;
+int dirIndexer = 0;
 
 uint32_t CalcDJB2(uint8_t *inBytes, uint32_t inLength)
 {
@@ -172,6 +173,13 @@ typedef enum
   GSTATE_GAMEOVER
 
 } GameState;
+
+typedef enum{
+  DIRINDEX_HORZ,
+  DIRINDEX_VERT,
+  DIRINDEX_DOWN,
+  DIRINDEX_NONE
+} DirIndices;
 
 // temporary
 Vec2 uiAnimOffset;
@@ -300,7 +308,7 @@ typedef enum
   STYPE_RESERVED_3,
   STYPE_DOOR,
   STYPE_ROOM_MARKER,
-  STYPE_RESERVED_5,
+  STYPE_PLATFORM_0,
   STYPE_RESERVED_6,
   STYPE_RESERVED_7,
   STYPE_RESERVED_9,
@@ -319,10 +327,10 @@ typedef enum
   STYPE_INDEXER_5,
   STYPE_INDEXER_6,
   STYPE_ROW2_7,
-  STYPE_PLATFORM_0,
-  STYPE_ROW2_9,
-  STYPE_ROW2_10,
-  STYPE_ROW2_11,
+  STYPE_DIRECTION_0_H,
+  STYPE_DIRECTION_1_V,
+  STYPE_DIRECTION_2_D,
+  STYPE_DIRECTION_3_NONE,
   STYPE_ROW2_12,
   STYPE_ROW2_13,
   STYPE_ROW2_14,
@@ -655,8 +663,10 @@ typedef struct Sprite
 
   // the frame we spawned on
   int spawnFrame;
-  // indexer for e.g. move types, room coords, ids, etc
+  // indexer for e.g. room edge groups, door ids, etc
   int indexer;
+  // 2nd param for e.g. horz/vert movement
+  int dirIndexer;
 
   // despawn at the end of the frame
   // so we don't screw with collision/loop logic
@@ -1554,6 +1564,7 @@ void ResetSprite(Sprite *spr)
   spr->markedForDespawn = false;
   spr->spawnFrame = frameCounter;
   spr->indexer = globalIndexer;
+  spr->dirIndexer = dirIndexer;
 
   // update other struct vals
   spr->facingRight = true;
@@ -1659,6 +1670,13 @@ void HandleNonSpawnableSpriteType(SpriteType inType, Vec2 worldStartPos)
   switch (inType)
   {
 
+  case STYPE_DIRECTION_0_H:
+  case STYPE_DIRECTION_1_V:
+  case STYPE_DIRECTION_2_D:
+  case STYPE_DIRECTION_3_NONE:
+    dirIndexer = (int)inType - STYPE_DIRECTION_0_H;
+    break;
+
   // set the global indexer to pass vals to the spawned sprite
   case STYPE_INDEXER_0:
   case STYPE_INDEXER_1:
@@ -1667,6 +1685,8 @@ void HandleNonSpawnableSpriteType(SpriteType inType, Vec2 worldStartPos)
   case STYPE_INDEXER_4:
   case STYPE_INDEXER_5:
   case STYPE_INDEXER_6:
+    // so we can have 2 params
+    // e.g. a direction and distance
     globalIndexer = (int)inType - STYPE_INDEXER_0;
     break;
 
@@ -2382,12 +2402,37 @@ void UpdateSpriteInputs(Sprite *spr)
   else if (spr->sType == STYPE_PLATFORM_0)
   {
     ClearSpriteInputs(spr);
-    //UpdatePatrollInputs(spr, true);
-    Inputs *inp = &spr->input;    
-    int framesPassed = frameCounter - spr->spawnFrame;
-    int phase = (framesPassed / 580) % 2;
-    inp->right = phase == 0 ? inp->right + 1 : 0;
-    inp->left = phase == 1 ? inp->left + 1 : 0; 
+    // UpdatePatrollInputs(spr, true);
+    Inputs *inp = &spr->input;
+    bool pressRight = false;
+    bool pressLeft = false;
+    if (spr->dirIndexer == DIRINDEX_HORZ){      
+      // horz movement
+      if (spr->facingRight){
+        // how far can it travel in world coords
+        int maxDist = (spr->indexer +1) * 4;
+        maxDist *= TILE_SIZE_SUB;
+        
+        int maxRight = spr->subSpawnPos.x + maxDist;
+        if (spr->subPos.x >= maxRight){
+          spr->facingRight = false;          
+        } else {
+          pressRight = true;
+        }
+      } else {
+
+        if (spr->subPos.x <= spr->subSpawnPos.x){
+          spr->facingRight = true;
+        } else {
+          pressLeft = true;
+        }
+
+      }
+    }
+    //int framesPassed = frameCounter - spr->spawnFrame;
+    // int phase = (framesPassed / 580) % 2;
+    inp->right = pressRight ? inp->right + 1 : 0;
+    inp->left = pressLeft ? inp->left + 1 : 0;
   }
   else
   {
@@ -3783,7 +3828,8 @@ int CheckCollisionsAndEject(HitInfo *info, Sprite *spr, bool horz, Vec2 platform
   {
     return 0;
   }
-  if ( spr->profile.iMask & IMASK_IGNORE_COLLISIONS){
+  if (spr->profile.iMask & IMASK_IGNORE_COLLISIONS)
+  {
     return 0;
   }
 
@@ -4923,7 +4969,8 @@ void SolveMovement(Sprite *spr)
   int subDampX = GetXDamping(spr);
   int subDampY = 0;
 
-  if (iMask & IMASK_SPECIAL_MOVES){
+  if (iMask & IMASK_SPECIAL_MOVES)
+  {
     TryJump(spr);
     TryContinueJump(spr);
     TryDash(spr);
@@ -4932,7 +4979,6 @@ void SolveMovement(Sprite *spr)
     TryContinueButtStomp(spr);
   }
   TryContinueKnockback(spr);
-  
 
   bool spriteXInput = false;
   bool spriteYInput = false;
