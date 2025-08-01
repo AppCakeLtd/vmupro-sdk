@@ -1418,6 +1418,17 @@ bool SpriteDashingAboveBonkThresh(Sprite *spr)
   return true;
 }
 
+bool SpriteHeadbuttingAbovethresh(Sprite *spr){
+
+
+  if( spr->lastSubVelo.y < -HEADBUTT_THRESH_SPEED){
+    return true;
+  }
+
+  return false;
+
+}
+
 bool SpriteButtStompingAboveThresh(Sprite *spr)
 {
 
@@ -5131,7 +5142,7 @@ void ProcessTileTouches(Sprite *spr, HitInfo *info, bool horz)
 
           TryButtBounce(spr, BUTTSTR_GROUND, "breakable tile");
         }
-        else if (spr->lastSubVelo.y < -HEADBUTT_THRESH_SPEED)
+        else if ( SpriteHeadbuttingAbovethresh(spr) )
         {
           // headbutt it
           Vec2 rowAndCol = GetTileRowAndColFromSubPos(&info->subCheckPos[i]);
@@ -5153,7 +5164,7 @@ void OnSpriteGotTouched(Sprite *toucher, Sprite *target, Direction inDir)
   //
   // if it hurts to touch, do the damage and call it a day
   //
-
+  
   if (horz)
   {
 
@@ -5192,8 +5203,9 @@ void OnSpriteGotTouched(Sprite *toucher, Sprite *target, Direction inDir)
 
   bool dashing = SpriteDashingAboveBonkThresh(toucher);
   bool buttstomping = SpriteButtStompingAboveThresh(toucher);
+  bool headbutting = SpriteHeadbuttingAbovethresh(toucher);
 
-  if (dashing || buttstomping)
+  if (dashing || buttstomping || headbutting)
   {
 
     bool takeDamage = (target->profile.iMask & IMASK_DMGIN_KNOCKSME);
