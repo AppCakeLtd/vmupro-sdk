@@ -265,6 +265,7 @@ const char *MoveModetoString(MoveMode inMode)
 
 typedef enum
 {
+  KNOCK_NUDGE,   // nudged while stunned
   KNOCK_MINIMAL, // dashed into an enemy, knock back a tiiiny amount for visual flare
   KNOCK_SOFT,    // dashed into a wall or something
   KNOCK_HARD,    // bumped into something spiky
@@ -386,6 +387,7 @@ typedef struct
   const int subdamping_walk;
   const int subdamping_run;
   const int subdamping_air;
+  const int subdamping_stunned;
 
   // max frames for which the up force
   // is applied
@@ -411,6 +413,7 @@ const PhysParams physDefault = {
     .subdamping_walk = 6,
     .subdamping_run = 6,
     .subdamping_air = 4,
+    .subdamping_stunned = 4,
     .max_jump_boost_frames = 16,
     .max_buttbounce_frames = 16,
     .max_dash_frames = 16,
@@ -434,6 +437,7 @@ const PhysParams physTestMob = {
     .subdamping_walk = 0,
     .subdamping_run = 6,
     .subdamping_air = 4,
+    .subdamping_stunned = 4,
     .max_jump_boost_frames = 16,
     .max_buttbounce_frames = 16,
     .max_dash_frames = 16,
@@ -958,7 +962,7 @@ void UnloadTileLayers();
 void DecompressAllTileLayers(Level *currentLevel, PersistentData *inData);
 void StopJumpBoost(Sprite *spr, bool resetMoveMode, const char *src);
 void StopDashBoost(Sprite *spr, bool resetMovemode, const char *src);
-void TryKnockback(Sprite *spr, KnockbackStrength inStr, const char *cause);
+void TryKnockback(Sprite *spr, KnockbackStrength inStr, const char *cause, Sprite *srcOrNull);
 void StopKnockback(Sprite *spr, bool resetMoveMode, const char *cause);
 void StopButtstomp(Sprite *spr, bool resetMoveMode, const char *cause);
 bool TryButtBounce(Sprite *spr, ButtStrength inStr, const char *cause);
@@ -1491,7 +1495,7 @@ void SpriteTakeDamage(Sprite *spr, int value, Sprite *sourceOrNull, const char *
     return;
   }
 
-  TryKnockback(spr, KNOCK_HARD, cause);
+  TryKnockback(spr, KNOCK_HARD, cause, NULL);
 }
 
 void CheckFellOffMap(Sprite *spr)
@@ -2795,6 +2799,9 @@ int GetXDamping(Sprite *spr)
     break;
 
   case MM_STUNNED:
+    returnVal = prof->subdamping_stunned;
+    break;
+
   case MM_JUMP:
   case MM_FALL:
     if (wasRunningWhenLastGrounded)
@@ -4513,7 +4520,7 @@ bool SpriteCanRideSprite(Sprite *rider, Sprite *thingImRiding)
   return true;
 }
 
-void TryKnockback(Sprite *spr, KnockbackStrength inStr, const char *cause)
+void TryKnockback(Sprite *spr, KnockbackStrength inStr, const char *cause, Sprite *srcOrNull)
 {
 
   vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d, Sprite %s knockback! str= %d, cause = '%s'", frameCounter, spr->name, (int)inStr, cause);
@@ -4529,17 +4536,28 @@ void TryKnockback(Sprite *spr, KnockbackStrength inStr, const char *cause)
   switch (inStr)
   {
   default:
-    vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d unhandled knockback strength %d", frameCounter, (int)inStr);
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Frame %d unhandled knockback strength %d", frameCounter, (int)inStr);
+    break;
+
+  case KNOCK_NUDGE:
+    if (srcOrNull == NULL)
+    {
+      vmupro_log(VMUPRO_LOG_ERROR, TAG, "Frame %d unhandled knockback strength %d", frameCounter, (int)inStr);
+      break;
+    }
+    bool nudgeRight = srcOrNull->subPos.x > spr->subPos.x;
+    xKnock = nudgeRight ? -DASHBONK_MINIMAL_KNOCKBACK * 2 : DASHBONK_MINIMAL_KNOCKBACK * 2;
+    yKnock = -(spr->phys->sub_gravity + 2);
     break;
 
   case KNOCK_MINIMAL:
     xKnock = spr->facingRight ? -DASHBONK_MINIMAL_KNOCKBACK : DASHBONK_MINIMAL_KNOCKBACK;
-    yKnock = -(spr->phys->sub_gravity +2);
+    yKnock = -(spr->phys->sub_gravity + 2);
     break;
 
   case KNOCK_SOFT:
     xKnock = -spr->lastSubVelo.x / 5;
-    yKnock = -(spr->phys->sub_gravity +2);
+    yKnock = -(spr->phys->sub_gravity + 2);
     break;
 
   case KNOCK_HARD:
@@ -4568,7 +4586,7 @@ void OnDashBonk(Sprite *spr)
   }
 
   // we hit something, dash bounce
-  TryKnockback(spr, KNOCK_SOFT, "H or Head bonk");
+  TryKnockback(spr, KNOCK_SOFT, "H or Head bonk", NULL);
 }
 
 void StopKnockback(Sprite *spr, bool resetMoveMode, const char *cause)
@@ -4746,14 +4764,14 @@ void OnSpriteGotTouched(Sprite *toucher, Sprite *target, bool horz)
         if (didStun && !SpriteIsButtDashing(toucher))
         {
           // knock back the player a bit, if they're not already buttstomping
-          TryKnockback(toucher, KNOCK_MINIMAL, "Stunned a thing");
+          TryKnockback(toucher, KNOCK_MINIMAL, "Stunned a thing", NULL);
         }
       }
     }
     else
     {
       // just apply a small knockback
-      TryKnockback(target, KNOCK_SOFT, "Toucher dashed non-damage taker");
+      TryKnockback(target, KNOCK_SOFT, "Toucher dashed non-damage taker", NULL);
     }
 
     if (buttstomping)
@@ -4768,7 +4786,7 @@ void OnSpriteGotTouched(Sprite *toucher, Sprite *target, bool horz)
     // if i'm stunned, i can be pushed
     if (SpriteStunned(target))
     {
-      TryKnockback(target, KNOCK_MINIMAL, "nudged while stunned");
+      TryKnockback(target, KNOCK_NUDGE, "nudged while stunned", toucher);
     }
   }
 }
@@ -4885,17 +4903,22 @@ void SolveMovement(Sprite *spr)
       spr->facingRight = false;
     }
   }
-  else
+  else if (SpriteIsKnockback(spr))
   {
-
-    if (SpriteIsKnockback(spr))
-    {
-      spriteXInput = true;
-      spriteYInput = true;
-      // TODO: can jam up if you never leave the ground
-      subAccelX += spr->subKnockbackAccel.x;
-      subAccelY += spr->subKnockbackAccel.y;
-    }
+    spriteXInput = true;
+    spriteYInput = true;
+    // TODO: can jam up if you never leave the ground
+    subAccelX += spr->subKnockbackAccel.x;
+    subAccelY += spr->subKnockbackAccel.y;
+  }
+  else if (SpriteStunned(spr))
+  {
+    spriteXInput = true;
+    spriteYInput = true;
+    subAccelX += spr->subKnockbackAccel.x;
+    subAccelY += spr->subKnockbackAccel.y;
+    spr->subKnockbackAccel.x = 0;
+    spr->subKnockbackAccel.y = 0;
   }
 
   // Debug/testing
@@ -4991,6 +5014,11 @@ void SolveMovement(Sprite *spr)
 
   // Damp X Velo
 
+  if (SpriteStunned(spr))
+  {
+    // printf("__TEST__stunned %d %ld %d %ld  sdx %d velx %d\n", (int)movingRight, inp->right, (int)movingLeft, inp->left, subDampX, spr->subVelo.x);
+  }
+
   if (movingRight && !inp->right)
   {
     // clamp it so we don't go into the negative
@@ -5010,6 +5038,7 @@ void SolveMovement(Sprite *spr)
   }
   else
   {
+
     subDampX = 0;
   }
 
@@ -5110,11 +5139,6 @@ void SolveMovement(Sprite *spr)
   {
     // Apply Y velo to Y movement + update bounding boxes
     AddSubPos2(spr, 0, spr->subVelo.y + ridingPlatformDelta.y);
-
-    if (SpriteStunned(spr))
-    {
-      printf("__TEST__ stun stuff %d %d grounded = %d\n", spr->subVelo.x, spr->subVelo.y, (int)spr->isGrounded);
-    }
 
     // Eject from any Y collisions
     vBonk = CheckCollisionsAndEject(&yHitInfo, spr, false, ridingPlatformDelta);
@@ -5420,6 +5444,10 @@ void DrawSprite(Sprite *spr)
   {
     SetAnim(spr, ANIIMTYPE_DIE);
   }
+  else if (spr->moveMode == MM_STUNNED)
+  {
+    SetAnim(spr, ANIMTYPE_STUNNED);
+  }
   else if (idle)
   {
     SetAnim(spr, ANIMTYPE_IDLE);
@@ -5461,10 +5489,6 @@ void DrawSprite(Sprite *spr)
   else if (spr->moveMode == MM_FALL)
   {
     SetAnim(spr, ANIMTYPE_FALL);
-  }
-  else if (spr->moveMode == MM_STUNNED)
-  {
-    SetAnim(spr, ANIMTYPE_STUNNED);
   }
   else
   {
