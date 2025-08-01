@@ -529,17 +529,17 @@ const PhysParams physPlatform = {
 
 };
 
-const PhysParams physFallingPlatform = {
+const PhysParams physCrawler = {
 
-    .max_subspeed_walk = 40,
+    .max_subspeed_walk = 4,
     .max_subspeed_run = 0,
-    .subaccel_walk = 8,
+    .subaccel_walk = 2,
     .subaccel_run = 0,
     .subaccel_air = 0,
-    .subdamping_walk = 0,
+    .subdamping_walk = 6,
     .subdamping_run = 0,
     .subdamping_air = 0,
-    .subdamping_stunned = 0,
+    .subdamping_stunned = 4,
     .max_jump_boost_frames = 0,
     .max_buttbounce_frames = 0,
     .max_dash_frames = 0,
@@ -548,8 +548,8 @@ const PhysParams physFallingPlatform = {
     .sub_dashforce = 0,
     .sub_buttbounceforce = 0,
     .dashDelayFrames = 0,
-    .sub_gravity = 0,
-    .max_subfallspeed = 0,
+    .sub_gravity = 9,
+    .max_subfallspeed = 120,
 
 };
 
@@ -723,7 +723,8 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
   {
     p->solid = SOLIDMASK_SPRITE_SOLID;
     p->defaultAnimGroup = &animgroup_crawler;
-    p->iMask = IMASK_SKIP_INPUT | IMASK_SKIP_MOVEMENT | IMASK_DMGOUT_HORZ | IMASK_DMGOUT_VERT;
+    p->physParams = &physCrawler;    
+    p->iMask = IMASK_DMGOUT_HORZ | IMASK_DMGOUT_VERT;
   }
   else if (inType == STYPE_PARTICLE_BROWN)
   {
@@ -2691,6 +2692,11 @@ void UpdateSpriteInputs(Sprite *spr)
     UpdatePatrollInputs(spr, false);
   }
   else if (spr->sType == STYPE_REDDUCK)
+  {
+    ClearSpriteInputs(spr);
+    UpdatePatrollInputs(spr, true);
+  }
+  else if (spr->sType == STYPE_CRAWLER)
   {
     ClearSpriteInputs(spr);
     UpdatePatrollInputs(spr, true);

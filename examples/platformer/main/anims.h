@@ -339,7 +339,7 @@ const AnimGroup animgroup_spikeball = {.idleFrames = {.frameSpeed = 20, .numImag
 const Img *imgs_particle_brown_all[] = {&img_particle_brown_0};
 const AnimGroup animgroup_particle_brown = {.idleFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_particle_brown_all), .images = imgs_particle_brown_all}};
 
-const Img *imgs_crawler_move[] = {&img_crawler_walk_0, &img_crawler_walk_1, &img_crawler_walk_2, &img_crawler_walk_3};
+const Img *imgs_crawler_move[] = {&img_crawler_walk_0, &img_crawler_walk_1, &img_crawler_walk_2, &img_crawler_walk_3, &img_crawler_walk_2, &img_crawler_walk_1};
 const Img *imgs_crawler_stunned[] = {&img_crawler_stunned_0};
 
 const int CRAWLER_ANIM_SPEED = 20;
