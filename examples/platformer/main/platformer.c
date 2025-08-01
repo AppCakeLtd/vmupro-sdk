@@ -451,6 +451,30 @@ const PhysParams physTestMob = {
 
 };
 
+const PhysParams physPlatform = {
+
+    .max_subspeed_walk = 4,
+    .max_subspeed_run = 4,
+    .subaccel_walk = 0,
+    .subaccel_run = 4,
+    .subaccel_air = 4,
+    .subdamping_walk = 0,
+    .subdamping_run = 0,
+    .subdamping_air = 0,
+    .subdamping_stunned = 0,
+    .max_jump_boost_frames = 0,
+    .max_buttbounce_frames = 0,
+    .max_dash_frames = 0,
+    .max_knockback_frames = 0,
+    .sub_jumpforce = 0,
+    .sub_dashforce = 0,
+    .sub_buttbounceforce = 0,
+    .dashDelayFrames = 0,
+    .sub_gravity = 0,
+    .max_subfallspeed = 0,
+
+};
+
 // profile of spite behaviour
 // such as runspeed, can it walk
 // off edges, etc
@@ -563,10 +587,12 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->physParams = &physTestMob;
     p->defaultAnimGroup = &animgroup_mob2;
   }
-  else if (inType == STYPE_PLATFORM_0){
+  else if (inType == STYPE_PLATFORM_0)
+  {
     p->solid = SOLIDMASK_ONESIDED;
     p->defaultAnimGroup = &animgroup_platform0;
-    p->iMask = IMASK_SKIP_ANIMSETS | IMASK_SKIP_INPUT | IMASK_SKIP_INPUT | IMASK_CAN_BE_RIDDEN;
+    p->physParams = &physPlatform;
+    p->iMask = IMASK_SKIP_ANIMSETS | IMASK_CAN_BE_RIDDEN;
   }
   else if (inType == STYPE_DOOR)
   {
@@ -1616,7 +1642,8 @@ bool IsTypeSpawnable(SpriteType inType)
     return true;
   }
 
-  if(inType == STYPE_PLATFORM_0){
+  if (inType == STYPE_PLATFORM_0)
+  {
     return true;
   }
 
@@ -2350,6 +2377,16 @@ void UpdateSpriteInputs(Sprite *spr)
     ClearSpriteInputs(spr);
     UpdatePatrollInputs(spr, true);
   }
+  else if (spr->sType == STYPE_PLATFORM_0)
+  {
+    ClearSpriteInputs(spr);
+    //UpdatePatrollInputs(spr, true);
+    Inputs *inp = &spr->input;    
+    int framesPassed = frameCounter - spr->spawnFrame;
+    int phase = (framesPassed / 80) % 2;
+    inp->right = phase == 0 ? inp->right + 1 : 0;
+    inp->left = phase == 1 ? inp->left + 1 : 0; 
+  }
   else
   {
     // Zero out the inputs
@@ -2670,7 +2707,7 @@ void EndFrameAllSprites()
 int GetYSubAccel(Sprite *spr)
 {
 
-  int returnVal = spr->isGrounded ? 0 : player->phys->sub_gravity;
+  int returnVal = spr->isGrounded ? 0 : spr->phys->sub_gravity;
 
   if (spr->inLiquid)
   {
