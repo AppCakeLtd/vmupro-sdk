@@ -1422,12 +1422,18 @@ bool SpriteDashingAboveBonkThresh(Sprite *spr)
 bool SpriteHeadbuttingAbovethresh(Sprite *spr)
 {
 
-  if (spr->lastSubVelo.y < -HEADBUTT_THRESH_SPEED)
+  // prevent bouncy stuff in water "headbutting" you
+  if (SpriteStunned(spr))
   {
-    return true;
+    return false;
   }
 
-  return false;
+  if (spr->lastSubVelo.y > -HEADBUTT_THRESH_SPEED)
+  {
+    return false;
+  }
+
+  return true;
 }
 
 bool SpriteButtStompingAboveThresh(Sprite *spr)
@@ -3043,7 +3049,16 @@ int GetYSubAccel(Sprite *spr)
 
   if (spr->inLiquid)
   {
-    returnVal /= 2;
+
+    if (SpriteStunned(spr))
+    {
+      returnVal /= 3;
+      returnVal *= -1;
+    }
+    else
+    {
+      returnVal /= 2;
+    }
   }
 
   if (SpriteIsButtDashing(spr))
@@ -4938,6 +4953,12 @@ bool SpriteCanRideSprite(Sprite *rider, Sprite *thingImRiding)
     return false;
   }
 
+  // prevent getting trapped under stuff in water
+  if (thingImRiding == player && player->inLiquid)
+  {
+    return false;
+  }
+
   if (!(rider->profile.iMask & IMASK_CAN_RIDE_STUFF))
     return false;
   if (!(thingImRiding->profile.iMask & IMASK_CAN_BE_RIDDEN))
@@ -5215,7 +5236,7 @@ void OnSpriteGotTouched(Sprite *toucher, Sprite *target, Direction inDir)
     bool takeDamage = (target->profile.iMask & IMASK_DMGIN_KNOCKSME);
     if (takeDamage)
     {
-      SpriteTakeDamage(target, toucher->profile.damage_multiplier, toucher, "Toucher Dashed damage taker");
+      SpriteTakeDamage(target, toucher->profile.damage_multiplier, toucher, "Toucher Dashed/Headbutted damage taker");
     }
     else if (target->profile.iMask & IMASK_DMGIN_STUNSME)
     {
@@ -5253,7 +5274,11 @@ void OnSpriteGotTouched(Sprite *toucher, Sprite *target, Direction inDir)
     // if i'm stunned, i can be pushed
     if (SpriteStunned(target))
     {
-      TryKnockback(target, KNOCK_NUDGE, "nudged while stunned", toucher);
+      // landing shouldn't cause little nudges tho
+      if (inDir != DIR_DOWN)
+      {
+        TryKnockback(target, KNOCK_NUDGE, "nudged while stunned", toucher);
+      }
     }
   }
 }
