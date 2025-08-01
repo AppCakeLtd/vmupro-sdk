@@ -427,6 +427,7 @@ typedef enum
   IMASK_PLATFORM_MOVEMENT = 1 << 15,           // e.g. platforms 'walking' accross the sky
   IMASK_NEVER_DIES = 1 << 16,                  // unkillable
   IMASK_UPDATE_OFFSCREEN = 1 << 17,            // platforms and the likes
+  IMASK_COLLECTABLE = 1 << 18,                 // coins, stuff, whatever
 } InteractionMask;
 
 typedef struct
@@ -733,13 +734,13 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
   {
     p->solid = SOLIDMASK_SPRITE_TRIGGER;
     p->defaultAnimGroup = &animgroup_orange;
-    p->iMask = IMASK_SKIP_ANIMSETS | IMASK_SKIP_INPUT | IMASK_SKIP_MOVEMENT | IMASK_DRAW_FIRST;
+    p->iMask = IMASK_SKIP_ANIMSETS | IMASK_SKIP_INPUT | IMASK_SKIP_MOVEMENT | IMASK_DRAW_FIRST | IMASK_COLLECTABLE;
   }
   else if (inType == STYPE_STRAWBERRY)
   {
     p->solid = SOLIDMASK_SPRITE_TRIGGER;
     p->defaultAnimGroup = &animgroup_strawberry;
-    p->iMask = IMASK_SKIP_ANIMSETS | IMASK_SKIP_INPUT | IMASK_SKIP_MOVEMENT | IMASK_DRAW_FIRST;
+    p->iMask = IMASK_SKIP_ANIMSETS | IMASK_SKIP_INPUT | IMASK_SKIP_MOVEMENT | IMASK_DRAW_FIRST | IMASK_COLLECTABLE;
   }
   else if (inType == STYPE_CRAWLER)
   {
@@ -882,7 +883,7 @@ typedef struct Sprite
 
 } Sprite;
 
-#define MAX_SPRITES 20
+#define MAX_SPRITES 40
 int numSprites = 0;
 Sprite *sprites[MAX_SPRITES];
 
@@ -1822,7 +1823,7 @@ bool IsTypeSpawnable(SpriteType inType)
 
   if (inType == STYPE_ORANGE || inType == STYPE_STRAWBERRY)
   {
-    return false;
+    return true;
   }
 
   if (inType == STYPE_PARTICLE_BROWN)
@@ -4920,6 +4921,46 @@ void HandleDoorTransition(Sprite *activator, Sprite *door)
   GotoGameState(GSTATE_TRANSITION);
 }
 
+bool SpriteIsCollectable(Sprite *spr)
+{
+
+  if (!spr->sentinel)
+  {
+    return false;
+  }
+
+  if (spr->markedForDespawn)
+  {
+    return false;
+  }
+
+  if (!(spr->profile.iMask & IMASK_COLLECTABLE))
+  {
+    return false;
+  }
+
+  return true;
+}
+
+bool TryCollectSprite(Sprite *collector, Sprite *target)
+{
+
+  if (collector != player)
+  {
+    return false;
+  }
+
+  if (!SpriteIsCollectable(target))
+  {
+    return false;
+  }
+  MarkSpriteForDespawn(target, "collected");
+
+  Vec2 worldSpawnPoint = Sub2World(&target->subSpawnPos);  
+  CreateSprite(STYPE_PARTICLE_BROWN, worldSpawnPoint, "Particle");
+  return true;
+}
+
 void HandleSpriteTriggers(Sprite *srcSprite, Sprite *trigger)
 {
 
@@ -4936,6 +4977,11 @@ void HandleSpriteTriggers(Sprite *srcSprite, Sprite *trigger)
 
   case STYPE_DOOR:
     HandleDoorTransition(srcSprite, trigger);
+    break;
+
+  case STYPE_ORANGE:
+  case STYPE_STRAWBERRY:
+    TryCollectSprite(srcSprite, trigger);
     break;
 
   default:
