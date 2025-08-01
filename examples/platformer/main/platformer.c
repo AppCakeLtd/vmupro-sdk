@@ -2553,9 +2553,7 @@ void UpdatePlatformInputs(Sprite *spr)
       // restore pos if we go off screen
       spr->platCounter++;
       if(!spr->isOnScreen && spr->platCounter > 50){
-        SetPlatState(spr, PS_NORMAL);
-        //SetSubPos(spr, &spr->subSpawnPos);
-        //spr->subVelo = ZeroVec();
+        SetPlatState(spr, PS_NORMAL);        
         RestoreOriginalPos(spr);
       }
     }
@@ -5081,6 +5079,7 @@ void ProcessTileTouches(Sprite *spr, HitInfo *info, bool horz)
           // destroy it
           Vec2 rowAndCol = GetTileRowAndColFromSubPos(&info->subCheckPos[i]);
           DestroyBlock(&rowAndCol);
+          OnDashBonk(spr);
         }
         else
         {
