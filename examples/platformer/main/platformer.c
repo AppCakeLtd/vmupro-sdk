@@ -220,6 +220,7 @@ typedef struct
   uint32_t right;
   uint32_t run;
   uint32_t jump;
+  uint32_t sleep;
 } Inputs;
 
 typedef enum
@@ -2732,6 +2733,7 @@ void UpdateSpriteInputs(Sprite *spr)
     inp->right = vmupro_btn_held(DPad_Right) ? inp->right + 1 : 0;
     inp->jump = vmupro_btn_held(Btn_B) ? inp->jump + 1 : 0;
     inp->run = vmupro_btn_held(Btn_A) ? inp->run + 1 : 0;
+    inp->sleep = vmupro_btn_held(Btn_Power) ? inp->sleep + 1 : 0;
   }
   else if (spr->sType == STYPE_GREENDUCK)
   {
@@ -4884,7 +4886,7 @@ void HandleDoorTransition(Sprite *activator, Sprite *door)
   // - must have slowed down
   // - ensure lowish velo
 
-  if (activator->input.up < DOOR_THRESH_FRAMES)
+  if (activator->input.sleep < DOOR_THRESH_FRAMES)
   {
     return;
   }
@@ -4956,7 +4958,7 @@ bool TryCollectSprite(Sprite *collector, Sprite *target)
   }
   MarkSpriteForDespawn(target, "collected");
 
-  Vec2 worldSpawnPoint = Sub2World(&target->subSpawnPos);  
+  Vec2 worldSpawnPoint = Sub2World(&target->subSpawnPos);
   CreateSprite(STYPE_PARTICLE_BROWN, worldSpawnPoint, "Particle");
   return true;
 }
