@@ -811,8 +811,7 @@ typedef struct Sprite
   bool mustReleaseJump;
   bool mustReleaseDash;
 
-  // config options
-  bool isPlayer;
+  // config options  
   Anchor_H anchorH;
   Anchor_V anchorV;
 
@@ -1663,7 +1662,7 @@ void CheckFellOffMap(Sprite *spr)
   SpriteTakeDamage(spr, DMG_INSTAKILL, NULL, "Fell off map");
 }
 
-void ResetSprite(Sprite *spr)
+void ResetSprite(Sprite *spr, bool includeIndexer)
 {
 
   // cleared on unload
@@ -1671,8 +1670,12 @@ void ResetSprite(Sprite *spr)
 
   spr->markedForDespawn = false;
   spr->spawnFrame = frameCounter;
-  spr->indexer = globalIndexer;
-  spr->dirIndexer = dirIndexer;
+
+  // data which is only valid during the first spawn
+  if( includeIndexer ){
+    spr->indexer = globalIndexer;
+    spr->dirIndexer = dirIndexer;
+  }
 
   spr->isOnScreen = false;
 
@@ -1711,8 +1714,7 @@ void ResetSprite(Sprite *spr)
   spr->mustReleaseJump = false;
 
   // temporary config stuff
-  spr->subPos = spr->subSpawnPos;
-  spr->isPlayer = true;
+  spr->subPos = spr->subSpawnPos;  
   spr->anchorH = ANCHOR_VTOP;
   spr->anchorV = ANCHOR_HLEFT;
 
@@ -1909,7 +1911,7 @@ Sprite *CreateSprite(SpriteType inType, Vec2 worldStartPos, const char *inName)
   // Runtime stuff, which may be reset
   //
 
-  ResetSprite(returnVal);
+  ResetSprite(returnVal, true);
 
   //
   // Finally, assign it.
@@ -2326,6 +2328,11 @@ void Retry()
   GotoGameState(GSTATE_INGAME);
 }
 
+void RestoreOriginalPos(Sprite *spr){
+  SetSubPos(spr, &spr->subSpawnPos);
+  ResetSprite(spr, false);
+}
+
 uint8_t *GetTileLayerData(int layer)
 {
   uint8_t *rVal = (layer == 0) ? decompressedTileLayerTable[0] : decompressedTileLayerTable[1];
@@ -2513,7 +2520,7 @@ void UpdatePlatformInputs(Sprite *spr)
 
     if (spr->platstate == PS_NORMAL)
     {
-      printf("__TEST Counter1 %d of %d\n", spr->platCounter, triggerPoint);
+      // printf("__TEST Counter1 %d of %d\n", spr->platCounter, triggerPoint);
       if (spr->platCounter > triggerPoint)
       {
         SetPlatState(spr, PS_FALLSLOW);
@@ -2524,7 +2531,7 @@ void UpdatePlatformInputs(Sprite *spr)
     {
       pressDown = true;
       spr->platCounter++;
-      printf("__TEST Counter2 %d of %d\n", spr->platCounter, fallPoint);
+      // printf("__TEST Counter2 %d of %d\n", spr->platCounter, fallPoint);
       if (spr->platCounter > fallPoint)
       {
         SetPlatState(spr, PS_FALLFAST);
@@ -2537,13 +2544,20 @@ void UpdatePlatformInputs(Sprite *spr)
       spr->platCounter++;
       if (spr->platCounter > 50)
       {
-        spr->platstate = PS_HIDDEN;
+        SetPlatState(spr, PS_HIDDEN);
       }
     }
 
     if (spr->platstate == PS_HIDDEN)
     {
       // restore pos if we go off screen
+      spr->platCounter++;
+      if(!spr->isOnScreen && spr->platCounter > 50){
+        SetPlatState(spr, PS_NORMAL);
+        //SetSubPos(spr, &spr->subSpawnPos);
+        //spr->subVelo = ZeroVec();
+        RestoreOriginalPos(spr);
+      }
     }
 
     inp->down = pressDown ? inp->down + 1 : 0;
@@ -5233,10 +5247,10 @@ bool CalcIfSpriteOnScreen(Sprite *spr)
   // TODO: omg cache this.
   BBox camWorldBBox = CameraBBoxWorld();
   // stretch the bbox a bit
-  camWorldBBox.x -= TILE_SIZE_PX *2;
-  camWorldBBox.y -= TILE_SIZE_PX *2;
-  camWorldBBox.width += (TILE_SIZE_PX*4);
-  camWorldBBox.height += (TILE_SIZE_PX*4);
+  //camWorldBBox.x -= TILE_SIZE_PX *2;
+  //camWorldBBox.y -= TILE_SIZE_PX *2;
+  //camWorldBBox.width += (TILE_SIZE_PX*4);
+  //camWorldBBox.height += (TILE_SIZE_PX*4);
 
   // TODO: should we check other points?
   Vec2 testPoint = GetPointOnSprite(spr, false, ANCHOR_HLEFT, ANCHOR_VTOP);
@@ -5284,6 +5298,10 @@ void SolveMovement(Sprite *spr)
   spr->isOnScreen = CalcIfSpriteOnScreen(spr);
 
   if( !SpriteOnScreenOrAlwaysEnabled(spr) ){
+    return;
+  }
+
+  if( spr->platstate == PS_HIDDEN ){
     return;
   }
 
