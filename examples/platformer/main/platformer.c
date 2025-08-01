@@ -833,8 +833,7 @@ typedef struct Sprite
   AnimTypes animID;
 
   int health;
-  bool onScreenOrAlwaysActive;
-
+  
   // to simplify one-way platforms
   // we'll make sure the player
   int highestYSubPosInJump;
@@ -1732,8 +1731,6 @@ void ResetSprite(Sprite *spr)
 
   spr->platstate = PS_NORMAL;
   spr->platCounter = 0;
-
-  spr->onScreenOrAlwaysActive = false;
 
   // update the hitbox, bounding box, etc
   OnSpriteMoved(spr);
@@ -5801,10 +5798,10 @@ bool IsSpriteOnScreen(Sprite *spr)
   // TODO: omg cache this.
   BBox camWorldBBox = CameraBBoxWorld();
   // stretch the bbox a bit
-  camWorldBBox.x -= TILE_SIZE_PX *2;
-  camWorldBBox.y -= TILE_SIZE_PX *2;
-  camWorldBBox.width += (TILE_SIZE_PX*4);
-  camWorldBBox.height += (TILE_SIZE_PX*4);
+  //camWorldBBox.x -= TILE_SIZE_PX *2;
+  //camWorldBBox.y -= TILE_SIZE_PX *2;
+  //camWorldBBox.width += (TILE_SIZE_PX*4);
+  //camWorldBBox.height += (TILE_SIZE_PX*4);
 
   // TODO: should we check other points?
   Vec2 testPoint = GetPointOnSprite(spr, false, ANCHOR_HLEFT, ANCHOR_VTOP);
@@ -5825,7 +5822,7 @@ bool IsSpriteOnScreen(Sprite *spr)
 
 void MoveAllSprites()
 {
-
+  
   for (int i = 0; i < numSprites; i++)
   {
     Sprite *spr = sprites[i];
@@ -5833,14 +5830,6 @@ void MoveAllSprites()
     {
       continue;
     }
-
-    // don't draw offscreen sprites unless they're marked for it
-    spr->onScreenOrAlwaysActive = IsSpriteOnScreen(spr) || (spr->profile.iMask & IMASK_UPDATE_OFFSCREEN);
-    if (!spr->onScreenOrAlwaysActive)
-    {
-      continue;
-    }
-
     SolveMovement(spr);
   }
 
@@ -5861,11 +5850,6 @@ void DrawSprite(Sprite *spr)
   if (spr == NULL)
   {
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Null sprite passed to DrawSprite");
-    return;
-  }
-
-  if (!spr->onScreenOrAlwaysActive)
-  {
     return;
   }
 
@@ -5941,12 +5925,12 @@ void DrawSprite(Sprite *spr)
   OnSpriteMoved(spr);
 
   // Still update, but, don't draw if off screen
-  // bool onScreen = IsSpriteOnScreen(spr);
-  // if (!onScreen)
-  // {
-  //   // vmupro_log(VMUPRO_LOG_WARN, TAG, "Frame %d Sprite %s is off screen", frameCounter, spr->name);
-  //   return;
-  // }
+  bool onScreen = IsSpriteOnScreen(spr);
+  if (!onScreen)
+  {
+    // vmupro_log(VMUPRO_LOG_WARN, TAG, "Frame %d Sprite %s is off screen", frameCounter, spr->name);
+    return;
+  }
 
   // update the img pointer, in case it's changed due to anims
   const Img *img = GetActiveImage(spr);
