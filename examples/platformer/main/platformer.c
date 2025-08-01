@@ -2458,6 +2458,7 @@ void IncrementRideCounter(Sprite *spr)
     return;
   }
   spr->platCounter++;
+  // printf("__TEST__ rc %d\n", spr->platCounter++);
 }
 
 void UpdatePlatformInputs(Sprite *spr)
@@ -2599,7 +2600,7 @@ void UpdatePlatformInputs(Sprite *spr)
   } // dirindex down
 }
 
-bool AllowSpriteInput(Sprite *spr)
+bool AllowSpriteInput(Sprite *spr, bool allowStunned)
 {
 
   if (spr->profile.iMask & IMASK_SKIP_INPUT)
@@ -2617,7 +2618,7 @@ bool AllowSpriteInput(Sprite *spr)
     return false;
   }
 
-  if (SpriteStunned(spr))
+  if (SpriteStunned(spr) && !allowStunned)
   {
     return false;
   }
@@ -2672,7 +2673,7 @@ void UpdateSpriteInputs(Sprite *spr)
 
   // if we're not in a playable state
   // just early exit since the inputs are wiped
-  if (!AllowSpriteInput(spr))
+  if (!AllowSpriteInput(spr, false))
   {
     // wipe and exit
     ClearSpriteInputs(spr);
@@ -4847,7 +4848,7 @@ Sprite *FindSpriteOfType(SpriteType inType, int indexerOrNeg, Sprite *excludeOrN
 void HandleDoorTransition(Sprite *activator, Sprite *door)
 {
 
-  if (!AllowSpriteInput(activator))
+  if (!AllowSpriteInput(activator, false))
     return;
 
   // We could add some in-air version of things
@@ -4932,7 +4933,12 @@ bool SpriteCanRideSprite(Sprite *rider, Sprite *thingImRiding)
     return false;
   }
 
-  // finally, falling platforms, ignore if they're falling
+  if (!(rider->profile.iMask & IMASK_CAN_RIDE_STUFF))
+  {
+    return false;
+  }
+
+  // falling platforms, ignore if they're falling
   if (thingImRiding->platstate == PS_FALLFAST || thingImRiding->platstate == PS_HIDDEN)
   {
     return false;
@@ -4945,12 +4951,18 @@ bool SpriteCanRideSprite(Sprite *rider, Sprite *thingImRiding)
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Frame %d, Sprite %s is riding a sprite with a stale ref!", frameCounter, rider->name);
     return false;
   }
-  if (!AllowSpriteInput(rider) || !AllowSpriteInput(thingImRiding))
-    return false;
-
-  if (rider->inLiquid)
+  if (!AllowSpriteInput(rider, false) || !AllowSpriteInput(thingImRiding, true))
   {
     return false;
+  }
+
+  // fine to ride stuff underwater when it's stunned
+  if (!SpriteStunned(thingImRiding))
+  {
+    if (rider->inLiquid)
+    {
+      return false;
+    }
   }
 
   // prevent getting trapped under stuff in water
@@ -5477,7 +5489,7 @@ void SolveMovement(Sprite *spr)
   bool movingUp = spr->subVelo.y < 0;
   bool movingDown = spr->subVelo.y > 0;
 
-  bool inControl = AllowSpriteInput(spr);
+  bool inControl = AllowSpriteInput(spr, false);
   bool isWorldSolidToMe = !(iMask & IMASK_IGNORE_COLLISIONS);
   bool isSolidToWorld = IsBlockingCollision(spr->profile.solid);
 
