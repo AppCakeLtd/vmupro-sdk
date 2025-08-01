@@ -400,23 +400,24 @@ typedef enum
 typedef enum
 {
   IMASK_NONE = 0x00,
-  IMASK_DMGOUT_HORZ = 0x01,                  // hurty if you walk into it horizontally
-  IMASK_DMGOUT_VERT = 0x02,                  // hurty if you land or bonk it
-  IMASK_CAN_BE_RIDDEN = 0x04,                //
-  IMASK_CAN_RIDE_STUFF = 0x08,               //
-  IMASK_DRAW_FIRST = 0x10,                   // doors n things, draw at the back
-  IMASK_DRAW_LAST = 0x20,                    // anything which should be drawn on top (not implemented)
-  IMASK_SKIP_INPUT = 0x40,                   // don't bother processing input (doors, spikes, projectiles)
-  IMASK_SKIP_MOVEMENT = 0x80,                // static, don't process the movement steps (doors, spikes)
-  IMASK_SKIP_ANIMSETS = 0x100,               // use only the IDLE anim set (no other move types)
-  IMASK_DMGIN_STUNSME = 0x200,               // when something hits me, i get stunned (no dmg unless stunned)
-  IMASK_DMGIN_KNOCKSME = 0x400,              // when something hits me, i bounce a bit (w/ dmg)
-  IMASK_DMGOUT_IGNORED_WHEN_BOUNCED = 0x800, // don't deal damage if the player buttstomps me
-  IMASK_IGNORE_COLLISIONS = 0x1000,          // e.g. moving platforms
-  IMASK_SPECIAL_MOVES = 0x2000,              // buttstomp etc
-  IMASK_PLATFORM_MOVEMENT = 0x4000,          // e.g. platforms 'walking' accross the sky
-  IMASK_NEVER_DIES = 0x8000,                 // unkillable
-  IMASK_UPDATE_OFFSCREEN = 0x10000,          // platforms and the likes
+  IMASK_DMGOUT_HORZ = 1 << 0,                  // hurty if you walk into it horizontally
+  IMASK_DMGOUT_VTOP = 1 << 1,                  // hurty if you land or bonk it
+  IMASK_DMGOUT_VBOTTOM = 1 << 2,               // hurty if you headbutt it
+  IMASK_CAN_BE_RIDDEN = 1 << 3,                //
+  IMASK_CAN_RIDE_STUFF = 1 << 4,               //
+  IMASK_DRAW_FIRST = 1 << 5,                   // doors n things, draw at the back
+  IMASK_DRAW_LAST = 1 << 6,                    // anything which should be drawn on top (not implemented)
+  IMASK_SKIP_INPUT = 1 << 7,                   // don't bother processing input (doors, spikes, projectiles)
+  IMASK_SKIP_MOVEMENT = 1 << 8,                // static, don't process the movement steps (doors, spikes)
+  IMASK_SKIP_ANIMSETS = 1 << 9,                // use only the IDLE anim set (no other move types)
+  IMASK_DMGIN_STUNSME = 1 << 10,               // when something hits me, i get stunned (no dmg unless stunned)
+  IMASK_DMGIN_KNOCKSME = 1 << 11,              // when something hits me, i bounce a bit (w/ dmg)
+  IMASK_DMGOUT_IGNORED_WHEN_BOUNCED = 1 << 12, // don't deal damage if the player buttstomps me
+  IMASK_IGNORE_COLLISIONS = 1 << 13,           // e.g. moving platforms
+  IMASK_SPECIAL_MOVES = 1 << 14,               // buttstomp etc
+  IMASK_PLATFORM_MOVEMENT = 1 << 15,           // e.g. platforms 'walking' accross the sky
+  IMASK_NEVER_DIES = 1 << 16,                  // unkillable
+  IMASK_UPDATE_OFFSCREEN = 1 << 17,            // platforms and the likes
 } InteractionMask;
 
 typedef struct
@@ -696,7 +697,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->default_health = 1;
     p->damage_multiplier = 1;
     p->solid = SOLIDMASK_PLATFORM;
-    p->iMask = IMASK_DMGIN_KNOCKSME | IMASK_DMGOUT_HORZ | IMASK_DMGOUT_VERT | IMASK_DMGOUT_IGNORED_WHEN_BOUNCED;
+    p->iMask = IMASK_DMGIN_KNOCKSME | IMASK_DMGOUT_HORZ | IMASK_DMGOUT_VTOP | IMASK_DMGOUT_IGNORED_WHEN_BOUNCED;
     p->physParams = &physTestMob;
     p->defaultAnimGroup = &animgroup_mob2;
   }
@@ -717,14 +718,14 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
   {
     p->solid = SOLIDMASK_SPRITE_SOLID;
     p->defaultAnimGroup = &animgroup_spikeball;
-    p->iMask = IMASK_SKIP_ANIMSETS | IMASK_SKIP_INPUT | IMASK_SKIP_MOVEMENT | IMASK_DMGOUT_HORZ | IMASK_DMGOUT_VERT;
+    p->iMask = IMASK_SKIP_ANIMSETS | IMASK_SKIP_INPUT | IMASK_SKIP_MOVEMENT | IMASK_DMGOUT_HORZ | IMASK_DMGOUT_VTOP | IMASK_DMGOUT_VBOTTOM;
   }
   else if (inType == STYPE_CRAWLER)
   {
     p->solid = SOLIDMASK_SPRITE_SOLID;
     p->defaultAnimGroup = &animgroup_crawler;
-    p->physParams = &physCrawler;    
-    p->iMask = IMASK_DMGOUT_HORZ | IMASK_DMGOUT_VERT;
+    p->physParams = &physCrawler;
+    p->iMask = IMASK_DMGOUT_HORZ | IMASK_DMGOUT_VTOP | IMASK_DMGIN_STUNSME;
   }
   else if (inType == STYPE_PARTICLE_BROWN)
   {
@@ -5142,27 +5143,53 @@ void ProcessTileTouches(Sprite *spr, HitInfo *info, bool horz)
   } // foreach
 }
 
-void OnSpriteGotTouched(Sprite *toucher, Sprite *target, bool horz)
+void OnSpriteGotTouched(Sprite *toucher, Sprite *target, Direction inDir)
 {
 
-  InteractionMask hvMask = horz ? IMASK_DMGOUT_HORZ : IMASK_DMGOUT_VERT;
+  bool horz = (inDir == DIR_LEFT) || (inDir == DIR_RIGHT);
+
   InteractionMask targetMask = target->profile.iMask;
 
-  // hurts to touch, do the damage, call it a day
-  if (targetMask & hvMask)
+  //
+  // if it hurts to touch, do the damage and call it a day
+  //
+
+  if (horz)
+  {
+
+    if (targetMask & IMASK_DMGOUT_HORZ)
+    {
+      SpriteTakeDamage(toucher, target->profile.damage_multiplier, target, "touch a hurty (h)");
+      return;
+    }
+  }
+  else
   {
 
     bool ignoreDamageDueToBeingButtBounced = !horz && (targetMask & IMASK_DMGOUT_IGNORED_WHEN_BOUNCED) && SpriteDoingButtStuff(toucher);
 
     if (!ignoreDamageDueToBeingButtBounced)
     {
-      SpriteTakeDamage(toucher, target->profile.damage_multiplier, target, "touch a hurty");
-      return;
+
+      if ((targetMask & IMASK_DMGOUT_VTOP) && (inDir != DIR_UP))
+      {
+        SpriteTakeDamage(toucher, target->profile.damage_multiplier, target, "touch a hurty (vtop)");
+        return;
+      }
+
+      if ((targetMask & IMASK_DMGOUT_VBOTTOM) && (inDir != DIR_DOWN))
+      {
+        SpriteTakeDamage(toucher, target->profile.damage_multiplier, target, "touch a hurty (vbottom)");
+        return;
+      }
     }
   }
 
+  //
   // doesn't hurt to touch
   // are we charging it?
+  //
+
   bool dashing = SpriteDashingAboveBonkThresh(toucher);
   bool buttstomping = SpriteButtStompingAboveThresh(toucher);
 
@@ -5234,7 +5261,7 @@ void ProcessSpriteTouches(Sprite *spr, HitInfo *info, bool horz)
       continue;
     }
 
-    OnSpriteGotTouched(spr, targ, horz);
+    OnSpriteGotTouched(spr, targ, info->whereWasCollision);
     lastTarget = targ;
   }
 }
