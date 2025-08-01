@@ -718,6 +718,8 @@ typedef struct Sprite
   Anchor_H anchorH;
   Anchor_V anchorV;
 
+  // note: possibly better named "facing positive"
+  // as it's used occasionally for vertical platforms
   bool facingRight;
   bool wasRunningLastTimeWasOnGround;
 
@@ -2404,9 +2406,12 @@ void UpdateSpriteInputs(Sprite *spr)
     ClearSpriteInputs(spr);
     // UpdatePatrollInputs(spr, true);
     Inputs *inp = &spr->input;
-    bool pressRight = false;
-    bool pressLeft = false;
+
     if (spr->dirIndexer == DIRINDEX_HORZ){      
+
+      bool pressRight = false;
+      bool pressLeft = false;
+
       // horz movement
       if (spr->facingRight){
         // how far can it travel in world coords
@@ -2428,11 +2433,44 @@ void UpdateSpriteInputs(Sprite *spr)
         }
 
       }
+
+      inp->right = pressRight ? inp->right + 1 : 0;
+      inp->left = pressLeft ? inp->left + 1 : 0;
     }
-    //int framesPassed = frameCounter - spr->spawnFrame;
-    // int phase = (framesPassed / 580) % 2;
-    inp->right = pressRight ? inp->right + 1 : 0;
-    inp->left = pressLeft ? inp->left + 1 : 0;
+
+    if (spr->dirIndexer == DIRINDEX_VERT){
+
+      bool pressDown = false;
+      bool pressUp = false;
+
+      // horz movement
+      if (spr->facingRight){
+        // how far can it travel in world coords
+        int maxDist = (spr->indexer +1) * 4;
+        maxDist *= TILE_SIZE_SUB;
+        
+        int maxRight = spr->subSpawnPos.y + maxDist;
+        if (spr->subPos.y >= maxRight){
+          spr->facingRight = false;          
+        } else {
+          pressDown = true;
+        }
+      } else {
+
+        if (spr->subPos.y <= spr->subSpawnPos.y){
+          spr->facingRight = true;
+        } else {
+          pressUp = true;
+        }
+
+      }
+
+      inp->down = pressDown ? inp->down + 1 : 0;
+      inp->up = pressUp ? inp->up + 1 : 0;
+
+    }
+
+
   }
   else
   {
