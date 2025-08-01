@@ -174,7 +174,8 @@ typedef enum
 
 } GameState;
 
-typedef enum{
+typedef enum
+{
   DIRINDEX_HORZ,
   DIRINDEX_VERT,
   DIRINDEX_DOWN,
@@ -373,6 +374,7 @@ typedef enum
   IMASK_DMGOUT_IGNORED_WHEN_BOUNCED = 0x800, // don't deal damage if the player buttstomps me
   IMASK_IGNORE_COLLISIONS = 0x1000,          // e.g. moving platforms
   IMASK_SPECIAL_MOVES = 0x2000,              // buttstomp etc
+  IMASK_PLATFORM_MOVEMENT = 0x4000,          // e.g. platforms 'walking' accross the sky
 } InteractionMask;
 
 typedef struct
@@ -464,10 +466,10 @@ const PhysParams physTestMob = {
 const PhysParams physPlatform = {
 
     .max_subspeed_walk = 4,
-    .max_subspeed_run = 4,
-    .subaccel_walk = 0,
-    .subaccel_run = 4,
-    .subaccel_air = 4,
+    .max_subspeed_run = 0,
+    .subaccel_walk = 4,
+    .subaccel_run = 0,
+    .subaccel_air = 0,
     .subdamping_walk = 0,
     .subdamping_run = 0,
     .subdamping_air = 0,
@@ -602,7 +604,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->solid = SOLIDMASK_ONESIDED;
     p->defaultAnimGroup = &animgroup_platform0;
     p->physParams = &physPlatform;
-    p->iMask = IMASK_SKIP_ANIMSETS | IMASK_CAN_BE_RIDDEN | IMASK_IGNORE_COLLISIONS;
+    p->iMask = IMASK_SKIP_ANIMSETS | IMASK_CAN_BE_RIDDEN | IMASK_IGNORE_COLLISIONS | IMASK_PLATFORM_MOVEMENT;
   }
   else if (inType == STYPE_DOOR)
   {
@@ -2407,70 +2409,84 @@ void UpdateSpriteInputs(Sprite *spr)
     // UpdatePatrollInputs(spr, true);
     Inputs *inp = &spr->input;
 
-    if (spr->dirIndexer == DIRINDEX_HORZ){      
+    if (spr->dirIndexer == DIRINDEX_HORZ)
+    {
 
       bool pressRight = false;
       bool pressLeft = false;
 
       // horz movement
-      if (spr->facingRight){
+      if (spr->facingRight)
+      {
         // how far can it travel in world coords
-        int maxDist = (spr->indexer +1) * 4;
+        int maxDist = (spr->indexer + 1) * 4;
         maxDist *= TILE_SIZE_SUB;
-        
+
         int maxRight = spr->subSpawnPos.x + maxDist;
-        if (spr->subPos.x >= maxRight){
-          spr->facingRight = false;          
-        } else {
+        if (spr->subPos.x >= maxRight)
+        {
+          spr->facingRight = false;
+        }
+        else
+        {
           pressRight = true;
         }
-      } else {
+      }
+      else
+      {
 
-        if (spr->subPos.x <= spr->subSpawnPos.x){
+        if (spr->subPos.x <= spr->subSpawnPos.x)
+        {
           spr->facingRight = true;
-        } else {
+        }
+        else
+        {
           pressLeft = true;
         }
-
       }
 
       inp->right = pressRight ? inp->right + 1 : 0;
       inp->left = pressLeft ? inp->left + 1 : 0;
     }
 
-    if (spr->dirIndexer == DIRINDEX_VERT){
+    if (spr->dirIndexer == DIRINDEX_VERT)
+    {
 
       bool pressDown = false;
       bool pressUp = false;
 
       // horz movement
-      if (spr->facingRight){
+      if (spr->facingRight)
+      {
         // how far can it travel in world coords
-        int maxDist = (spr->indexer +1) * 4;
+        int maxDist = (spr->indexer + 1) * 4;
         maxDist *= TILE_SIZE_SUB;
-        
+
         int maxRight = spr->subSpawnPos.y + maxDist;
-        if (spr->subPos.y >= maxRight){
-          spr->facingRight = false;          
-        } else {
+        if (spr->subPos.y >= maxRight)
+        {
+          spr->facingRight = false;
+        }
+        else
+        {
           pressDown = true;
         }
-      } else {
-
-        if (spr->subPos.y <= spr->subSpawnPos.y){
+      }
+      else
+      {
+        if (spr->subPos.y <= spr->subSpawnPos.y)
+        {
           spr->facingRight = true;
-        } else {
+        }
+        else
+        {
           pressUp = true;
         }
-
       }
 
       inp->down = pressDown ? inp->down + 1 : 0;
       inp->up = pressUp ? inp->up + 1 : 0;
-
     }
-
-
   }
   else
   {
@@ -5007,6 +5023,32 @@ void SolveMovement(Sprite *spr)
   int subDampX = GetXDamping(spr);
   int subDampY = 0;
 
+  if (iMask & IMASK_PLATFORM_MOVEMENT)
+  {
+    // simple, basic movement
+    // e.g. platforms 'walking' accross the sky
+    maxSubSpeedX = spr->phys->max_subspeed_walk;
+    maxSubSpeedY = spr->phys->max_subspeed_walk;
+
+    subAccelX = spr->phys->subaccel_walk;
+    subAccelY = spr->phys->subaccel_walk;
+
+    subDampX = spr->phys->subaccel_walk;
+    subDampY = spr->phys->subaccel_walk;
+  }
+  else
+  {
+
+    maxSubSpeedX = GetMaxXSubSpeed(spr);
+    maxSubSpeedY = GetMaxYSubSpeed(spr);
+
+    subAccelX = GetXSubAccel(spr);
+    subAccelY = GetYSubAccel(spr);
+
+    subDampX = GetXDamping(spr);
+    subDampY = 0;
+  }
+
   if (iMask & IMASK_SPECIAL_MOVES)
   {
     TryJump(spr);
@@ -5062,10 +5104,8 @@ void SolveMovement(Sprite *spr)
   }
 
   // Debug/testing
-  if (DEBUG_NO_GRAV)
+  if (iMask & IMASK_PLATFORM_MOVEMENT)
   {
-    subDampY = 1;
-
     if (!spriteYInput)
     {
       subAccelY = 0;
@@ -5222,7 +5262,7 @@ void SolveMovement(Sprite *spr)
 
   // Damp Y Velo
 
-  if (DEBUG_NO_GRAV)
+  if (iMask & IMASK_PLATFORM_MOVEMENT)
   {
 
     if (movingDown && !inp->down)
