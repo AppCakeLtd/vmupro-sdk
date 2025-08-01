@@ -5288,13 +5288,13 @@ void SolveMovement(Sprite *spr)
     return;
   }
 
+  spr->isOnScreen = CalcIfSpriteOnScreen(spr);
+
   // skip the whole loop if it's a door or something
   if (spr->profile.iMask & IMASK_SKIP_MOVEMENT)
   {
     return;
   }
-
-  spr->isOnScreen = CalcIfSpriteOnScreen(spr);
 
   if( !SpriteOnScreenOrAlwaysEnabled(spr) ){
     return;
@@ -5874,7 +5874,9 @@ void MoveAllSprites()
     {
       continue;
     }
+
     SolveMovement(spr);
+
   }
 
   for (int i = 0; i < numSprites; i++)
