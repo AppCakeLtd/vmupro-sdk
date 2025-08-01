@@ -338,3 +338,21 @@ const AnimGroup animgroup_spikeball = {.idleFrames = {.frameSpeed = 20, .numImag
 
 const Img *imgs_particle_brown_all[] = {&img_particle_brown_0};
 const AnimGroup animgroup_particle_brown = {.idleFrames = {.frameSpeed = 1, .numImages = ARRAYSIZE(imgs_particle_brown_all), .images = imgs_particle_brown_all}};
+
+const Img *imgs_crawler_move[] = {&img_crawler_walk_0, &img_crawler_walk_1, &img_crawler_walk_2, &img_crawler_walk_3};
+const Img *imgs_crawler_stunned[] = {&img_crawler_stunned_0};
+
+const int CRAWLER_ANIM_SPEED = 20;
+
+const AnimGroup animgroup_crawler = {
+
+    .idleFrames = {.frameSpeed = CRAWLER_ANIM_SPEED, .numImages = ARRAYSIZE(imgs_crawler_move), .images = imgs_crawler_move},
+    .fallFrames = {.frameSpeed = CRAWLER_ANIM_SPEED, .numImages = ARRAYSIZE(imgs_crawler_move), .images = imgs_crawler_move},
+    .walkFrames = {.frameSpeed = CRAWLER_ANIM_SPEED, .numImages = ARRAYSIZE(imgs_crawler_move), .images = imgs_crawler_move},
+    .jumpFrames = {.frameSpeed = CRAWLER_ANIM_SPEED, .numImages = ARRAYSIZE(imgs_crawler_move), .images = imgs_crawler_move},
+    .dashFrames = {.frameSpeed = CRAWLER_ANIM_SPEED, .numImages = ARRAYSIZE(imgs_crawler_move), .images = imgs_crawler_move},
+    .buttstompFrames = {.frameSpeed = CRAWLER_ANIM_SPEED, .numImages = ARRAYSIZE(imgs_crawler_move), .images = imgs_crawler_move},
+    .buttBounceFrames = {.frameSpeed = CRAWLER_ANIM_SPEED, .numImages = ARRAYSIZE(imgs_crawler_move), .images = imgs_crawler_move},
+    .knockbackFrames = {.frameSpeed = CRAWLER_ANIM_SPEED, .numImages = ARRAYSIZE(imgs_crawler_move), .images = imgs_crawler_move},
+    .stunFrames = {.frameSpeed = CRAWLER_ANIM_SPEED, .numImages = ARRAYSIZE(imgs_crawler_stunned), .images = imgs_crawler_stunned},
+    .dieFrames = {.frameSpeed = CRAWLER_ANIM_SPEED, .numImages = ARRAYSIZE(imgs_crawler_stunned), .images = imgs_crawler_stunned}};

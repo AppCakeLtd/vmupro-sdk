@@ -340,7 +340,7 @@ typedef enum
   // third row of sprites in the tilemap
   STYPE_GREENDUCK,
   STYPE_REDDUCK,
-  STYPE_ROW3_2,
+  STYPE_CRAWLER,
   STYPE_ROW3_3,
   STYPE_SPIKEBALL,
   STYPE_MAX
@@ -374,6 +374,13 @@ const char *STypeToString(SpriteType inType)
 
   case STYPE_REDDUCK:
     return "REDDUCK";
+    break;
+
+  case STYPE_SPIKEBALL:
+    return "SPIKEBALL";
+    break;
+  case STYPE_CRAWLER:
+    return "CRAWLER";
     break;
   }
 }
@@ -712,6 +719,12 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->defaultAnimGroup = &animgroup_spikeball;
     p->iMask = IMASK_SKIP_ANIMSETS | IMASK_SKIP_INPUT | IMASK_SKIP_MOVEMENT | IMASK_DMGOUT_HORZ | IMASK_DMGOUT_VERT;
   }
+  else if (inType == STYPE_CRAWLER)
+  {
+    p->solid = SOLIDMASK_SPRITE_SOLID;
+    p->defaultAnimGroup = &animgroup_crawler;
+    p->iMask = IMASK_SKIP_INPUT | IMASK_SKIP_MOVEMENT | IMASK_DMGOUT_HORZ | IMASK_DMGOUT_VERT;
+  }
   else if (inType == STYPE_PARTICLE_BROWN)
   {
     p->solid = SOLIDMASK_NONE;
@@ -792,7 +805,7 @@ typedef struct Sprite
   // for coyote time
   uint32_t lastGroundedFrame;
   // see usage
-  Sprite *thingImRiding;  
+  Sprite *thingImRiding;
   bool isGrounded;
   bool isOnWall;
   bool onGroundLastFrame;
@@ -811,7 +824,7 @@ typedef struct Sprite
   bool mustReleaseJump;
   bool mustReleaseDash;
 
-  // config options  
+  // config options
   Anchor_H anchorH;
   Anchor_V anchorV;
 
@@ -834,7 +847,7 @@ typedef struct Sprite
   AnimTypes animID;
 
   int health;
-  
+
   // to simplify one-way platforms
   // we'll make sure the player
   int highestYSubPosInJump;
@@ -1672,7 +1685,8 @@ void ResetSprite(Sprite *spr, bool includeIndexer)
   spr->spawnFrame = frameCounter;
 
   // data which is only valid during the first spawn
-  if( includeIndexer ){
+  if (includeIndexer)
+  {
     spr->indexer = globalIndexer;
     spr->dirIndexer = dirIndexer;
   }
@@ -1714,7 +1728,7 @@ void ResetSprite(Sprite *spr, bool includeIndexer)
   spr->mustReleaseJump = false;
 
   // temporary config stuff
-  spr->subPos = spr->subSpawnPos;  
+  spr->subPos = spr->subSpawnPos;
   spr->anchorH = ANCHOR_VTOP;
   spr->anchorV = ANCHOR_HLEFT;
 
@@ -1760,7 +1774,7 @@ bool IsTypeSpawnable(SpriteType inType)
     return true;
   }
 
-  if (inType >= STYPE_GREENDUCK || inType == STYPE_REDDUCK)
+  if (inType >= STYPE_GREENDUCK || inType == STYPE_REDDUCK || inType == STYPE_CRAWLER || inType == STYPE_SPIKEBALL)
   {
     return true;
   }
@@ -2328,7 +2342,8 @@ void Retry()
   GotoGameState(GSTATE_INGAME);
 }
 
-void RestoreOriginalPos(Sprite *spr){
+void RestoreOriginalPos(Sprite *spr)
+{
   SetSubPos(spr, &spr->subSpawnPos);
   ResetSprite(spr, false);
 }
@@ -2552,8 +2567,9 @@ void UpdatePlatformInputs(Sprite *spr)
     {
       // restore pos if we go off screen
       spr->platCounter++;
-      if(!spr->isOnScreen && spr->platCounter > 50){
-        SetPlatState(spr, PS_NORMAL);        
+      if (!spr->isOnScreen && spr->platCounter > 50)
+      {
+        SetPlatState(spr, PS_NORMAL);
         RestoreOriginalPos(spr);
       }
     }
@@ -5217,7 +5233,8 @@ void ProcessSpriteTouches(Sprite *spr, HitInfo *info, bool horz)
   }
 }
 
-bool SpriteOnScreenOrAlwaysEnabled(Sprite *spr){
+bool SpriteOnScreenOrAlwaysEnabled(Sprite *spr)
+{
 
   if (spr == NULL)
   {
@@ -5225,13 +5242,13 @@ bool SpriteOnScreenOrAlwaysEnabled(Sprite *spr){
     return false;
   }
 
-  if( spr->isOnScreen ) return true;
-  if ( spr->profile.iMask & IMASK_UPDATE_OFFSCREEN ) return true;
+  if (spr->isOnScreen)
+    return true;
+  if (spr->profile.iMask & IMASK_UPDATE_OFFSCREEN)
+    return true;
 
   return false;
-
 }
-
 
 // TODO: not very efficient
 bool CalcIfSpriteOnScreen(Sprite *spr)
@@ -5246,10 +5263,10 @@ bool CalcIfSpriteOnScreen(Sprite *spr)
   // TODO: omg cache this.
   BBox camWorldBBox = CameraBBoxWorld();
   // stretch the bbox a bit
-  //camWorldBBox.x -= TILE_SIZE_PX *2;
-  //camWorldBBox.y -= TILE_SIZE_PX *2;
-  //camWorldBBox.width += (TILE_SIZE_PX*4);
-  //camWorldBBox.height += (TILE_SIZE_PX*4);
+  // camWorldBBox.x -= TILE_SIZE_PX *2;
+  // camWorldBBox.y -= TILE_SIZE_PX *2;
+  // camWorldBBox.width += (TILE_SIZE_PX*4);
+  // camWorldBBox.height += (TILE_SIZE_PX*4);
 
   // TODO: should we check other points?
   Vec2 testPoint = GetPointOnSprite(spr, false, ANCHOR_HLEFT, ANCHOR_VTOP);
@@ -5296,11 +5313,13 @@ void SolveMovement(Sprite *spr)
     return;
   }
 
-  if( !SpriteOnScreenOrAlwaysEnabled(spr) ){
+  if (!SpriteOnScreenOrAlwaysEnabled(spr))
+  {
     return;
   }
 
-  if( spr->platstate == PS_HIDDEN ){
+  if (spr->platstate == PS_HIDDEN)
+  {
     return;
   }
 
@@ -5863,10 +5882,9 @@ void FixSpriteIndices(Sprite *rider, Sprite *thingBeingRidden)
   sprites[thingBeingRiddenIndex] = rider;
 }
 
-
 void MoveAllSprites()
 {
-  
+
   for (int i = 0; i < numSprites; i++)
   {
     Sprite *spr = sprites[i];
@@ -5876,7 +5894,6 @@ void MoveAllSprites()
     }
 
     SolveMovement(spr);
-
   }
 
   for (int i = 0; i < numSprites; i++)
@@ -5888,7 +5905,6 @@ void MoveAllSprites()
     }
   }
 }
-
 
 void DrawSprite(Sprite *spr)
 {
@@ -5970,7 +5986,7 @@ void DrawSprite(Sprite *spr)
   UpdateAnimation(spr);
   OnSpriteMoved(spr);
 
-  // Still update, but, don't draw if off screen  
+  // Still update, but, don't draw if off screen
   if (!spr->isOnScreen)
   {
     // vmupro_log(VMUPRO_LOG_WARN, TAG, "Frame %d Sprite %s is off screen", frameCounter, spr->name);
