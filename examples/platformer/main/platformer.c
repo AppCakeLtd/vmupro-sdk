@@ -722,6 +722,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
   }
   else if (inType == STYPE_CRAWLER)
   {
+    p->default_health = 2;
     p->solid = SOLIDMASK_SPRITE_SOLID;
     p->defaultAnimGroup = &animgroup_crawler;
     p->physParams = &physCrawler;
@@ -1418,15 +1419,15 @@ bool SpriteDashingAboveBonkThresh(Sprite *spr)
   return true;
 }
 
-bool SpriteHeadbuttingAbovethresh(Sprite *spr){
+bool SpriteHeadbuttingAbovethresh(Sprite *spr)
+{
 
-
-  if( spr->lastSubVelo.y < -HEADBUTT_THRESH_SPEED){
+  if (spr->lastSubVelo.y < -HEADBUTT_THRESH_SPEED)
+  {
     return true;
   }
 
   return false;
-
 }
 
 bool SpriteButtStompingAboveThresh(Sprite *spr)
@@ -5142,7 +5143,7 @@ void ProcessTileTouches(Sprite *spr, HitInfo *info, bool horz)
 
           TryButtBounce(spr, BUTTSTR_GROUND, "breakable tile");
         }
-        else if ( SpriteHeadbuttingAbovethresh(spr) )
+        else if (SpriteHeadbuttingAbovethresh(spr))
         {
           // headbutt it
           Vec2 rowAndCol = GetTileRowAndColFromSubPos(&info->subCheckPos[i]);
@@ -5164,37 +5165,40 @@ void OnSpriteGotTouched(Sprite *toucher, Sprite *target, Direction inDir)
   //
   // if it hurts to touch, do the damage and call it a day
   //
-  
-  if (horz)
+
+  if (!SpriteStunned(target))
   {
-
-    if (targetMask & IMASK_DMGOUT_HORZ)
-    {
-      SpriteTakeDamage(toucher, target->profile.damage_multiplier, target, "touch a hurty (h)");
-      return;
-    }
-  }
-  else
-  {
-
-    bool ignoreDamageDueToBeingButtBounced = !horz && (targetMask & IMASK_DMGOUT_IGNORED_WHEN_BOUNCED) && SpriteDoingButtStuff(toucher);
-
-    if (!ignoreDamageDueToBeingButtBounced)
+    if (horz)
     {
 
-      if ((targetMask & IMASK_DMGOUT_VTOP) && (inDir != DIR_UP))
+      if (targetMask & IMASK_DMGOUT_HORZ)
       {
-        SpriteTakeDamage(toucher, target->profile.damage_multiplier, target, "touch a hurty (vtop)");
-        return;
-      }
-
-      if ((targetMask & IMASK_DMGOUT_VBOTTOM) && (inDir != DIR_DOWN))
-      {
-        SpriteTakeDamage(toucher, target->profile.damage_multiplier, target, "touch a hurty (vbottom)");
+        SpriteTakeDamage(toucher, target->profile.damage_multiplier, target, "touch a hurty (h)");
         return;
       }
     }
-  }
+    else
+    {
+
+      bool ignoreDamageDueToBeingButtBounced = !horz && (targetMask & IMASK_DMGOUT_IGNORED_WHEN_BOUNCED) && SpriteDoingButtStuff(toucher);
+
+      if (!ignoreDamageDueToBeingButtBounced)
+      {
+
+        if ((targetMask & IMASK_DMGOUT_VTOP) && (inDir != DIR_UP))
+        {
+          SpriteTakeDamage(toucher, target->profile.damage_multiplier, target, "touch a hurty (vtop)");
+          return;
+        }
+
+        if ((targetMask & IMASK_DMGOUT_VBOTTOM) && (inDir != DIR_DOWN))
+        {
+          SpriteTakeDamage(toucher, target->profile.damage_multiplier, target, "touch a hurty (vbottom)");
+          return;
+        }
+      } // ignore due to buttbounce
+    } // vert
+  } // stunned
 
   //
   // doesn't hurt to touch
