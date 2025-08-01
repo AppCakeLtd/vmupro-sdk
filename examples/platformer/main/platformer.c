@@ -40,6 +40,7 @@ const bool DEBUG_ONLY_MOVE_PLAYER = false;
 #define TILE_SIZE_PX 16
 // e.g. 1 tile is 256 subpixel units
 #define TILE_SIZE_SUB (TILE_SIZE_PX << SHIFT)
+#define MAX_MOVE_SPEED TILE_SIZE_SUB
 
 // the spritesheet/atlas
 // could read it out from the data
@@ -272,7 +273,6 @@ const char *MoveModetoString(MoveMode inMode)
   }
 }
 
-
 typedef enum
 {
   KNOCK_NUDGE,   // nudged while stunned
@@ -346,10 +346,8 @@ typedef enum
   STYPE_MAX
 } SpriteType;
 
-
-
-const char * STypeToString(SpriteType inType){
-
+const char *STypeToString(SpriteType inType)
+{
 
   switch (inType)
   {
@@ -377,10 +375,7 @@ const char * STypeToString(SpriteType inType){
   case STYPE_REDDUCK:
     return "REDDUCK";
     break;
-
   }
-
-
 }
 
 // Note: we do some >= on these, be careful changing them
@@ -413,6 +408,7 @@ typedef enum
   IMASK_IGNORE_COLLISIONS = 0x1000,          // e.g. moving platforms
   IMASK_SPECIAL_MOVES = 0x2000,              // buttstomp etc
   IMASK_PLATFORM_MOVEMENT = 0x4000,          // e.g. platforms 'walking' accross the sky
+  IMASK_NEVER_DIES = 0x8000,                 // unkillable
 } InteractionMask;
 
 typedef struct
@@ -525,10 +521,64 @@ const PhysParams physPlatform = {
 
 };
 
-typedef struct {
-  int framesRidden; // how many frames i've been stood on for
-  int hideCount;    // >0 = hide offscreen, wait for respawn
-} PlatformData;
+const PhysParams physFallingPlatform = {
+
+    .max_subspeed_walk = 40,
+    .max_subspeed_run = 0,
+    .subaccel_walk = 8,
+    .subaccel_run = 0,
+    .subaccel_air = 0,
+    .subdamping_walk = 0,
+    .subdamping_run = 0,
+    .subdamping_air = 0,
+    .subdamping_stunned = 0,
+    .max_jump_boost_frames = 0,
+    .max_buttbounce_frames = 0,
+    .max_dash_frames = 0,
+    .max_knockback_frames = 0,
+    .sub_jumpforce = 0,
+    .sub_dashforce = 0,
+    .sub_buttbounceforce = 0,
+    .dashDelayFrames = 0,
+    .sub_gravity = 0,
+    .max_subfallspeed = 0,
+
+};
+
+// TODO: Shouldn't be part of every sprite in its current
+// state, but will be repurposed for similar behaviour later
+typedef enum
+{
+  PS_NORMAL,
+  PS_FALLSLOW,
+  PS_FALLFAST,
+  PS_HIDDEN
+} PlatState;
+
+const char *PlatStateToString(PlatState inState)
+{
+
+  switch (inState)
+  {
+  default:
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "UNNAMED PLAT STATE %d\n", (int)inState);
+    return "UNKNOWN PLAT STATE";
+    break;
+
+  case PS_NORMAL:
+    return "NORMAL";
+    break;
+  case PS_FALLSLOW:
+    return "FALLSLOW";
+    break;
+  case PS_FALLFAST:
+    return "FALLFAST";
+    break;
+  case PS_HIDDEN:
+    return "HIDDEN";
+    break;
+  }
+}
 
 // profile of spite behaviour
 // such as runspeed, can it walk
@@ -548,8 +598,6 @@ typedef struct
   const AnimGroup *defaultAnimGroup;
 
   Vec2 startVelo;
-
-  PlatformData * platDataOrNull;
 
 } SpriteProfile;
 // TODO: rename to spriteblueprint?
@@ -616,8 +664,6 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
   p->startVelo.x = 0;
   p->startVelo.y = 0;
 
-  p->platDataOrNull = NULL;
-
   if (inType == STYPE_PLAYER)
   {
     // default
@@ -651,11 +697,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->solid = SOLIDMASK_ONESIDED;
     p->defaultAnimGroup = &animgroup_platform0;
     p->physParams = &physPlatform;
-    p->iMask = IMASK_SKIP_ANIMSETS | IMASK_CAN_BE_RIDDEN | IMASK_IGNORE_COLLISIONS | IMASK_PLATFORM_MOVEMENT;
-
-    p->platDataOrNull = malloc(sizeof(PlatformData));
-    memset(p->platDataOrNull, 0, sizeof(PlatformData));
-
+    p->iMask = IMASK_SKIP_ANIMSETS | IMASK_CAN_BE_RIDDEN | IMASK_IGNORE_COLLISIONS | IMASK_PLATFORM_MOVEMENT | IMASK_NEVER_DIES;
   }
   else if (inType == STYPE_DOOR)
   {
@@ -796,6 +838,9 @@ typedef struct Sprite
   int highestYSubPosInJump;
   int lastgroundedYSubPos;
 
+  PlatState platstate;
+  int platCounter;
+
 } Sprite;
 
 #define MAX_SPRITES 20
@@ -881,7 +926,9 @@ void SetAnim(Sprite *spr, AnimTypes inType)
   // just in case
   if (spr->activeFrameSet->numImages == 0)
   {
-    vmupro_log(VMUPRO_LOG_INFO, TAG, "Sprite was assigned an empty frame set\n");
+    vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite was assigned an empty frame set\n");
+    // the idle frame set is always filled in
+    spr->activeFrameSet = &spr->anims->idleFrames;
   }
 }
 
@@ -1392,8 +1439,8 @@ void SetMoveMode(Sprite *spr, MoveMode inMode, const char *cause)
 
   if (SpriteStunned(spr))
   {
-    // ignore movement changes
-    printf("__TEST__ ignoring state changes due to stunnedness\n");
+    // ignore movement changes    
+    vmupro_log(VMUPRO_LOG_WARN, TAG, "Frame %d Sprite %s ignoring state change due to stunnedness", frameCounter, spr->name);
     return;
   }
 
@@ -1442,6 +1489,9 @@ Vec2 GetPlayerWorldStartPos()
 
 bool SpriteCanDie(Sprite *spr)
 {
+
+  if (spr->profile.iMask & IMASK_NEVER_DIES)
+    return false;
   if (spr->health < 0)
     return false;
   if (SpriteIsDead(spr))
@@ -1678,6 +1728,9 @@ void ResetSprite(Sprite *spr)
   spr->lastGameframe = frameCounter;
   spr->animID = ANIMTYPE_IDLE;
 
+  spr->platstate = PS_NORMAL;
+  spr->platCounter = 0;
+
   // update the hitbox, bounding box, etc
   OnSpriteMoved(spr);
 }
@@ -1807,7 +1860,6 @@ void AddToSpriteList(Sprite *inSprite)
 Sprite *CreateSprite(SpriteType inType, Vec2 worldStartPos, const char *inName)
 {
 
-
   if (inType < 0 || inType >= STYPE_MAX)
   {
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite index %d is invalid!", inType);
@@ -1921,13 +1973,6 @@ int UnloadSprite(Sprite *spr)
 
   vmupro_log(VMUPRO_LOG_WARN, TAG, "Frame %d Sprite %s unloading", frameCounter, spr->name);
 
-  
-  if (spr->profile.platDataOrNull != NULL){
-    memset(spr->profile.platDataOrNull, 0, sizeof(PlatformData));
-    free(spr->profile.platDataOrNull);
-    spr->profile.platDataOrNull = NULL;
-  }
-  
   // wipe the mem before freeing it
   memset(spr, 0, sizeof(Sprite));
   free(spr);
@@ -2348,6 +2393,159 @@ void UpdatePatrollInputs(Sprite *spr, bool ignorePlayer)
   spr->input.left = !spr->facingRight;
 }
 
+void SetPlatState(Sprite *spr, PlatState inState)
+{
+
+  const char *newStateString = PlatStateToString(inState);
+  vmupro_log(VMUPRO_LOG_INFO, TAG, "Frame %d Sprite %s switching to platstate %d/%s", frameCounter, spr->name, (int)inState, newStateString);
+
+  spr->platstate = inState;
+  spr->platCounter = 0;
+}
+
+void IncrementRideCounter(Sprite *spr)
+{
+
+  if (spr->platstate != PS_NORMAL)
+  {
+    return;
+  }
+  spr->platCounter++;
+}
+
+void UpdatePlatformInputs(Sprite *spr)
+{
+
+  Inputs *inp = &spr->input;
+
+  if (spr->dirIndexer == DIRINDEX_HORZ)
+  {
+
+    bool pressRight = false;
+    bool pressLeft = false;
+
+    // horz movement
+    if (spr->facingRight)
+    {
+      // how far can it travel in world coords
+      int maxDist = (spr->indexer + 1) * 4;
+      maxDist *= TILE_SIZE_SUB;
+
+      int maxRight = spr->subSpawnPos.x + maxDist;
+      if (spr->subPos.x >= maxRight)
+      {
+        spr->facingRight = false;
+      }
+      else
+      {
+        pressRight = true;
+      }
+    }
+    else
+    {
+
+      if (spr->subPos.x <= spr->subSpawnPos.x)
+      {
+        spr->facingRight = true;
+      }
+      else
+      {
+        pressLeft = true;
+      }
+    }
+
+    inp->right = pressRight ? inp->right + 1 : 0;
+    inp->left = pressLeft ? inp->left + 1 : 0;
+  }
+
+  if (spr->dirIndexer == DIRINDEX_VERT)
+  {
+
+    bool pressDown = false;
+    bool pressUp = false;
+
+    // horz movement
+    if (spr->facingRight)
+    {
+      // how far can it travel in world coords
+      int maxDist = (spr->indexer + 1) * 4;
+      maxDist *= TILE_SIZE_SUB;
+
+      int maxRight = spr->subSpawnPos.y + maxDist;
+      if (spr->subPos.y >= maxRight)
+      {
+        spr->facingRight = false;
+      }
+      else
+      {
+        pressDown = true;
+      }
+    }
+    else
+    {
+      if (spr->subPos.y <= spr->subSpawnPos.y)
+      {
+        spr->facingRight = true;
+      }
+      else
+      {
+        pressUp = true;
+      }
+    }
+
+    inp->down = pressDown ? inp->down + 1 : 0;
+    inp->up = pressUp ? inp->up + 1 : 0;
+  } // dirindex vert
+
+  if (spr->dirIndexer == DIRINDEX_DOWN)
+  {
+    bool pressDown = false;
+
+    // fall slowly after like 10 - 70 frames or so
+    int triggerPoint = (spr->indexer + 1) * 10;
+    // fall fast after this many frames
+    int fallPoint = 40;
+
+    if (spr->platstate == PS_NORMAL)
+    {
+      printf("__TEST Counter1 %d of %d\n", spr->platCounter, triggerPoint);
+      if (spr->platCounter > triggerPoint)
+      {
+        SetPlatState(spr, PS_FALLSLOW);
+      }
+    }
+
+    if (spr->platstate == PS_FALLSLOW)
+    {
+      pressDown = true;
+      spr->platCounter++;
+      printf("__TEST Counter2 %d of %d\n", spr->platCounter, fallPoint);
+      if (spr->platCounter > fallPoint)
+      {
+        SetPlatState(spr, PS_FALLFAST);
+      }
+    }
+
+    if (spr->platstate == PS_FALLFAST)
+    {
+      pressDown = true;
+      spr->platCounter++;
+      if (spr->platCounter > 50)
+      {
+        spr->platstate = PS_HIDDEN;
+      }
+    }
+
+    if (spr->platstate == PS_HIDDEN)
+    {
+      // restore pos if we go off screen
+    }
+
+    inp->down = pressDown ? inp->down + 1 : 0;
+
+  } // dirindex down
+}
+
 bool AllowSpriteInput(Sprite *spr)
 {
 
@@ -2466,105 +2664,8 @@ void UpdateSpriteInputs(Sprite *spr)
   }
   else if (spr->sType == STYPE_PLATFORM_0)
   {
-    ClearSpriteInputs(spr);    
-    Inputs *inp = &spr->input;
-
-    if (spr->dirIndexer == DIRINDEX_HORZ)
-    {
-
-      bool pressRight = false;
-      bool pressLeft = false;
-
-      // horz movement
-      if (spr->facingRight)
-      {
-        // how far can it travel in world coords
-        int maxDist = (spr->indexer + 1) * 4;
-        maxDist *= TILE_SIZE_SUB;
-
-        int maxRight = spr->subSpawnPos.x + maxDist;
-        if (spr->subPos.x >= maxRight)
-        {
-          spr->facingRight = false;
-        }
-        else
-        {
-          pressRight = true;
-        }
-      }
-      else
-      {
-
-        if (spr->subPos.x <= spr->subSpawnPos.x)
-        {
-          spr->facingRight = true;
-        }
-        else
-        {
-          pressLeft = true;
-        }
-      }
-
-      inp->right = pressRight ? inp->right + 1 : 0;
-      inp->left = pressLeft ? inp->left + 1 : 0;
-    }
-
-    if (spr->dirIndexer == DIRINDEX_VERT)
-    {
-
-      bool pressDown = false;
-      bool pressUp = false;
-
-      // horz movement
-      if (spr->facingRight)
-      {
-        // how far can it travel in world coords
-        int maxDist = (spr->indexer + 1) * 4;
-        maxDist *= TILE_SIZE_SUB;
-
-        int maxRight = spr->subSpawnPos.y + maxDist;
-        if (spr->subPos.y >= maxRight)
-        {
-          spr->facingRight = false;
-        }
-        else
-        {
-          pressDown = true;
-        }
-      }
-      else
-      {
-        if (spr->subPos.y <= spr->subSpawnPos.y)
-        {
-          spr->facingRight = true;
-        }
-        else
-        {
-          pressUp = true;
-        }
-      }
-
-      inp->down = pressDown ? inp->down + 1 : 0;
-      inp->up = pressUp ? inp->up + 1 : 0;
-    } // dirindex vert
-
-    if( spr->dirIndexer == DIRINDEX_DOWN ){
-      bool pressDown = false;
-      /*
-      if (spr->thingImRiding->profile.platDataOrNull != NULL ){
-
-        if (spr->thingImRiding->profile.platDataOrNull->framesRidden > 10 ){
-          pressDown = true;
-        }
-
-        inp->down = pressDown ? inp->down + 1 : 0;
-      } else {
-        vmupro_log(VMUPRO_LOG_ERROR, TAG, "Falling platform with no platform data!");
-      }
-      */
-      
-    } // dirindex down
-
+    ClearSpriteInputs(spr);
+    UpdatePlatformInputs(spr);
   }
   else
   {
@@ -3328,7 +3429,7 @@ bool IsOneWaySpriteSolid(Sprite *jumper, Sprite *platform)
   bool movingVert = jumper->subVelo.y != 0;
 
   Vec2 jumperFootPos = GetPointOnSprite(jumper, true, ANCHOR_HMID, ANCHOR_VBOTTOM);
-  Vec2 platformHeadPos = GetPointOnSprite(platform, true, ANCHOR_HMID, ANCHOR_VTOP);  
+  Vec2 platformHeadPos = GetPointOnSprite(platform, true, ANCHOR_HMID, ANCHOR_VTOP);
   bool playerHigher = jumperFootPos.y < platformHeadPos.y;
 
   // Walking along the top
@@ -4377,10 +4478,9 @@ bool TryButtBounce(Sprite *spr, ButtStrength inStr, const char *cause)
   int delta = now.y - highest;
   if (delta < 0)
   {
-    printf("__TEST__ negative jump height\n");
+    vmupro_log(VMUPRO_LOG_WARN, TAG, "Frame %d Sprite %s, negative jump height\n", frameCounter, spr->name);
     return false;
   }
-  // printf("__TEST__ jump height: %d (h %d & n %d)\n", delta, highest, now.y);
 
   int bounceVel = Abs(delta) / 250; // Abs(spr->lastSubVelo.y);
   // bouncing off a mob should let you jump sliiightly higher
@@ -4761,6 +4861,12 @@ bool SpriteCanRideSprite(Sprite *rider, Sprite *thingImRiding)
   }
 
   if (!(thingImRiding->profile.iMask & IMASK_CAN_BE_RIDDEN))
+  {
+    return false;
+  }
+
+  // finally, falling platforms, ignore if they're falling
+  if (thingImRiding->platstate == PS_FALLFAST || thingImRiding->platstate == PS_HIDDEN)
   {
     return false;
   }
@@ -5159,8 +5265,14 @@ void SolveMovement(Sprite *spr)
     subAccelX = spr->phys->subaccel_walk;
     subAccelY = spr->phys->subaccel_walk;
 
-    subDampX = spr->phys->subaccel_walk;
-    subDampY = spr->phys->subaccel_walk;
+    subDampX = spr->phys->subdamping_walk;
+    subDampY = spr->phys->subdamping_walk;
+
+    if (spr->platstate == PS_FALLFAST)
+    {
+      maxSubSpeedY = MAX_MOVE_SPEED; // faaast
+      subAccelY *= 4;
+    }
   }
   else
   {
@@ -5196,7 +5308,7 @@ void SolveMovement(Sprite *spr)
   bool inControl = AllowSpriteInput(spr);
   bool isWorldSolidToMe = !(iMask & IMASK_IGNORE_COLLISIONS);
   bool isSolidToWorld = IsBlockingCollision(spr->profile.solid);
-  
+
   if (inControl)
   {
 
@@ -5290,12 +5402,8 @@ void SolveMovement(Sprite *spr)
       // movement calcs and helps preven glitching into stuff
       ridingPlatformDelta = SubNewVec(&spr->thingImRiding->subPos, &spr->thingImRiding->lastSubPos);
 
-      /*
-      if (spr->thingImRiding->profile.platDataOrNull != NULL){
-        spr->thingImRiding->profile.platDataOrNull->framesRidden +=1;
-      }
-      */
-
+      // track the # frames it's been ridden for
+      IncrementRideCounter(spr->thingImRiding);
     }
     else
     {
@@ -5439,7 +5547,7 @@ void SolveMovement(Sprite *spr)
   }
 
   // Sanity check
-  if (Abs(spr->subVelo.y) > (TILE_SIZE_SUB))
+  if (Abs(spr->subVelo.y) > (MAX_MOVE_SPEED))
   {
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite's y velo exceeds a full tile size!");
   }
