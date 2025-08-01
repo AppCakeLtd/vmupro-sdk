@@ -311,8 +311,8 @@ typedef enum
   STYPE_DOOR,
   STYPE_ROOM_MARKER,
   STYPE_PLATFORM_0,
-  STYPE_RESERVED_6,
-  STYPE_RESERVED_7,
+  STYPE_ORANGE,
+  STYPE_STRAWBERRY,
   STYPE_RESERVED_9,
   STYPE_PARTICLE_BROWN,
   STYPE_RESERVED_11,
@@ -379,6 +379,15 @@ const char *STypeToString(SpriteType inType)
   case STYPE_SPIKEBALL:
     return "SPIKEBALL";
     break;
+
+  case STYPE_ORANGE:
+    return "ORANGE";
+    break;
+
+  case STYPE_STRAWBERRY:
+    return "STRAWBERRY";
+    break;
+
   case STYPE_CRAWLER:
     return "CRAWLER";
     break;
@@ -719,6 +728,18 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->solid = SOLIDMASK_SPRITE_SOLID;
     p->defaultAnimGroup = &animgroup_spikeball;
     p->iMask = IMASK_SKIP_ANIMSETS | IMASK_SKIP_INPUT | IMASK_SKIP_MOVEMENT | IMASK_DMGOUT_HORZ | IMASK_DMGOUT_VTOP | IMASK_DMGOUT_VBOTTOM;
+  }
+  else if (inType == STYPE_ORANGE)
+  {
+    p->solid = SOLIDMASK_SPRITE_TRIGGER;
+    p->defaultAnimGroup = &animgroup_orange;
+    p->iMask = IMASK_SKIP_ANIMSETS | IMASK_SKIP_INPUT | IMASK_SKIP_MOVEMENT | IMASK_DRAW_FIRST;
+  }
+  else if (inType == STYPE_STRAWBERRY)
+  {
+    p->solid = SOLIDMASK_SPRITE_TRIGGER;
+    p->defaultAnimGroup = &animgroup_strawberry;
+    p->iMask = IMASK_SKIP_ANIMSETS | IMASK_SKIP_INPUT | IMASK_SKIP_MOVEMENT | IMASK_DRAW_FIRST;
   }
   else if (inType == STYPE_CRAWLER)
   {
@@ -1797,6 +1818,11 @@ bool IsTypeSpawnable(SpriteType inType)
   if (inType >= STYPE_GREENDUCK || inType == STYPE_REDDUCK || inType == STYPE_CRAWLER || inType == STYPE_SPIKEBALL)
   {
     return true;
+  }
+
+  if (inType == STYPE_ORANGE || inType == STYPE_STRAWBERRY)
+  {
+    return false;
   }
 
   if (inType == STYPE_PARTICLE_BROWN)

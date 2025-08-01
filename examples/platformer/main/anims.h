@@ -356,3 +356,11 @@ const AnimGroup animgroup_crawler = {
     .knockbackFrames = {.frameSpeed = CRAWLER_ANIM_SPEED, .numImages = ARRAYSIZE(imgs_crawler_move), .images = imgs_crawler_move},
     .stunFrames = {.frameSpeed = CRAWLER_ANIM_SPEED, .numImages = ARRAYSIZE(imgs_crawler_stunned), .images = imgs_crawler_stunned},
     .dieFrames = {.frameSpeed = CRAWLER_ANIM_SPEED, .numImages = ARRAYSIZE(imgs_crawler_stunned), .images = imgs_crawler_stunned}};
+
+const int COLLECTABLE_ANIM_SPEED = 20;
+
+const Img * imgs_orange_all[] = {&img_orange_idle_0, &img_orange_idle_1, &img_orange_idle_2, &img_orange_idle_3, &img_orange_idle_4 };
+const AnimGroup animgroup_orange = {.idleFrames = {.frameSpeed = COLLECTABLE_ANIM_SPEED, .numImages = ARRAYSIZE(imgs_orange_all), .images = imgs_orange_all}};
+
+const Img * imgs_strawberry_all[] = {&img_strawberry_idle_0, &img_strawberry_idle_1, &img_strawberry_idle_2, &img_strawberry_idle_3, &img_strawberry_idle_4 };
+const AnimGroup animgroup_strawberry = {.idleFrames = {.frameSpeed = COLLECTABLE_ANIM_SPEED, .numImages = ARRAYSIZE(imgs_strawberry_all), .images = imgs_strawberry_all}};
