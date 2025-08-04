@@ -15,6 +15,7 @@
 #include "esp_heap_caps.h"
 #include "vmupro_utils.h"
 #include "framerate.h"
+#include "mixer.h"
 
 const char *TAG = "[Platformer]";
 
@@ -6390,11 +6391,15 @@ void app_main(void)
   InitGame();
 
   InitFrameRate();
+  InitMixer();
+
+  TestPlayClip();
 
   while (true)
   {
 
     FrameStarted();
+    TestUpdate();
 
     vmupro_color_t col = VMUPRO_COLOR_BLUE;
     vmupro_display_clear(col);
@@ -6445,4 +6450,6 @@ void app_main(void)
   // Terminate the renderer
   vmupro_stop_double_buffer_renderer();
   DeInitFrameRate();
+  DeInitMixer();
+
 }

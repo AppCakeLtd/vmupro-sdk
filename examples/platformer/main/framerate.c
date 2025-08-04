@@ -34,8 +34,11 @@ void InitFrameRate()
 }
 
 void DeInitFrameRate()
-{
-    free(frameTimes);
+{   
+    if ( frameTimes != NULL){
+        free(frameTimes);
+        frameTimes = NULL;
+    }
 }
 
 void FrameStarted()
