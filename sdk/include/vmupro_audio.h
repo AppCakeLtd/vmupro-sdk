@@ -179,6 +179,23 @@ uint8_t vmupro_get_global_volume(void);
  */
 void vmupro_set_global_volume(uint8_t volume);
 
+/**
+ * @brief Return the fill state of the audio buffer
+ * either for internal or USB/BT audio
+ * 
+ * @param outBufferFilledsamples How many samples are sat in the ring 
+ * buffer waiting to be sent to the audio device
+ * @param outBufferSizeInSamples How big is the buffer in samples
+ * E.g. a 16kb buffer can hold 8k 16-bit mono samples or 8k 16-bit stereo samples
+ * Free space is the difference: max size - filled bytes
+ * 
+ * @return Fill percent 0-100%
+ * @note A full buffer may be slightly laggy, while running it close to
+ * empty will provide lower latency (running the risk of audio gaps if you
+ * code is slow) 
+ */
+int vmupro_get_ringbuffer_fill_state(uint32_t * outBufferFilledSamples, uint32_t outBufferSizeInsamples);
+
 #ifdef __cplusplus
 }
 #endif
