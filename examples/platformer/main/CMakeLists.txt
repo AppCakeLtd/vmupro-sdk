@@ -1,4 +1,4 @@
-idf_component_register(SRCS "platformer.c"
+idf_component_register(SRCS "platformer.c" "framerate.c"
                        INCLUDE_DIRS ".")
 
 # Prevent linking full IDF runtime

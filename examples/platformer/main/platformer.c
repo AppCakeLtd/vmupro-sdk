@@ -14,6 +14,7 @@
 #include "images/maps.h"
 #include "esp_heap_caps.h"
 #include "vmupro_utils.h"
+#include "framerate.h"
 
 const char *TAG = "[Platformer]";
 
@@ -92,61 +93,6 @@ const int BUTTDASH_THRESH_SPEED = 100;        // how fast you should be hitting 
 const int BUTTBOUNCE_MAX_VEL = TILE_SIZE_SUB; // how much uppy bounce before we clamp it
 const int HEADBUTT_THRESH_SPEED = 16;         // much lower than butt stomp, it should virtually always pass
 const uint32_t COYOTE_TIME_FRAME_THRESH = 3;
-
-// TODO: move to a separate header
-//
-// Timing
-//
-
-// SMA of the last 10 frames
-// EMA uses too much CPU
-// values measured in us
-#define FRAMERATE_TARGET 60.0f
-#define FRAMERATE_AVG_COUNT 60
-// malloced/freed on ctor/dtor
-static uint32_t *frameTimes;
-static uint32_t totalFrames = 0;
-static uint32_t lastFrameTimeDBG = 0.0f;
-static float lastFramerateDBG = 0.0f;
-bool dbgUncappedFramerate = 0;
-
-static void UpdateFrameTime(uint32_t fTimeMicros)
-{
-  frameTimes[totalFrames % FRAMERATE_AVG_COUNT] = fTimeMicros;
-  lastFrameTimeDBG = fTimeMicros;
-  totalFrames++;
-}
-
-static void ResetFrameTime()
-{
-  totalFrames = 0;
-  for (int i = 0; i < FRAMERATE_AVG_COUNT; i++)
-  {
-    frameTimes[i] = 0;
-  }
-  lastFrameTimeDBG = 0;
-  lastFramerateDBG = 0;
-}
-
-static inline float GetAverageFrameTimeUs()
-{
-  float total = 0;
-  for (int i = 0; i < FRAMERATE_AVG_COUNT; i++)
-  {
-    total += frameTimes[i];
-  }
-  total /= (float)FRAMERATE_AVG_COUNT;
-  return total;
-}
-
-static float GetFPS()
-{
-  float total = GetAverageFrameTimeUs();
-  total /= 1e6f;
-  total = 1.0f / total;
-  lastFramerateDBG = total;
-  return total;
-}
 
 // not stored on the sprite
 // since we may despawn/respawn
@@ -6441,20 +6387,15 @@ void app_main(void)
 
   vmupro_start_double_buffer_renderer();
 
-  frameTimes = (uint32_t*)malloc(sizeof(uint32_t) * FRAMERATE_AVG_COUNT);
-
   InitGame();
-  
-  // timing
-  static const uint64_t MAX_FRAME_TIME_US = 1000000 / FRAMERATE_TARGET; // microseconds per frame
-  int64_t accumulated_us = 0;
+
+  InitFrameRate();
 
   while (true)
   {
-    
-    // timing
-    int64_t frameStartTime = vmupro_get_time_us();
-    
+
+    FrameStarted();
+
     vmupro_color_t col = VMUPRO_COLOR_BLUE;
     vmupro_display_clear(col);
 
@@ -6498,62 +6439,10 @@ void app_main(void)
     // re-seed the rng
     rng = GetRNG(1);
 
-    // timing:
-    // Measure mid-frame elapsed time
-    // to determine delay
-
-    // Measure mid-frame elapsed time
-    // to determine delay
-
-    int64_t elapsed_us = vmupro_get_time_us() - frameStartTime;
-    
-    // are we running too slow?
-    if (elapsed_us > MAX_FRAME_TIME_US)
-    {
-      // no point carrying this forward
-      // a natural delay has been introduced
-      accumulated_us = 0;
-
-      printf("under fps: elapse=%llu / targ=%llu (accum=%llu)\n", elapsed_us, MAX_FRAME_TIME_US, accumulated_us);
-
-    }
-    else
-    {
-      int64_t sleep_us = MAX_FRAME_TIME_US - elapsed_us;
-      // add up any accumulated values that were lower than min
-      sleep_us += accumulated_us;
-
-      // if the required delay is smaller than a minimum
-      // we can add it up and spread it over a few frames
-
-      // add 100micros for jitter
-      const uint32_t minSleepDelay = 350;
-      if (sleep_us >= minSleepDelay)
-      {
-        if (!dbgUncappedFramerate)
-        {
-          vmupro_delay_us(sleep_us - minSleepDelay);
-        }
-        accumulated_us = 0;
-      }
-      else
-      {
-        accumulated_us += sleep_us;
-      }
-    }
-
-    // Measure post-frame elapsed time
-    // i.e. after delay
-
-    int64_t finalTime = vmupro_get_time_us();
-    UpdateFrameTime(finalTime - frameStartTime);
-
-    //printf("FT %.1f\n", GetFPS());
-
+    FrameEnded();
   }
 
   // Terminate the renderer
   vmupro_stop_double_buffer_renderer();
-  free(frameTimes);
-
+  DeInitFrameRate();
 }
