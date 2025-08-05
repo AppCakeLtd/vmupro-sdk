@@ -99,15 +99,15 @@ typedef enum
 {
   BP_NONE = 0,
   BP_ONEWAY = 1 << 0,
-  BP_DRAWTRANS = 1 << 1,
-  BP_EASYSTOMP = 1 << 2,
-  BP_HARDSTOMP = 1 << 3,
-  BP_SPAWN_ON_BREAK = 1 << 4,
-  BP_TRIGGER = 1 << 5,
-  BP_WATER = 1 << 6,
-  BP_GOOP = 1 << 7,
-  BP_LAVA = 1 << 8,
-  BP_INSTAKILL = 1 << 9
+  BP_DRAWTRANS = 1 << 2,
+  BP_EASYSTOMP = 1 << 3,
+  BP_HARDSTOMP = 1 << 4,
+  BP_SPAWN_ON_BREAK = 1 << 5,
+  BP_TRIGGER = 1 << 6,
+  BP_WATER = 1 << 7,
+  BP_GOOP = 1 << 8,
+  BP_LAVA = 1 << 9,
+  BP_INSTAKILL = 1 << 10
 } BlockProperties;
 
 // not stored on the sprite
@@ -2809,10 +2809,13 @@ BlockProperties GetBlockProps(int blockID)
   if (rowNum == 0)
     rVal |= BP_ONEWAY;
 
-  if (rowNum == 11)
-    rVal |= BP_ONEWAY | BP_DRAWTRANS;
+  if(rowNum == 1)
+    rVal |= BP_DRAWTRANS;
 
   if (rowNum == 12)
+    rVal |= BP_ONEWAY | BP_DRAWTRANS;
+
+  if (rowNum == 13)
   {
     rVal |= BP_EASYSTOMP;
     if (colNum == 0)
@@ -2821,7 +2824,7 @@ BlockProperties GetBlockProps(int blockID)
       rVal |= BP_HARDSTOMP;
   }
 
-  if (rowNum == 13 || rowNum == 14)
+  if (rowNum == 14 || rowNum == 15)
   {
     rVal |= BP_TRIGGER;
     if (colNum >= 0 && colNum < 4)
@@ -2840,11 +2843,6 @@ BlockProperties GetBlockProps(int blockID)
     {
       rVal |= BP_INSTAKILL;
     }
-  }
-
-  if (rowNum == 15)
-  {
-    rVal |= BP_DRAWTRANS;
   }
 
   return rVal;
