@@ -3724,6 +3724,23 @@ void GetTileTriggerOverlaps(Sprite *spr, TileTriggerInfo *info)
   HandleTileTriggers(spr, info);
 }
 
+bool DoBBoxesIntersect(BBox * a, BBox * b){
+
+    int a_left   = a->x;
+    int a_top    = a->y;
+    int a_right  = a->x + a->width;
+    int a_bottom = a->y + a->height;
+
+    int b_left   = b->x;
+    int b_top    = b->y;
+    int b_right  = b->x + b->width;
+    int b_bottom = b->y + b->height;
+
+    return !(b_right <= a_left || b_left >= a_right ||
+             b_bottom <= a_top || b_top >= a_bottom);
+
+}
+
 Sprite *GetSpriteTriggerOverlaps(Sprite *srcSprite)
 {
 
@@ -3747,9 +3764,19 @@ Sprite *GetSpriteTriggerOverlaps(Sprite *srcSprite)
     if (otherSprite->profile.solid != SOLIDMASK_SPRITE_TRIGGER)
       continue;
 
+    // start with a broad phase:
+    // exclude anything more than 200 world units away
+    int xDelta = Abs(srcSprite->worldBBox.x - otherSprite->worldBBox.x);
+    if ( xDelta > 200 ) continue;
+    int yDelta = Abs(srcSprite->worldBBox.y - otherSprite->worldBBox.y);
+    if ( yDelta > 200 ) continue;
+
     Vec2 *srcSubPos = &srcSprite->subPos;
 
-    bool inside = IsPointInsideBox(srcSubPos, &otherSprite->subHitBox);
+
+
+    //bool inside = IsPointInsideBox(srcSubPos, &otherSprite->subHitBox);
+    bool inside = DoBBoxesIntersect(&srcSprite->subHitBox, &otherSprite->subHitBox);
 
     if (inside)
     {
