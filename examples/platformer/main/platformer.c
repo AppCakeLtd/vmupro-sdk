@@ -886,7 +886,7 @@ typedef struct Sprite
 
 } Sprite;
 
-#define MAX_SPRITES 40
+#define MAX_SPRITES 60
 int numSprites = 0;
 Sprite *sprites[MAX_SPRITES];
 
@@ -4888,8 +4888,8 @@ void HandleDoorTransition(Sprite *activator, Sprite *door)
   // - must have slowed down
   // - ensure lowish velo
 
-  if (activator->input.sleep < DOOR_THRESH_FRAMES)
-  {
+  if (activator->input.sleep < 1)
+  {    
     return;
   }
 
@@ -5039,6 +5039,8 @@ bool SpriteCanRideSprite(Sprite *rider, Sprite *thingImRiding)
     {
       return false;
     }
+  } else {
+    return false;
   }
 
   // prevent getting trapped under stuff in water
@@ -5165,6 +5167,8 @@ void DestroyBlock(Vec2 *rowAndCol)
   uint8_t *tileData = GetTileLayerData(LAYER_COLS);
 
   int indexIntoTileArray = (rowAndCol->y * currentLevel->colLayer->width) + rowAndCol->x;
+
+  int oldBlockID = tileData[indexIntoTileArray];
   // destroy the tile in the tilemap, but not in the hitinfo
   // since we might still be using it
   tileData[indexIntoTileArray] = BLOCK_NULL;
@@ -5174,6 +5178,13 @@ void DestroyBlock(Vec2 *rowAndCol)
   Vec2 worldSpawnPoint;
   worldSpawnPoint.x = rowAndCol->x * TILE_SIZE_PX;
   worldSpawnPoint.y = rowAndCol->y * TILE_SIZE_PX;
+
+  // TODO: table
+  int tileMaprow = oldBlockID / TILEMAP_WIDTH_TILES;
+  if (tileMaprow == 9)
+  {
+    CreateSprite(STYPE_ORANGE, worldSpawnPoint, "EggSpawn");
+  }
 
   for (int i = 0; i < 4; i++)
   {
@@ -5218,7 +5229,7 @@ void ProcessTileTouches(Sprite *spr, HitInfo *info, bool horz)
       if (SpriteDashingAboveBonkThresh(spr))
       {
 
-        if (IsTileIDBreakable(tileID))
+        if (true)
         {
           // destroy it
           Vec2 rowAndCol = GetTileRowAndColFromSubPos(&info->subCheckPos[i]);
@@ -5241,7 +5252,7 @@ void ProcessTileTouches(Sprite *spr, HitInfo *info, bool horz)
         continue;
       }
 
-      if (IsTileIDBreakable(tileID))
+      if (true)
       {
         if (SpriteButtStompingAboveThresh(spr))
         {
@@ -6393,13 +6404,13 @@ void app_main(void)
   InitFrameRate();
   InitMixer();
 
-  TestPlayClip();
+  // TestPlayClip();
 
   while (true)
   {
 
     FrameStarted();
-    TestUpdate();
+    // TestUpdate();
 
     vmupro_color_t col = VMUPRO_COLOR_BLUE;
     vmupro_display_clear(col);
@@ -6451,5 +6462,4 @@ void app_main(void)
   vmupro_stop_double_buffer_renderer();
   DeInitFrameRate();
   DeInitMixer();
-
 }
