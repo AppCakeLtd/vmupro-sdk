@@ -1243,15 +1243,26 @@ void OnSpriteMoved(Sprite *spr)
   Vec2 worldOrigin = GetWorldPos(spr);
   Vec2 subOrigin = GetSubPos(spr);
 
+  int worldWidth = img->width;
+  int worldHeight = img->height;
+  int subWidth = (worldWidth << SHIFT);
+  int subHeight = (worldHeight << SHIFT);
+
+  if ( spr->profile.iMask & IMASK_SPECIAL_MOVES){
+    // offset inwards slightly
+    // so you don't clip your head, etc
+    const int spriteOffset = 12;
+    // make the hitbox <spriteoffset> pixels thinner
+    subWidth -= (spriteOffset<<SHIFT);
+    // and then offset the draw origin by this
+    worldOrigin.x -= (spriteOffset/2);
+  }
+  
   spr->worldBBox.x = worldOrigin.x;
   spr->subHitBox.x = subOrigin.x;
   spr->worldBBox.y = worldOrigin.y;
   spr->subHitBox.y = subOrigin.y;
 
-  int worldWidth = img->width;
-  int worldHeight = img->height;
-  int subWidth = (worldWidth << SHIFT);
-  int subHeight = (worldHeight << SHIFT);
 
   spr->worldBBox.width = worldWidth;
   spr->worldBBox.height = worldHeight;
@@ -1302,6 +1313,7 @@ void OnSpriteMoved(Sprite *spr)
   {
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite has unhandled vert alginment type");
   }
+
 }
 
 void AddVec(Vec2 *targ, Vec2 *delta)
