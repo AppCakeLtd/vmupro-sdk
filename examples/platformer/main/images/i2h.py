@@ -238,6 +238,12 @@ def ProcessFile(fName):
     width = im.size[0]
     height = im.size[1]
 
+    # for layer 3: we can use everything
+    # above 256 px as map markers
+    # but we don't need to encode them for the game
+    if height > 256:
+        height = 256
+
     numPixels = width * height
 
     bytes = []

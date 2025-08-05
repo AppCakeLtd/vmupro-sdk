@@ -95,6 +95,20 @@ const int BUTTBOUNCE_MAX_VEL = TILE_SIZE_SUB; // how much uppy bounce before we 
 const int HEADBUTT_THRESH_SPEED = 16;         // much lower than butt stomp, it should virtually always pass
 const uint32_t COYOTE_TIME_FRAME_THRESH = 3;
 
+typedef enum {
+  BP_NONE,
+  BP_ONEWAY,
+  BP_DRAWTRANS,
+  BP_EASYSTOMP,
+  BP_HARDSTOMP,
+  BP_SPAWN_ON_BREAK,
+  BP_TRIGGER,
+  BP_WATER,
+  BP_GOOP,
+  BP_LAVA,
+  BP_INSTAKILL
+} BlockProperties;
+
 // not stored on the sprite
 // since we may despawn/respawn
 // or control other sprites
@@ -331,15 +345,15 @@ typedef enum
   STYPE_INDEXER_4,
   STYPE_INDEXER_5,
   STYPE_INDEXER_6,
-  STYPE_ROW2_7,
+  STYPE_INDEXER_7,
+  STYPE_INDEXER_8,
+  STYPE_INDEXER_9,
+  STYPE_INDEXER_10,
+  STYPE_INDEXER_11,
   STYPE_DIRECTION_0_H,
   STYPE_DIRECTION_1_V,
   STYPE_DIRECTION_2_D,
   STYPE_DIRECTION_3_NONE,
-  STYPE_ROW2_12,
-  STYPE_ROW2_13,
-  STYPE_ROW2_14,
-  STYPE_ROW2_15,
   // third row of sprites in the tilemap
   STYPE_GREENDUCK,
   STYPE_REDDUCK,
@@ -1865,6 +1879,11 @@ void HandleNonSpawnableSpriteType(SpriteType inType, Vec2 worldStartPos)
   case STYPE_INDEXER_4:
   case STYPE_INDEXER_5:
   case STYPE_INDEXER_6:
+  case STYPE_INDEXER_7:
+  case STYPE_INDEXER_8:
+  case STYPE_INDEXER_9:
+  case STYPE_INDEXER_10:
+  case STYPE_INDEXER_11:
     // so we can have 2 params
     // e.g. a direction and distance
     globalIndexer = (int)inType - STYPE_INDEXER_0;
@@ -2117,13 +2136,13 @@ void ReadSpawnLayer(Level *inLevel, PersistentData *inData)
     // starting from the 13th row of the tilemap
     // we'll go 0, 1, 2, corresponding to sprite type IDs
 
-    int startBlock = TILEMAP_WIDTH_TILES * TILEMAP_SPAWNDATA_ROW_13;
+    int startBlock = 0;
     int newID = id - startBlock;
     if (newID < 0)
     {
       // something else from the tilemap has snuck into this layer
       // i.e. something that isn't a spawn marker
-      vmupro_log(VMUPRO_LOG_ERROR, TAG, "Encountered block ID %d/%d, BELOW the max sprite ID range", id, newID);
+      vmupro_log(VMUPRO_LOG_ERROR, TAG, "SpawnLayer: Encountered block ID %d/%d, BELOW the max sprite ID range", id, newID);
       return;
     }
     if (newID > 48)
@@ -2132,7 +2151,7 @@ void ReadSpawnLayer(Level *inLevel, PersistentData *inData)
       // at the bottom of the tilemap
       // we could calc this magic number, but i think
       // this description clears it up better
-      vmupro_log(VMUPRO_LOG_ERROR, TAG, "Encountered block ID %d/%d, BEYOND the max sprite ID range", id, newID);
+      vmupro_log(VMUPRO_LOG_ERROR, TAG, "SpawnLayer: Encountered block ID %d/%d, BEYOND the max sprite ID range", id, newID);
       return;
     }
 
@@ -2778,43 +2797,60 @@ void InputAllSprites()
   }
 }
 
-bool IsBlockOneWay(int blockId)
+
+BlockProperties GetBlockProps(int blockID){
+
+  BlockProperties rVal = BP_NONE;
+
+  int colNum = blockID % TILEMAP_WIDTH_TILES;
+  int rowNum = blockID / TILEMAP_WIDTH_TILES;
+
+  if ( rowNum == 0 ) rVal |= BP_ONEWAY;
+
+  if ( rowNum == 11 ) rVal |= BP_ONEWAY | BP_DRAWTRANS;
+
+  if ( rowNum == 12 ){
+    rVal |= BP_EASYSTOMP;
+    if ( colNum == 0 ) rVal |= BP_SPAWN_ON_BREAK;
+    if ( colNum >= 10 ) rVal |= BP_HARDSTOMP;
+  }
+
+  if( rowNum == 13 || rowNum == 14 ){
+    rVal |= BP_TRIGGER;
+    if ( colNum >= 0 && colNum < 4 ){
+      rVal |= BP_WATER;
+    }else
+    if (  colNum >= 4 && colNum < 8 ){
+      rVal |= BP_GOOP;
+    } else 
+    if ( colNum >= 8 && colNum < 12 ){
+      rVal |= BP_LAVA;
+    } else {
+      rVal |= BP_INSTAKILL;
+    }
+  }
+
+  if (rowNum == 15){
+    rVal |= BP_DRAWTRANS;
+  }
+
+  return rVal;
+}
+
+bool IsBlockOneWay(int blockID)
 {
 
-  int rowNum = blockId / TILEMAP_WIDTH_TILES;
-  int colNum = blockId % TILEMAP_WIDTH_TILES;
+  BlockProperties props = GetBlockProps(blockID);
+  return (props & BP_ONEWAY);
 
-  // ignore smashables, liquid, etc
-  if (colNum >= TILEMAP_SMASHABLE_COL_13)
-  {
-    return false;
-  }
-
-  // Top row of the tilemap are one-way platforms
-  if (rowNum == TILEMAP_ONEWAY_PLATFORM_ROW_0)
-  {
-    return true;
-  }
-
-  // as is row 11
-  if (rowNum == TILEMAP_ONEWAY_PLATFORM_ROW_11)
-  {
-    return true;
-  }
-
-  return false;
 }
 
 bool IsBlockTransparent(int blockID)
 {
 
-  int rowNum = blockID / TILEMAP_WIDTH_TILES;
+  BlockProperties props = GetBlockProps(blockID);
+  return (props & BP_DRAWTRANS);
 
-  if (rowNum == TILEMAP_TRANSPARENT_ROW_11 || rowNum == TILEMAP_TRANSPARENT_ROW_12)
-  {
-    return true;
-  }
-  return false;
 }
 
 void DrawLevelBlock(int inBlockCol, int inBlockRow, int layer)
@@ -3434,43 +3470,22 @@ Vec2 GetTileSubPosFromRowAndCol(Vec2 *rowAndcol)
   return returnVal;
 }
 
+
 bool IsTileIDBreakable(int blockID)
 {
 
-  int colNum = blockID % TILEMAP_WIDTH_TILES;
-  if (colNum != TILEMAP_SMASHABLE_COL_13)
-  {
-    return false;
-  }
+  BlockProperties props = GetBlockProps(blockID);
+  return (props & BP_EASYSTOMP) | (props & BP_HARDSTOMP);
 
-  int rowNum = blockID / TILEMAP_WIDTH_TILES;
-  if (rowNum >= TILEMAP_SPAWNDATA_ROW_13)
-  {
-    return false;
-  }
-
-  return true;
 }
 
 // right side of
 bool IsTriggerTile(int blockID)
 {
 
-  // the last to cols are special cols
-  int colNum = blockID % TILEMAP_WIDTH_TILES;
-  if (colNum != TILEMAP_ANIMATED_TRIGGER_COL_14)
-  {
-    return false;
-  }
+  BlockProperties props = GetBlockProps(blockID);
+  return (props & BP_TRIGGER);
 
-  // except if it's spawndata tiles, ignore that.
-  int rowNum = blockID / TILEMAP_WIDTH_TILES;
-  if (rowNum >= TILEMAP_SPAWNDATA_ROW_13)
-  {
-    return false;
-  }
-
-  return true;
 }
 
 // Solid one-way platform or not?

@@ -71,6 +71,12 @@ function main ()
      while x < w do
       local mapval = mappy.getBlockValue (mappy.getBlock (x, y, l), mappy.BLKBG)
       mapval = mapval + adjust
+	  --- adjust for spawn markers
+	  if mapval >= 256 then
+		mapval = mapval - 256
+	  --- then have block 0 be literally block 0 in our atlas
+	  --- by having the third layer indexed from 0
+	  end
       if mapval < 0 then
        mapval = 255
       end
