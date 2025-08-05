@@ -95,18 +95,19 @@ const int BUTTBOUNCE_MAX_VEL = TILE_SIZE_SUB; // how much uppy bounce before we 
 const int HEADBUTT_THRESH_SPEED = 16;         // much lower than butt stomp, it should virtually always pass
 const uint32_t COYOTE_TIME_FRAME_THRESH = 3;
 
-typedef enum {
-  BP_NONE,
-  BP_ONEWAY,
-  BP_DRAWTRANS,
-  BP_EASYSTOMP,
-  BP_HARDSTOMP,
-  BP_SPAWN_ON_BREAK,
-  BP_TRIGGER,
-  BP_WATER,
-  BP_GOOP,
-  BP_LAVA,
-  BP_INSTAKILL
+typedef enum
+{
+  BP_NONE = 0,
+  BP_ONEWAY = 1 << 0,
+  BP_DRAWTRANS = 1 << 1,
+  BP_EASYSTOMP = 1 << 2,
+  BP_HARDSTOMP = 1 << 3,
+  BP_SPAWN_ON_BREAK = 1 << 4,
+  BP_TRIGGER = 1 << 5,
+  BP_WATER = 1 << 6,
+  BP_GOOP = 1 << 7,
+  BP_LAVA = 1 << 8,
+  BP_INSTAKILL = 1 << 9
 } BlockProperties;
 
 // not stored on the sprite
@@ -2797,40 +2798,52 @@ void InputAllSprites()
   }
 }
 
-
-BlockProperties GetBlockProps(int blockID){
+BlockProperties GetBlockProps(int blockID)
+{
 
   BlockProperties rVal = BP_NONE;
 
   int colNum = blockID % TILEMAP_WIDTH_TILES;
   int rowNum = blockID / TILEMAP_WIDTH_TILES;
 
-  if ( rowNum == 0 ) rVal |= BP_ONEWAY;
+  if (rowNum == 0)
+    rVal |= BP_ONEWAY;
 
-  if ( rowNum == 11 ) rVal |= BP_ONEWAY | BP_DRAWTRANS;
+  if (rowNum == 11)
+    rVal |= BP_ONEWAY | BP_DRAWTRANS;
 
-  if ( rowNum == 12 ){
+  if (rowNum == 12)
+  {
     rVal |= BP_EASYSTOMP;
-    if ( colNum == 0 ) rVal |= BP_SPAWN_ON_BREAK;
-    if ( colNum >= 10 ) rVal |= BP_HARDSTOMP;
+    if (colNum == 0)
+      rVal |= BP_SPAWN_ON_BREAK;
+    if (colNum >= 10)
+      rVal |= BP_HARDSTOMP;
   }
 
-  if( rowNum == 13 || rowNum == 14 ){
+  if (rowNum == 13 || rowNum == 14)
+  {
     rVal |= BP_TRIGGER;
-    if ( colNum >= 0 && colNum < 4 ){
+    if (colNum >= 0 && colNum < 4)
+    {
       rVal |= BP_WATER;
-    }else
-    if (  colNum >= 4 && colNum < 8 ){
+    }
+    else if (colNum >= 4 && colNum < 8)
+    {
       rVal |= BP_GOOP;
-    } else 
-    if ( colNum >= 8 && colNum < 12 ){
+    }
+    else if (colNum >= 8 && colNum < 12)
+    {
       rVal |= BP_LAVA;
-    } else {
+    }
+    else
+    {
       rVal |= BP_INSTAKILL;
     }
   }
 
-  if (rowNum == 15){
+  if (rowNum == 15)
+  {
     rVal |= BP_DRAWTRANS;
   }
 
@@ -2842,7 +2855,6 @@ bool IsBlockOneWay(int blockID)
 
   BlockProperties props = GetBlockProps(blockID);
   return (props & BP_ONEWAY);
-
 }
 
 bool IsBlockTransparent(int blockID)
@@ -2850,7 +2862,6 @@ bool IsBlockTransparent(int blockID)
 
   BlockProperties props = GetBlockProps(blockID);
   return (props & BP_DRAWTRANS);
-
 }
 
 void DrawLevelBlock(int inBlockCol, int inBlockRow, int layer)
@@ -3470,13 +3481,11 @@ Vec2 GetTileSubPosFromRowAndCol(Vec2 *rowAndcol)
   return returnVal;
 }
 
-
 bool IsTileIDBreakable(int blockID)
 {
 
   BlockProperties props = GetBlockProps(blockID);
-  return (props & BP_EASYSTOMP) | (props & BP_HARDSTOMP);
-
+  return (props & BP_EASYSTOMP) || (props & BP_HARDSTOMP);
 }
 
 // right side of
@@ -3485,7 +3494,6 @@ bool IsTriggerTile(int blockID)
 
   BlockProperties props = GetBlockProps(blockID);
   return (props & BP_TRIGGER);
-
 }
 
 // Solid one-way platform or not?
@@ -4904,7 +4912,7 @@ void HandleDoorTransition(Sprite *activator, Sprite *door)
   // - ensure lowish velo
 
   if (activator->input.sleep < 1)
-  {    
+  {
     return;
   }
 
@@ -5054,9 +5062,11 @@ bool SpriteCanRideSprite(Sprite *rider, Sprite *thingImRiding)
     {
       return false;
     }
-  } else {
-    return false;
   }
+  else
+  {
+  }
+  return false;
 
   // prevent getting trapped under stuff in water
   if (thingImRiding == player && player->inLiquid)
