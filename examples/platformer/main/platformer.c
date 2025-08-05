@@ -446,6 +446,8 @@ typedef enum
   IMASK_NEVER_DIES = 1 << 16,                  // unkillable
   IMASK_UPDATE_OFFSCREEN = 1 << 17,            // platforms and the likes
   IMASK_COLLECTABLE = 1 << 18,                 // coins, stuff, whatever
+  IMASK_CHECK_SPRITE_TRIGGERS = 1 << 19,       // do we check for doors, collectables
+  IMASK_CHECK_TILE_TRIGGERS = 1 << 20,         // do we check for lava and stuff
 } InteractionMask;
 
 typedef struct
@@ -707,7 +709,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->default_health = 10;
     p->damage_multiplier = 1;
     p->solid = SOLIDMASK_SPRITE_SOLID;
-    p->iMask = IMASK_CAN_BE_RIDDEN | IMASK_CAN_RIDE_STUFF | IMASK_DMGIN_KNOCKSME | IMASK_SPECIAL_MOVES | IMASK_UPDATE_OFFSCREEN;
+    p->iMask = IMASK_CAN_BE_RIDDEN | IMASK_CAN_RIDE_STUFF | IMASK_DMGIN_KNOCKSME | IMASK_SPECIAL_MOVES | IMASK_UPDATE_OFFSCREEN | IMASK_CHECK_SPRITE_TRIGGERS | IMASK_CHECK_TILE_TRIGGERS;
     p->physParams = &physDefault;
     p->defaultAnimGroup = &animgroup_player;
   }
@@ -716,7 +718,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->default_health = 1;
     p->damage_multiplier = 1;
     p->solid = SOLIDMASK_PLATFORM;
-    p->iMask = IMASK_CAN_BE_RIDDEN | IMASK_CAN_RIDE_STUFF | IMASK_DMGIN_STUNSME;
+    p->iMask = IMASK_CAN_BE_RIDDEN | IMASK_CAN_RIDE_STUFF | IMASK_DMGIN_STUNSME | IMASK_CHECK_TILE_TRIGGERS;
     p->physParams = &physTestMob;
     p->defaultAnimGroup = &animgroup_mob1;
   }
@@ -725,7 +727,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->default_health = 1;
     p->damage_multiplier = 1;
     p->solid = SOLIDMASK_PLATFORM;
-    p->iMask = IMASK_DMGIN_KNOCKSME | IMASK_DMGOUT_HORZ | IMASK_DMGOUT_VTOP | IMASK_DMGOUT_IGNORED_WHEN_BOUNCED;
+    p->iMask = IMASK_DMGIN_KNOCKSME | IMASK_DMGOUT_HORZ | IMASK_DMGOUT_VTOP | IMASK_DMGOUT_IGNORED_WHEN_BOUNCED | IMASK_CHECK_TILE_TRIGGERS;
     p->physParams = &physTestMob;
     p->defaultAnimGroup = &animgroup_mob2;
   }
@@ -766,7 +768,7 @@ void CreateProfile(SpriteProfile *inProfile, SpriteType inType)
     p->solid = SOLIDMASK_SPRITE_SOLID;
     p->defaultAnimGroup = &animgroup_crawler;
     p->physParams = &physCrawler;
-    p->iMask = IMASK_DMGOUT_HORZ | IMASK_DMGOUT_VTOP | IMASK_DMGIN_STUNSME;
+    p->iMask = IMASK_DMGOUT_HORZ | IMASK_DMGOUT_VTOP | IMASK_DMGIN_STUNSME | IMASK_CHECK_TILE_TRIGGERS;
   }
   else if (inType == STYPE_PARTICLE_BROWN)
   {
@@ -1248,21 +1250,21 @@ void OnSpriteMoved(Sprite *spr)
   int subWidth = (worldWidth << SHIFT);
   int subHeight = (worldHeight << SHIFT);
 
-  if ( spr->profile.iMask & IMASK_SPECIAL_MOVES){
+  if (spr->profile.iMask & IMASK_SPECIAL_MOVES)
+  {
     // offset inwards slightly
     // so you don't clip your head, etc
     const int spriteOffset = 12;
     // make the hitbox <spriteoffset> pixels thinner
-    subWidth -= (spriteOffset<<SHIFT);
+    subWidth -= (spriteOffset << SHIFT);
     // and then offset the draw origin by this
-    worldOrigin.x -= (spriteOffset/2);
+    worldOrigin.x -= (spriteOffset / 2);
   }
-  
+
   spr->worldBBox.x = worldOrigin.x;
   spr->subHitBox.x = subOrigin.x;
   spr->worldBBox.y = worldOrigin.y;
   spr->subHitBox.y = subOrigin.y;
-
 
   spr->worldBBox.width = worldWidth;
   spr->worldBBox.height = worldHeight;
@@ -1313,7 +1315,6 @@ void OnSpriteMoved(Sprite *spr)
   {
     vmupro_log(VMUPRO_LOG_ERROR, TAG, "Sprite has unhandled vert alginment type");
   }
-
 }
 
 void AddVec(Vec2 *targ, Vec2 *delta)
@@ -2821,7 +2822,7 @@ BlockProperties GetBlockProps(int blockID)
   if (rowNum == 0)
     rVal |= BP_ONEWAY;
 
-  if(rowNum == 1)
+  if (rowNum == 1)
     rVal |= BP_DRAWTRANS;
 
   if (rowNum == 12)
@@ -5612,8 +5613,10 @@ void SolveMovement(Sprite *spr)
   bool movingDown = spr->subVelo.y > 0;
 
   bool inControl = AllowSpriteInput(spr, false);
+  // world wouldn't be solid to e.g. coins
   bool isWorldSolidToMe = !(iMask & IMASK_IGNORE_COLLISIONS);
-  bool isSolidToWorld = IsBlockingCollision(spr->profile.solid);
+  // can other stuff hit me? ducks, bullets, etc
+  // bool isSolidToWorld = IsBlockingCollision(spr->profile.solid);
 
   if (inControl)
   {
@@ -5946,7 +5949,8 @@ void SolveMovement(Sprite *spr)
   //
   // Handle tile triggers (liquid, lava, instadeath, etc)
   //
-  if (isSolidToWorld)
+  bool checkTileTriggers = (spr->profile.iMask & IMASK_CHECK_TILE_TRIGGERS);
+  if (checkTileTriggers)
   {
     // player can check against triggers
     // triggers can sit idle
@@ -5972,89 +5976,103 @@ void SolveMovement(Sprite *spr)
   // After any damage is dealt, etc
   //
 
-  GroundHitInfo ghi = {0};
-  spr->isGrounded = CheckGrounded(spr, &ghi);
-
-  // Are we riding anything?
-
-  Sprite *standingOn = ghi.otherSpriteOrNull;
-  if (standingOn != NULL)
-  {
-    bool canRide = SpriteCanRideSprite(spr, ghi.otherSpriteOrNull);
-    if (canRide)
-    {
-      spr->thingImRiding = standingOn;
-    }
-  }
-
-  // For coyote time
-
-  if (spr->isGrounded)
-  {
-    spr->lastGroundedFrame = frameCounter;
-  }
-
-  // printf("Frame %d is grounded %d yVel = %d\n", frameCounter, spr->isGrounded, spr->subVelo.y);
-  spr->isOnWall = (vBonk != 0);
-
+  // no point checking grounded, if we're non-solid
   if (isWorldSolidToMe)
   {
+    GroundHitInfo ghi = {0};
+    spr->isGrounded = CheckGrounded(spr, &ghi);
+
+    // Are we riding anything?
+
+    Sprite *standingOn = ghi.otherSpriteOrNull;
+    if (standingOn != NULL)
+    {
+      bool canRide = SpriteCanRideSprite(spr, ghi.otherSpriteOrNull);
+      if (canRide)
+      {
+        spr->thingImRiding = standingOn;
+      }
+    }
+
+    // For coyote time
+
+    if (spr->isGrounded)
+    {
+      spr->lastGroundedFrame = frameCounter;
+    }
+
+    // printf("Frame %d is grounded %d yVel = %d\n", frameCounter, spr->isGrounded, spr->subVelo.y);
+    spr->isOnWall = (vBonk != 0);
+
     CheckLanded(spr);
     CheckFallen(spr);
   }
-  CheckFellOffMap(spr);
-
-  // head or feet bonked
-  // prevent jump boost
-  if (spr->isGrounded || vBonk != 0)
-  {
-    // don't need to change move mode, checklanded will have set that
-    // special case, clippin the edge of a stair while jumping up
-
-    if (!DontLandCauseImJumping(spr))
-    {
-      StopJumpBoost(spr, false, "LandedOrHeadBonk (v)");
-    }
-
-    StopKnockback(spr, false, "LandedOrHeadBonk (v)");
-  }
-  if (hBonk != 0 || vBonk < 0)
-  {
-
-    if (SpriteIsKnockback(spr) && !knockbackThisFrame)
-    {
-      // we're dash bouncing, but we hit something new
-      // stop
-      StopKnockback(spr, true, "H or Head bonk");
-    }
-  }
-
-  // Keep track of our jump height
-  // so we can check if we jumped higher than a one-way platform
-  // (or landed on it from above)
-  // if not, we don't land on it
-
-  if (spr->isGrounded)
-  {
-    ResetHighestJumpPoint(spr, "Grounded");
-  }
   else
   {
-    Vec2 feetPos = GetPointOnSprite(spr, true, ANCHOR_HMID, ANCHOR_VMID);
-    if (feetPos.y < spr->highestYSubPosInJump)
-    {
-      spr->highestYSubPosInJump = feetPos.y;
-    }
+    spr->isGrounded = false;
+    spr->isOnWall = false;
   }
 
-  // check triggers
-  // let's not allow both on the same frame
-  // to avoid e.g. double door transitions
-  Sprite *trigger = GetSpriteTriggerOverlaps(spr);
+  CheckFellOffMap(spr);
 
-  if (trigger != NULL)
+  if (isWorldSolidToMe)
   {
-    HandleSpriteTriggers(spr, trigger);
+    // head or feet bonked
+    // prevent jump boost
+    if (spr->isGrounded || vBonk != 0)
+    {
+      // don't need to change move mode, checklanded will have set that
+      // special case, clippin the edge of a stair while jumping up
+
+      if (!DontLandCauseImJumping(spr))
+      {
+        StopJumpBoost(spr, false, "LandedOrHeadBonk (v)");
+      }
+
+      StopKnockback(spr, false, "LandedOrHeadBonk (v)");
+    }
+    if (hBonk != 0 || vBonk < 0)
+    {
+
+      if (SpriteIsKnockback(spr) && !knockbackThisFrame)
+      {
+        // we're dash bouncing, but we hit something new
+        // stop
+        StopKnockback(spr, true, "H or Head bonk");
+      }
+    }
+
+    // Keep track of our jump height
+    // so we can check if we jumped higher than a one-way platform
+    // (or landed on it from above)
+    // if not, we don't land on it
+
+    if (spr->isGrounded)
+    {
+      ResetHighestJumpPoint(spr, "Grounded");
+    }
+    else
+    {
+      Vec2 feetPos = GetPointOnSprite(spr, true, ANCHOR_HMID, ANCHOR_VMID);
+      if (feetPos.y < spr->highestYSubPosInJump)
+      {
+        spr->highestYSubPosInJump = feetPos.y;
+      }
+    }
+  } // is world solid to me
+
+  bool checkSpriteTriggers = (spr->profile.iMask & IMASK_CHECK_TILE_TRIGGERS);
+  if (checkTileTriggers)
+  {
+    // check triggers
+    // let's not allow both on the same frame
+    // to avoid e.g. double door transitions
+    Sprite *trigger = GetSpriteTriggerOverlaps(spr);
+
+    if (trigger != NULL)
+    {
+      HandleSpriteTriggers(spr, trigger);
+    }
   }
 
   if (spr->invulnFrameNum > 0)
