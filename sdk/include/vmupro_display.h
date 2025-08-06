@@ -68,6 +68,16 @@ extern "C"
     VMUPRO_COLOR_VMUINK = 0x8a28,      /**< VMU signature ink color (RGB565 big endian: 0x8A28) */
   } vmupro_color_t;
 
+    /**
+   * @brief Flip flags for various draw functions
+   * Combine as e.g. VMUPRO_DRAWFLAGS_FLIP_H | VMUPRO_DRAWFLAGS_FLIP_H   
+   */
+  typedef enum {
+    VMUPRO_DRAWFLAGS_NORMAL = 0x00,
+    VMUPRO_DRAWFLAGS_FLIP_H = 0x01,
+    VMUPRO_DRAWFLAGS_FLIP_V = 0x02
+  } vmupro_drawflags_t;
+
   /**
    * @brief Clear the display with a solid color
    *
@@ -296,11 +306,12 @@ extern "C"
    * @param width Width of the source buffer in pixels
    * @param height Height of the source buffer in pixels
    * @param transparent_color Color value to treat as transparent (will not be drawn)
+   * @param flags Horizontal/vertical flip flags
    * 
    * @note Essential for sprite rendering with transparent backgrounds
    * @note Transparent pixels preserve the existing framebuffer content
    */
-  void vmupro_blit_buffer_transparent(uint8_t *buffer, int x, int y, int width, int height, vmupro_color_t transparent_color);
+  void vmupro_blit_buffer_transparent(uint8_t *buffer, int x, int y, int width, int height, vmupro_color_t transparent_color, vmupro_drawflags_t flags);
 
   /**
    * @brief Blit a buffer with alpha blending
@@ -364,17 +375,18 @@ extern "C"
    * @brief Blit a buffer with vertical flipping
    * 
    * Copies pixel data from a source buffer to the display framebuffer,
-   * flipping the image vertically during the copy operation.
+   * optionally flipping the image horizontally and/or vertically during the copy operation.
    * 
    * @param buffer Pointer to the source pixel buffer
    * @param x X coordinate of the top-left corner where the buffer will be placed
    * @param y Y coordinate of the top-left corner where the buffer will be placed
    * @param width Width of the source buffer in pixels
    * @param height Height of the source buffer in pixels
+   * @param flags Horizontal/vertical draw flags
    * 
    * @note The bottom row of the source becomes the top row in the destination
    */
-  void vmupro_blit_buffer_flip_v(uint8_t *buffer, int x, int y, int width, int height);
+  void vmupro_blit_buffer_flipped(uint8_t *buffer, int x, int y, int width, int height, vmupro_drawflags_t flags);
 
   /**
    * @brief Blit a buffer with scaling support
@@ -911,8 +923,9 @@ extern "C"
    * @param y Y coordinate of the region
    * @param width Width of the region
    * @param height Height of the region
+   * @param flags Horizontal/vertical draw flags
    */
-  void vmupro_blit_buffer_masked(uint8_t *buffer, uint8_t *mask, int x, int y, int width, int height);
+  void vmupro_blit_buffer_masked(uint8_t *buffer, uint8_t *mask, int x, int y, int width, int height, vmupro_drawflags_t flags);
 
   /**
    * @brief Clear the color window
@@ -1094,6 +1107,9 @@ extern "C"
    * @note Ensure proper memory alignment for best performance
    */
   void vmupro_blit_tile(uint8_t *buffer, int x, int y, int src_x, int src_y, int width, int height, int tilemap_width);
+
+  // todo: add description from firmware
+  void vmupro_blit_tile_advanced(uint8_t* buffer, int x, int y, int atlas_src_x, int atlas_src_y, int width, int height, int tilemap_width, vmupro_color_t transparent_color, vmupro_drawflags_t flags);
 
   // return whether the last buffer sent to the GPU was
   // fb_side == 0, or fb_side == 1

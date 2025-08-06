@@ -1,4 +1,6 @@
 
+python ..\..\tools\packer\send.py --func reset
+
 idf.py build
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 

@@ -31,14 +31,14 @@ import serial
 import time
 import argparse
 
-# curses has a tendency to steal focus
-# keyboard requires root on linux
-# msvcrt/termios can mess up your terminal
-# so.. we're using threads. sorry.
+# soz, but it's more portable lol
 import queue
 import threading
 import struct
-from pynput import keyboard
+
+# safest windows way to get keyb input
+import msvcrt
+# for linux/osx we'll use curses,
 
 
 # 8 char input buffer
@@ -53,27 +53,23 @@ debugMode = False
 
 CHUNK_SIZE = 2048 * 8
 
-# https://pynput.readthedocs.io/en/latest/keyboard.html
-
-
-def OnKeyPress(key):
-    """key press event for listener thread"""
-
-    try:
-        ch = key.char
-    except AttributeError as e:
-        # Special key - esc to exit
-        if key == keyboard.Key.esc:
-            keyQueue.put('\x1B')
-        return
-    keyQueue.put(ch)
-
-
 def ListenerThread():
     """ Input listener thread, to prevent blocking serial """
+    # not required for msvcrt, but is for *nix
 
-    with keyboard.Listener(on_press=OnKeyPress) as listener:
-        listener.join()
+    if sys.platform == "win32":
+        while True:
+            if msvcrt.kbhit():
+                key = msvcrt.getch()
+                if key == b'\x00' or key == b'\xE0':
+                    msvcrt.getch()
+                    continue
+                keyQueue.put(key)
+    
+            time.sleep(0.01)
+    else:
+        while True:
+            time.sleep(0.01)
 
 
 def AddToBuffer(newChar):
@@ -110,7 +106,7 @@ def Monitor2Way():
         key = keyQueue.get()
         if key == '\x1B':  # escape
             raise KeyboardInterrupt
-        uart.write(key.encode())
+        uart.write(key)
         # print(f"Sent: {key!r}")
 
 

@@ -194,7 +194,7 @@ void vmupro_set_global_volume(uint8_t volume);
  * empty will provide lower latency (running the risk of audio gaps if you
  * code is slow) 
  */
-int vmupro_get_ringbuffer_fill_state(uint32_t * outBufferFilledSamples, uint32_t outBufferSizeInsamples);
+int vmupro_get_ringbuffer_fill_state(uint32_t * outBufferFilledSamples, uint32_t * outBufferSizeInsamples);
 
 #ifdef __cplusplus
 }
