@@ -76,6 +76,7 @@ const bool DEBUG_ONLY_MOVE_PLAYER = false;
 #define TILEMAP_INSTAKILL_ID_76 78
 
 #define BLOCK_NULL 0xFF
+#define DMG_TILEMAP_GOO 1
 #define DMG_TILEMAP_LAVA 2
 #define DMG_INSTAKILL 0xFF
 #define DMG_ALWAYS_STUN 0xFF
@@ -2816,6 +2817,8 @@ BlockProperties GetBlockProps(int blockID)
 
   BlockProperties rVal = BP_NONE;
 
+  if ( blockID == BLOCK_NULL) return rVal;
+
   int colNum = blockID % TILEMAP_WIDTH_TILES;
   int rowNum = blockID / TILEMAP_WIDTH_TILES;
 
@@ -2852,7 +2855,7 @@ BlockProperties GetBlockProps(int blockID)
     {
       rVal |= BP_LAVA;
     }
-    else
+    else if (colNum >= 12 && colNum < 16)
     {
       rVal |= BP_INSTAKILL;
     }
@@ -3671,29 +3674,26 @@ void HandleTileTriggers(Sprite *spr, TileTriggerInfo *info)
   int outDamage = 0;
 
   int tileID = info->triggerTileID[index];
-  if (tileID == TILEMAP_LAVA_ID_14 || tileID == TILEMAP_LAVA_ID_30)
+  BlockProperties props = GetBlockProps(tileID);
+
+  if (props & BP_LAVA)
   {
-    if (outDamage < DMG_TILEMAP_LAVA)
-    {
-      outDamage = DMG_TILEMAP_LAVA;
-    }
+    SpriteTakeDamage(spr, DMG_TILEMAP_LAVA, NULL, "World Lava");
     spr->inLiquid = true;
   }
-  if (tileID == TILEMAP_WATER_ID_44 || tileID == TILEMAP_WATER_ID_60)
+  if (props & BP_WATER)
   {
     spr->inLiquid = true;
   }
-  if (tileID == TILEMAP_INSTAKILL_ID_76)
+  if (props & BP_GOOP){
+    SpriteTakeDamage(spr, DMG_TILEMAP_GOO, NULL, "World Goop");
+    spr->inLiquid = true;
+  }
+  if (props & BP_INSTAKILL)
   {
-    outDamage = DMG_INSTAKILL;
+    SpriteTakeDamage(spr, DMG_INSTAKILL, NULL, "World Instakill");
   }
 
-  // Any kinda damage?
-
-  if (outDamage != 0)
-  {
-    SpriteTakeDamage(spr, outDamage, NULL, "World damage");
-  }
 }
 
 void GetTileTriggerOverlaps(Sprite *spr, TileTriggerInfo *info)
