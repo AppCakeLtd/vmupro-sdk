@@ -154,19 +154,49 @@ int vmupro_snprintf(char* buffer, size_t size, const char* format, ...);
  * and file filtering options.
  */
 typedef struct {
+  uint32_t version;            /**< Set internally by vmupro_emubrowser_defaults() */
   const char* title;           /**< Title displayed at the top of the browser */
   const char* rootPath;        /**< Root directory path to browse (e.g., "/storage/") */
-  const char* filterExtension; /**< File extension filter (e.g., ".nes", ".gb", ".rom") */
+  const char* filterExtension; /**< File extension filter (e.g., ".nes", "*", "*.gb,*.gba" or NULL) */  
+  bool showFolders;            /**< List directories amongst the results*/  
 } vmupro_emubrowser_settings_t;
+
+
+typedef enum
+{
+    VMUPRO_EMUBROWSER_OK = 0,
+    VMUPRO_EMUBROWSER_INIT_ERROR,
+    VMUPRO_EMUBROWSER_PATH_NOT_FOUND,
+    VMUPRO_EMUBROWSER_NO_FILES_FOUND,
+    VMUPRO_EMUBROWSER_PATH_TOO_LONG,
+    VMUPRO_EMUBROWSER_MALLOC_ERROR,    
+} vmupro_emubrowser_error_t;
+
+/**
+ * @brief EmuBrowser structure with initialised defaults
+ * It is strongly recommended that you use the default initialiser to 
+ * have sensible default values should the fields change in the future
+ */
+static inline vmupro_emubrowser_settings_t vmupro_emubrowser_defaults(void) {
+    return (vmupro_emubrowser_settings_t){
+        .version = 1,
+        .title = "File Browser",
+        .rootPath = "/sdcard/example",
+        .filterExtension = ".bmp,.png",        
+        .showFolders = true
+    };
+}
 
 /**
  * @brief Initialize the emulator browser
  *
  * Initializes the emulator file browser with the specified settings.
  * This must be called before using vmupro_emubrowser_render_contents().
+ * It is recommended that you use the default `vmupro_emubrowser_defaults() function` 
+ * struct to guard against future changes.
  *
  * @param settings Browser configuration settings
- * @return 0 on success, -1 on failure
+ * @return vmupro_emubrowser_error_t
  *
  * @note The browser instance is a singleton - only one can exist at a time
  * @note All string pointers in settings must remain valid during browser usage
@@ -182,7 +212,7 @@ typedef struct {
  * }
  * @endcode
  */
-int vmupro_emubrowser_init(vmupro_emubrowser_settings_t settings);
+vmupro_emubrowser_error_t vmupro_emubrowser_init(vmupro_emubrowser_settings_t settings);
 
 /**
  * @brief Render the emulator browser and get selected file
@@ -190,17 +220,24 @@ int vmupro_emubrowser_init(vmupro_emubrowser_settings_t settings);
  * Displays the file browser interface and allows the user to navigate
  * and select a file. The function blocks until the user makes a selection
  * or cancels the operation.
+ * 
+ * It will return an absolute path such as "/sdcard/MP3/thing.mp3"
+ * or if folder browsing is enabled: "/sdcard/MP3/favourites/thing.mp3"
+ * and will truncate to ensure a null terminator exists at or before buf[256];
  *
- * @param[out] launchfile Buffer to receive the selected file path
+ * @param[out] outAbsPath Buffer to receive the selected file path
+ *                        "/sdcard/MP3/thing.mp3" 
  *                        Must be at least 256 bytes in size
- *
+ * 
+ * @return vmupro_emubrowser_error_t
+ * 
  * @note The browser must be initialized with vmupro_emubrowser_init() first
- * @note If user cancels, launchfile will contain an empty string
- * @note The returned path is relative to the root path specified in settings
+ * @note If user cancels, launchfile will contain an empty string * 
+ * @note An absolute path is returned
  *
  * @code
- * char selected_file[256];
- * vmupro_emubrowser_render_contents(selected_file);
+ * char selected_file[256]; 
+ * vmupro_emubrowser_render_contents(selected_file, 256, NULL, 0);
  * if (strlen(selected_file) > 0) {
  *     // User selected a file
  *     printf("Selected: %s\n", selected_file);
@@ -209,7 +246,7 @@ int vmupro_emubrowser_init(vmupro_emubrowser_settings_t settings);
  * }
  * @endcode
  */
-void vmupro_emubrowser_render_contents(char* launchfile);
+vmupro_emubrowser_error_t vmupro_emubrowser_render_contents(char* outAbsPath);
 
 #ifdef __cplusplus
 }
