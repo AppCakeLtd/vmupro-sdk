@@ -158,7 +158,9 @@ typedef struct {
   const char* title;           /**< Title displayed at the top of the browser */
   const char* rootPath;        /**< Root directory path to browse (e.g., "/storage/") */
   const char* filterExtension; /**< File extension filter (e.g., ".nes", "*", "*.gb,*.gba" or NULL) */  
+  bool showFiles;              /**< List files amongst the results*/    
   bool showFolders;            /**< List directories amongst the results*/  
+  bool showIcons;              /**< Draw file/folder icons next to file names*/
 } vmupro_emubrowser_settings_t;
 
 
@@ -183,7 +185,9 @@ static inline vmupro_emubrowser_settings_t vmupro_emubrowser_defaults(void) {
         .title = "File Browser",
         .rootPath = "/sdcard/example",
         .filterExtension = ".bmp,.png",        
-        .showFolders = true
+        .showFiles = true,
+        .showFolders = false,
+        .showIcons = false
     };
 }
 
