@@ -64,6 +64,31 @@ extern "C"
   bool vmupro_folder_exists(const char *path);
 
   /**
+   * @brief Create a folder on the SD card
+   *
+   * Creates a new directory at the specified path. If the directory already exists,
+   * the function will return true (success). The function will create any necessary
+   * parent directories if they don't exist.
+   *
+   * @param path Full path to the directory to create (e.g., "/sdcard/roms/nes/")
+   * @return true if folder was created successfully or already exists, false on error
+   *
+   * @note Path should use forward slashes as directory separators
+   * @note The function will log appropriate messages for success, warnings, and errors
+   * @note Parent directories will be created automatically if they don't exist
+   *
+   * @code
+   * // Create a directory for ROM files
+   * if (vmupro_create_folder("/sdcard/roms/nes/")) {
+   *     vmupro_log(VMUPRO_LOG_INFO, "APP", "ROM directory ready");
+   * } else {
+   *     vmupro_log(VMUPRO_LOG_ERROR, "APP", "Failed to create ROM directory");
+   * }
+   * @endcode
+   */
+  bool vmupro_create_folder(const char *path);
+
+  /**
    * @brief Get the size of a file
    *
    * Returns the size of the specified file in bytes.
