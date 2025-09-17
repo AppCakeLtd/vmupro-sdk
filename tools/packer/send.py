@@ -37,7 +37,8 @@ import threading
 import struct
 
 # safest windows way to get keyb input
-import msvcrt
+if sys.platform == "win32":
+    import msvcrt
 # for linux/osx we'll use curses,
 
 

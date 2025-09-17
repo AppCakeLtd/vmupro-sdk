@@ -150,17 +150,34 @@ extern "C"
    *
    * Contains configuration parameters for initializing the emulator file browser.
    * This structure allows customization of the browser's title, root directory,
-   * file filtering options, and display preferences.
+   * and file filtering options.
    */
-  typedef struct
-  {
-    const char *title;           /**< Title displayed at the top of the browser (can be NULL to auto-generate from path) */
-    const char *rootPath;        /**< Root directory path to browse (e.g., "/storage/") */
-    const char *filterExtension; /**< File extension filter as CSV (e.g., "nes,gb,rom" or "*" for all files) */
-    bool showFiles;              /**< Whether to show files in the browser */
-    bool showFolders;            /**< Whether to show folders in the browser */
-    bool showIcons;              /**< Whether to show file type icons next to entries */
+  typedef struct {
+    uint32_t version;            /**< Set internally by vmupro_emubrowser_defaults() */
+    const char* title;           /**< Title displayed at the top of the browser */
+    const char* rootPath;        /**< Root directory path to browse (e.g., "/storage/") */
+    const char* filterExtension; /**< File extension filter (e.g., ".nes", "*", "*.gb,*.gba" or NULL) */  
+    bool showFiles;              /**< List files amongst the results*/    
+    bool showFolders;            /**< List directories amongst the results*/  
+    bool showIcons;              /**< Draw file/folder icons next to file names*/
   } vmupro_emubrowser_settings_t;
+
+  /**
+   * @brief EmuBrowser structure with initialised defaults
+   * It is strongly recommended that you use the default initialiser to 
+   * have sensible default values should the fields change in the future
+   */
+  static inline vmupro_emubrowser_settings_t vmupro_emubrowser_defaults(void) {
+      return (vmupro_emubrowser_settings_t){
+          .version = 1,
+          .title = "File Browser",
+          .rootPath = "/sdcard/example",
+          .filterExtension = ".bmp,.png",        
+          .showFiles = true,
+          .showFolders = false,
+          .showIcons = false
+      };
+  }
 
   /**
    * @brief Error codes for emulator browser operations
@@ -212,7 +229,7 @@ extern "C"
    * and select a file. The function blocks until the user makes a selection
    * or cancels the operation.
    *
-   * @param[out] launchfile Buffer to receive the selected file path
+  * @param[out] launchfile Buffer to receive the selected file path
    *                        Must be at least 256 bytes in size
    * @return vmupro_emubrowser_error_t result code
    *

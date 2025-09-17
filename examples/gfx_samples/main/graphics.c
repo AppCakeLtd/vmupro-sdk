@@ -321,8 +321,8 @@ void DrawTestFunctions(int testNum)
   if (testNum == 5)
   {
     Img *img = &img_vmu_circle_raw;
-    vmupro_blit_buffer_flip_h(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height);
-    vmupro_blit_buffer_flip_v(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height);
+    vmupro_blit_buffer_flipped(img->data, bounce1.xPos, bounce1.yPos, img->width, img->height, VMUPRO_DRAWFLAGS_FLIP_H);
+    vmupro_blit_buffer_flipped(img->data, bounce2.xPos, bounce2.yPos, img->width, img->height, VMUPRO_DRAWFLAGS_FLIP_V);
     static bool shownMsg5 = false;
     if (!shownMsg5)
     {
@@ -351,8 +351,8 @@ void DrawTestFunctions(int testNum)
   if (testNum == 7)
   {
     Img *img = &img_vmu_circle_raw;
-    vmupro_blit_buffer_masked(img->data, mask_55x55_a, bounce1.xPos, bounce1.yPos, img->width, img->height);
-    vmupro_blit_buffer_masked(img->data, mask_55x55_b, bounce2.xPos, bounce2.yPos, img->width, img->height);
+    vmupro_blit_buffer_masked(img->data, mask_55x55_a, bounce1.xPos, bounce1.yPos, img->width, img->height, VMUPRO_DRAWFLAGS_NORMAL);
+    vmupro_blit_buffer_masked(img->data, mask_55x55_b, bounce2.xPos, bounce2.yPos, img->width, img->height, VMUPRO_DRAWFLAGS_NORMAL);
     static bool shownMsg7 = false;
     if (!shownMsg7)
     {
