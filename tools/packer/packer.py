@@ -7,7 +7,7 @@ import argparse
 import os
 import json
 import struct
-from typing import Any, Dict
+from typing import Any, Dict, List, Tuple
 from PIL import Image
 from pathlib import Path
 
@@ -455,45 +455,70 @@ def ParseResources(inJsonData, absMetaFileName, absProjectDir):
 
     inJsonResArray = inJsonData["resources"]
     outMetaJSON["resources"] = []
+    outMetaJSON["resource_index"] = []  # New: index of all files with metadata
 
+    allFiles = []  # Collect all files from resources (including folders)
+
+    # Process each resource entry (can be file or folder)
     for r in inJsonResArray:
-        print("    Reading resource {}".format(r))
+        print("    Processing resource entry: {}".format(r))
 
         absResPath = absProjectDir / r
-        absResPath = Path(absResPath)
-        absResPath = absResPath.resolve()
+        absResPath = Path(absResPath).resolve()
 
-        if not os.path.isfile(absResPath):
-            print("      Couldn't locate resource {} from base path: {} and tail: {}".format(
-                absResPath, absProjectDir, r))
+        if os.path.isfile(absResPath):
+            # Single file
+            allFiles.append((r, absResPath))
+            print("      Added file: {}".format(r))
+        elif os.path.isdir(absResPath):
+            # Folder - recursively scan for all files
+            print("      Scanning folder: {}".format(r))
+            folderFiles = ScanFolderRecursive(absProjectDir, r)
+            allFiles.extend(folderFiles)
+            print("      Found {} files in folder".format(len(folderFiles)))
+        else:
+            print("      ERROR: Resource {} is neither file nor folder at {}".format(r, absResPath))
             return False
 
+    # Process all collected files
+    for relativePath, absResPath in allFiles:
+        print("    Packing file: {}".format(relativePath))
         print("      Located @: {}".format(absResPath))
 
         try:
             with open(absResPath, "rb") as f:
                 data = bytearray(f.read())
                 dataLen = len(data)
-                # append to the master list
                 print("      Read {} / {} bytes".format(dataLen, hex(dataLen)))
 
-                # name and location
-                # mything.png : 200
+                # Record file metadata
                 startOffset = len(sect_allResources)
-                kvp = (r, startOffset)
-                resourceNameOffsetKeyVals.append(kvp)
 
-                # Add the key value pair to the output json
+                # Legacy format for backward compatibility
+                kvp = (relativePath, startOffset)
+                resourceNameOffsetKeyVals.append(kvp)
                 outMetaJSON["resources"].append(kvp)
+
+                # New detailed resource index
+                fileInfo = {
+                    "path": relativePath,
+                    "offset": startOffset,
+                    "size": dataLen,
+                    "padded_size": 0  # Will be filled after padding
+                }
 
                 # Add the file to the blob
                 sect_allResources.extend(data)
 
-                print(
-                    "      Data starts at {} / {} bytes".format(startOffset, hex(startOffset)))
+                print("      Data starts at {} / {} bytes".format(startOffset, hex(startOffset)))
 
-                # pad the data out to 512 byte boundaries for much faster SD access
+                # Pad the data out to 512 byte boundaries for much faster SD access
                 paddingLength = PadByteArray(sect_allResources, 512)
+                fileInfo["padded_size"] = dataLen + paddingLength
+
+                # Add to resource index
+                outMetaJSON["resource_index"].append(fileInfo)
+
                 print("      Padding data end by {} bytes to 512 boundary @ {}".format(
                     paddingLength, hex(len(sect_allResources))))
 
@@ -516,6 +541,37 @@ def ParseResources(inJsonData, absMetaFileName, absProjectDir):
         print("    DEBUG: Wrote {}".format(absFilePath))
 
     return True
+
+
+def ScanFolderRecursive(baseDir, folderPath):
+    # type: (Path, str) -> List[Tuple[str, Path]]
+    """
+    Recursively scan a folder and return all files with their relative paths
+    Returns list of (relative_path, absolute_path) tuples
+    """
+
+    files = []
+    absFolderPath = baseDir / folderPath
+    absFolderPath = Path(absFolderPath).resolve()
+
+    print("        Scanning folder: {}".format(absFolderPath))
+
+    try:
+        for root, _, filenames in os.walk(absFolderPath):
+            for filename in filenames:
+                absFilePath = Path(root) / filename
+
+                # Calculate relative path from base project directory
+                relativeFromBase = absFilePath.relative_to(baseDir.resolve())
+                relativePath = str(relativeFromBase).replace('\\', '/')  # Normalize path separators
+
+                files.append((relativePath, absFilePath))
+                print("          Found: {}".format(relativePath))
+
+    except Exception as e:
+        print("        Error scanning folder {}: {}".format(absFolderPath, e))
+
+    return files
 
 
 def AddBinding():

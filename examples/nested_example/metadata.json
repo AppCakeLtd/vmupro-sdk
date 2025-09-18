@@ -1,0 +1,14 @@
+{
+  "metadata_version": 1,
+  "app_name": "Nested Example",
+  "app_author": "8BitMods",
+  "app_version": "1.0.0",
+  "app_entry_point": "app.lua",
+  "app_mode": 1,
+  "app_environment": "lua",
+  "icon_transparency": false,
+  "resources": [
+    "app.lua",
+    "libraries"
+  ]
+}
