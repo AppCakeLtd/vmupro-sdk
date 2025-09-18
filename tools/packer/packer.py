@@ -653,6 +653,8 @@ def CreateHeader(absProjectDir, appName):
     # 3 = EXCLUSIVE (not applicable)
     # Pick 2 for now!
     appMode = outMetaJSON["app_mode"]
+    modePacked = struct.pack("<I", appMode)
+    sect_header.extend(modePacked)
 
     # 34-38 app env
     envStr = outMetaJSON["app_environment"]
