@@ -30,13 +30,18 @@ jobs:
         submodules: recursive
         fetch-depth: 0
 
+    - name: Initialize submodules
+      run: git submodule update --init --recursive
+
     - name: Install Doxygen
       run: |
         sudo apt-get update
         sudo apt-get install -y doxygen graphviz
 
-    - name: Generate Documentation  
-      run: doxygen Doxyfile
+    - name: Generate Documentation
+      run: |
+        cd sdk
+        doxygen Doxyfile
 
     - name: Upload documentation artifacts
       uses: actions/upload-artifact@v4

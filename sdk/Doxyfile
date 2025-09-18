@@ -8,8 +8,10 @@ OUTPUT_DIRECTORY       = ../docs
 CREATE_SUBDIRS         = NO
 
 INPUT                  = api/
+USE_MDFILE_AS_MAINPAGE = api/mainpage.md
 RECURSIVE              = YES
 FILE_PATTERNS          = *.lua *.md
+EXTENSION_MAPPING      = lua=C++
 
 GENERATE_HTML          = YES
 GENERATE_LATEX         = NO
@@ -19,6 +21,11 @@ GENERATE_XML           = NO
 HTML_OUTPUT            = html
 HTML_TIMESTAMP         = YES
 HTML_DYNAMIC_SECTIONS  = YES
+HTML_EXTRA_STYLESHEET  = ../docs/doxygen-awesome-css/doxygen-awesome.css \
+                         ../docs/doxygen-awesome-css/doxygen-awesome-sidebar-only.css
+HTML_COLORSTYLE_HUE    = 220
+HTML_COLORSTYLE_SAT    = 100
+HTML_COLORSTYLE_GAMMA  = 80
 
 EXTRACT_ALL            = YES
 EXTRACT_PRIVATE        = NO
@@ -31,8 +38,8 @@ OPTIMIZE_OUTPUT_FOR_C  = NO
 OPTIMIZE_OUTPUT_JAVA   = NO
 OPTIMIZE_FOR_FORTRAN   = NO
 
-BUILTIN_STL_SUPPORT    = YES
-IDL_PROPERTY_SUPPORT   = YES
+BUILTIN_STL_SUPPORT    = NO
+IDL_PROPERTY_SUPPORT   = NO
 
 HIDE_UNDOC_MEMBERS     = NO
 HIDE_UNDOC_CLASSES     = NO
@@ -70,4 +77,4 @@ CALLER_GRAPH           = NO
 GRAPHICAL_HIERARCHY    = NO
 DIRECTORY_GRAPH        = NO
 
-FILTER_PATTERNS        = "*.lua=lua_filter"
+# FILTER_PATTERNS        = "*.lua=lua_filter"
