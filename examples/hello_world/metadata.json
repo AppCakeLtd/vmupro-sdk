@@ -1,0 +1,12 @@
+{
+    "metadata_version": 1,
+    "app_name": "Hello World",
+    "app_author": "8BitMods",
+    "app_version": "1.0.0",
+    "app_entry_point": "app.lua",
+    "app_mode": 1,
+    "icon_transparency": false,
+    "resources": [
+        "app.lua"
+    ]
+}
