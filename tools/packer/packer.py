@@ -483,6 +483,7 @@ def ValidateMetadata(inJsonData, absMetaFileName, absProjectDir):
         app_entry_point = readStr("app_entry_point", 1)
         icon_trans = readBool("icon_transparency")
         app_mode = readUInt32("app_mode")
+        app_environment = readStr("app_environment", 3)
 
     except Exception as e:
         print("Parse error: {}".format(e))
@@ -660,6 +661,37 @@ def AddToArray(targ, pos, val):
 
     return 4
 
+    # 00-08: uint8_t magic[8] = "VMUPACK\0"
+    # 08-0C: uint32_t version = 1
+    # 0C-10: uint32_t encryptionVersion = 0 (not encrypted)
+    #
+    # 10-30: uint8_t appName[32] = "My awesome app\0"
+    #
+    # 30-34: uint32_t appMode     # 1= applet, 2= fullscreen
+    # 34-38: uint32_t appEnv      # 0 = native, 1 = LUA
+    # 38-40: uint32_t reserved[2]
+    #
+    # 40-44: uint32_t iconOffset
+    # 44-48: uint32_t iconLength
+    #
+    # 48-4C: uint32_t metadataOffset
+    # 4C-50: uint32_t metadataLength
+    #
+    # 50-54: uint32_t resourceOffset
+    # 54-58: uint32_t resourceLength
+    #
+    # V---- Encrypted section ----V
+    #
+    # 58-5C: uint32_t bindingOffset
+    # 5C-60: uint32_t bindingLength
+    #
+    # 60-64: uint32_t elfOffset
+    # 64-68: uint32_t elfLength
+    #
+    # 68-78: uint32_t reserved[4]
+    #
+    # padded to 512 bytes
+
 
 def CreateHeader(absProjectDir, relElfNameNoExt):
     # type: (str, str) -> bool
@@ -675,19 +707,19 @@ def CreateHeader(absProjectDir, relElfNameNoExt):
     #
     global finalBinary
 
-    # magic
+    # 0-8: magic
     magic = b"VMUPACK\0"
     sect_header.extend(magic)
 
     # Add the values we know immediately
 
-    # version
+    # 8-C: version
     sect_header.extend(headerVersion.to_bytes(4, 'little'))
 
-    # encryption
+    # C-10: encryption
     sect_header.extend(encryptionVersion.to_bytes(4, 'little'))
 
-    # little label for quick reading without json parsing:
+    # 10-30 - mini header identifier
     appName = outMetaJSON["app_name"]
     appName = bytearray(appName, "ascii")
     # clamp it at 31 chars
@@ -697,18 +729,37 @@ def CreateHeader(absProjectDir, relElfNameNoExt):
     PadByteArray(appName, 32)
     sect_header.extend(appName)
 
+    # 30-34 - app mode
     # 0 = AUTO (not applicable for ext apps)
     # 1 = APPLET (WIP)
     # 2 = FULLSCREEN
     # 3 = EXCLUSIVE (not applicable)
     # Pick 2 for now!
     appMode = outMetaJSON["app_mode"]
-
-    # 4 bytes for app flags
     modePacked = struct.pack("<I", appMode)
     sect_header.extend(modePacked)
-    # 12 more bytes for alignment
-    PadByteArray(sect_header, 16)
+
+    # 34-38 app env
+    envStr = outMetaJSON["app_environment"]
+    envVal = 0
+    if envStr == "native":
+        envVal = 0
+    elif envStr == "lua":
+        envVal = 1
+    else:
+        envVal = 0xFFFFFFFF
+    envPacked = struct.pack("<I", envVal)
+    sect_header.extend(envPacked)
+
+    # 2 reserved fields
+    # then we'll start adding the other sections
+    res1Packed = struct.pack("<I", 0)
+    res2Packed = struct.pack("<I", 0)
+    sect_header.extend(res1Packed)
+    sect_header.extend(res2Packed)
+
+    headerFieldPos = len(sect_header)
+    print("Continuing header from offset {}".format(headerFieldPos))
 
     #
     # Pad out some byte arrays and then let's start piecing them together
@@ -723,43 +774,11 @@ def CreateHeader(absProjectDir, relElfNameNoExt):
     PrintSectionSizes("Padded section sizes:")
 
     #
-    # Write Header
+    # Write Header int the final binary
+    # Update header fields as we append new sections
     #
-
-    print(" Creating header...")
-
-    # uint8_t magic[8] = "VMUPACK\0"
-    # uint32_t version = 1
-    # uint32_t encryptionVersion = 0 (not encrypted)
-    #
-    # uint8_t appName[32] = "My awesome app\0"
-    #
-    # uint32_t appFlags     # 1= exclusive
-    # uint32_t reserved[3]
-    #
-    # uint32_t iconOffset
-    # uint32_t iconLength
-    #
-    # uint32_t metadataOffset
-    # uint32_t metadataLength
-    #
-    # uint32_t resourceOffset
-    # uint32_t resourceLength
-    #
-    # V---- Encrypted section ----V
-    #
-    # uint32_t bindingOffset
-    # uint32_t bindingLength
-    #
-    # uint32_t elfOffset
-    # uint32_t elfLength
-    #
-    # uint32_t reserved[4]
-    #
-    # padded to 512 bytes
 
     finalBinary.extend(sect_header)
-    headerFieldPos = 16 + 16 + 32
 
     iconStart = len(finalBinary)
     headerFieldPos += AddToArray(finalBinary, headerFieldPos, iconStart)
