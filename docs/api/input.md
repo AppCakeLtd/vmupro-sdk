@@ -9,33 +9,29 @@ The VMU Pro has 8 buttons that can be read through the input API. The system pro
 ## Button Constants
 
 ```lua
-local VMUPRO_BTN_UP = 1
-local VMUPRO_BTN_DOWN = 2
-local VMUPRO_BTN_LEFT = 4
-local VMUPRO_BTN_RIGHT = 8
-local VMUPRO_BTN_A = 16
-local VMUPRO_BTN_B = 32
-local VMUPRO_BTN_POWER = 64
-local VMUPRO_BTN_MODE = 128
+BTN_DPAD_UP = 0      -- D-Pad Up
+BTN_DPAD_DOWN = 1    -- D-Pad Down
+BTN_DPAD_RIGHT = 2   -- D-Pad Right
+BTN_DPAD_LEFT = 3    -- D-Pad Left
+BTN_POWER = 4        -- Power button
+BTN_MODE = 5         -- Mode button
+BTN_A = 6            -- A button
+BTN_B = 7            -- B button
 ```
 
 ## Functions
 
 ### vmupro_btn_read()
 
-Reads the current state of all buttons as a bitmask.
+Updates the button state (call once per frame before checking button states).
 
 ```lua
-local button_state = vmupro_btn_read()
-if button_state & VMUPRO_BTN_A then
-    print("A button is pressed")
-end
+vmupro_btn_read() -- Update button states
 ```
 
 **Parameters:** None
 
-**Returns:**
-- `button_state` (number): Bitmask of currently pressed buttons
+**Returns:** None
 
 ---
 
@@ -44,7 +40,7 @@ end
 Checks if a button was just pressed (edge detection).
 
 ```lua
-if vmupro_btn_pressed(VMUPRO_BTN_A) then
+if vmupro_btn_pressed(BTN_A) then
     print("A button was just pressed")
 end
 ```
@@ -62,7 +58,7 @@ end
 Checks if a button was just released (edge detection).
 
 ```lua
-if vmupro_btn_released(VMUPRO_BTN_A) then
+if vmupro_btn_released(BTN_A) then
     print("A button was just released")
 end
 ```
@@ -80,7 +76,7 @@ end
 Checks if a button is currently being held down.
 
 ```lua
-if vmupro_btn_held(VMUPRO_BTN_A) then
+if vmupro_btn_held(BTN_A) then
     print("A button is being held")
 end
 ```
@@ -179,13 +175,18 @@ end
 ## Button Layout
 
 ```
-    [UP]
-[LEFT] [RIGHT]
-   [DOWN]
+VMU Pro Device Layout:
 
-[MODE] [START]
-  [A]   [B]
+        [DISPLAY]
+
+   [UP]           [SLEEP] [MODE]
+[LEFT] [RIGHT]      [A]    [B]
+  [DOWN]
 ```
+
+- **D-Pad**: Left side at same level as SLEEP/MODE (UP, DOWN, LEFT, RIGHT)
+- **SLEEP/MODE**: Right side under display
+- **A/B**: Right side under SLEEP/MODE buttons
 
 ## Example Usage
 
