@@ -1,91 +1,180 @@
 # Input API
 
-The Input API provides functions for reading button inputs and other user interactions on the VMU Pro device.
+The Input API provides functions for reading button inputs and handling user interactions on the VMU Pro device.
 
 ## Overview
 
-The VMU Pro device has several buttons that can be read through the input API. The system provides both immediate state checking and event-based input handling.
+The VMU Pro has 8 buttons that can be read through the input API. The system provides immediate state checking, edge detection, and convenience functions for common input patterns.
+
+## Button Constants
+
+```lua
+local VMUPRO_BTN_UP = 1
+local VMUPRO_BTN_DOWN = 2
+local VMUPRO_BTN_LEFT = 4
+local VMUPRO_BTN_RIGHT = 8
+local VMUPRO_BTN_A = 16
+local VMUPRO_BTN_B = 32
+local VMUPRO_BTN_POWER = 64
+local VMUPRO_BTN_MODE = 128
+```
 
 ## Functions
 
-### vmupro_input_get_buttons()
+### vmupro_btn_read()
 
-Gets the current state of all buttons.
-
-```lua
-local buttons = vmupro_input_get_buttons()
-```
-
-**Parameters:** None
-
-**Returns:**
-- `buttons` (table): Table containing button states
-
-**Button Fields:**
-- `up` (boolean): Up button state
-- `down` (boolean): Down button state
-- `left` (boolean): Left button state
-- `right` (boolean): Right button state
-- `a` (boolean): A button state
-- `b` (boolean): B button state
-- `start` (boolean): Start button state
-- `mode` (boolean): Mode button state
-
----
-
-### vmupro_input_is_button_pressed(button)
-
-Checks if a specific button is currently pressed.
+Reads the current state of all buttons as a bitmask.
 
 ```lua
-if vmupro_input_is_button_pressed("a") then
+local button_state = vmupro_btn_read()
+if button_state & VMUPRO_BTN_A then
     print("A button is pressed")
 end
 ```
 
-**Parameters:**
-- `button` (string): Button name ("up", "down", "left", "right", "a", "b", "start", "mode")
+**Parameters:** None
 
 **Returns:**
-- `pressed` (boolean): True if button is pressed
+- `button_state` (number): Bitmask of currently pressed buttons
 
 ---
 
-### vmupro_input_wait_for_button(button)
+### vmupro_btn_pressed(button)
 
-Waits until a specific button is pressed.
+Checks if a button was just pressed (edge detection).
 
 ```lua
-vmupro_input_wait_for_button("start") -- Wait for start button
+if vmupro_btn_pressed(VMUPRO_BTN_A) then
+    print("A button was just pressed")
+end
 ```
 
 **Parameters:**
-- `button` (string): Button name to wait for
+- `button` (number): Button constant to check
 
-**Returns:** None (blocks until button is pressed)
+**Returns:**
+- `pressed` (boolean): True if button was just pressed this frame
 
 ---
 
-### vmupro_input_get_button_event()
+### vmupro_btn_released(button)
 
-Gets the next button event from the input queue.
+Checks if a button was just released (edge detection).
 
 ```lua
-local event = vmupro_input_get_button_event()
-if event then
-    print("Button " .. event.button .. " was " .. event.action)
+if vmupro_btn_released(VMUPRO_BTN_A) then
+    print("A button was just released")
+end
+```
+
+**Parameters:**
+- `button` (number): Button constant to check
+
+**Returns:**
+- `released` (boolean): True if button was just released this frame
+
+---
+
+### vmupro_btn_held(button)
+
+Checks if a button is currently being held down.
+
+```lua
+if vmupro_btn_held(VMUPRO_BTN_A) then
+    print("A button is being held")
+end
+```
+
+**Parameters:**
+- `button` (number): Button constant to check
+
+**Returns:**
+- `held` (boolean): True if button is currently held
+
+---
+
+### vmupro_btn_anything_held()
+
+Checks if any button is currently being held.
+
+```lua
+if vmupro_btn_anything_held() then
+    print("Some button is being pressed")
 end
 ```
 
 **Parameters:** None
 
 **Returns:**
-- `event` (table or nil): Button event or nil if no events
+- `any_held` (boolean): True if any button is currently held
 
-**Event Fields:**
-- `button` (string): Button name
-- `action` (string): "pressed" or "released"
-- `timestamp` (number): Event timestamp
+---
+
+### vmupro_btn_confirm_pressed()
+
+Checks if the confirm button (A) was just pressed.
+
+```lua
+if vmupro_btn_confirm_pressed() then
+    print("Confirmed!")
+end
+```
+
+**Parameters:** None
+
+**Returns:**
+- `confirmed` (boolean): True if confirm button was just pressed
+
+---
+
+### vmupro_btn_confirm_released()
+
+Checks if the confirm button (A) was just released.
+
+```lua
+if vmupro_btn_confirm_released() then
+    print("Confirm button released")
+end
+```
+
+**Parameters:** None
+
+**Returns:**
+- `released` (boolean): True if confirm button was just released
+
+---
+
+### vmupro_btn_dismiss_pressed()
+
+Checks if the dismiss button (B) was just pressed.
+
+```lua
+if vmupro_btn_dismiss_pressed() then
+    print("Dismissed!")
+end
+```
+
+**Parameters:** None
+
+**Returns:**
+- `dismissed` (boolean): True if dismiss button was just pressed
+
+---
+
+### vmupro_btn_dismiss_released()
+
+Checks if the dismiss button (B) was just released.
+
+```lua
+if vmupro_btn_dismiss_released() then
+    print("Dismiss button released")
+end
+```
+
+**Parameters:** None
+
+**Returns:**
+- `released` (boolean): True if dismiss button was just released
 
 ## Button Layout
 

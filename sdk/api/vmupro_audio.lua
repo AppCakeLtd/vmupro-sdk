@@ -24,17 +24,30 @@ function vmupro_get_global_volume() end
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
 function vmupro_set_global_volume(volume) end
 
---- @brief Get the current global brightness level
---- @return number Brightness level (0-255)
---- @usage local brightness = vmupro_get_global_brightness()
+--- @brief Start audio listen mode for input capture
+--- @usage vmupro_audio_start_listen_mode()
+--- @note Enables audio input capture to the ring buffer
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
-function vmupro_get_global_brightness() end
+function vmupro_audio_start_listen_mode() end
 
---- @brief Set the global brightness level
---- @param brightness number Brightness level (0-255, where 0 is darkest and 255 is brightest)
---- @usage vmupro_set_global_brightness(128) -- Set to 50% brightness
---- @usage vmupro_set_global_brightness(255) -- Set to maximum brightness
+--- @brief Clear the audio ring buffer
+--- @usage vmupro_audio_clear_ring_buffer()
+--- @note Removes all captured audio data from the ring buffer
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
-function vmupro_set_global_brightness(brightness) end
+function vmupro_audio_clear_ring_buffer() end
+
+--- @brief Exit audio listen mode
+--- @usage vmupro_audio_exit_listen_mode()
+--- @note Stops audio input capture
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro_audio_exit_listen_mode() end
+
+--- @brief Get the current fill state of the audio ring buffer
+--- @return number Ring buffer fill percentage (0-100)
+--- @usage local fill_level = vmupro_get_ringbuffer_fill_state()
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro_get_ringbuffer_fill_state() end

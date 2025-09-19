@@ -1,87 +1,99 @@
 # Audio API
 
-The Audio API provides functions for playing sounds and music on the VMU Pro device.
+The Audio API provides functions for audio playback, volume control, and audio ring buffer management on the VMU Pro device.
 
 ## Overview
 
-The audio system supports various audio formats and provides both simple sound effects and more complex audio playback capabilities. All audio operations are bridged from LUA to the native audio subsystem.
+The audio system provides volume control and audio monitoring capabilities. Audio files are typically played through the file system, while the ring buffer system allows for audio input monitoring and processing.
 
-## Functions
+## Volume Control Functions
 
-### vmupro_audio_play_tone(frequency, duration)
+### vmupro_get_global_volume()
 
-Plays a simple tone at the specified frequency.
-
-```lua
-vmupro_audio_play_tone(440, 1000) -- Play A4 for 1 second
-```
-
-**Parameters:**
-- `frequency` (number): Frequency in Hz
-- `duration` (number): Duration in milliseconds
-
-**Returns:** None
-
----
-
-### vmupro_audio_play_sound(filename)
-
-Plays a sound file from the SD card.
+Gets the current global audio volume level.
 
 ```lua
-vmupro_audio_play_sound("/sdcard/sounds/beep.wav")
-```
-
-**Parameters:**
-- `filename` (string): Path to the sound file
-
-**Returns:**
-- `success` (boolean): True if playback started successfully
-
----
-
-### vmupro_audio_stop()
-
-Stops all audio playback.
-
-```lua
-vmupro_audio_stop()
-```
-
-**Parameters:** None
-
-**Returns:** None
-
----
-
-### vmupro_audio_set_volume(volume)
-
-Sets the audio volume.
-
-```lua
-vmupro_audio_set_volume(50) -- Set volume to 50%
-```
-
-**Parameters:**
-- `volume` (number): Volume level (0-100)
-
-**Returns:** None
-
----
-
-### vmupro_audio_get_volume()
-
-Gets the current audio volume.
-
-```lua
-local volume = vmupro_audio_get_volume()
+local volume = vmupro_get_global_volume()
 print("Current volume: " .. volume)
 ```
 
 **Parameters:** None
 
 **Returns:**
-- `volume` (number): Current volume level (0-100)
+- `volume` (number): Current global volume level (0-255)
+
+---
+
+### vmupro_set_global_volume(volume)
+
+Sets the global audio volume level.
+
+```lua
+vmupro_set_global_volume(128) -- Set volume to 50%
+```
+
+**Parameters:**
+- `volume` (number): Volume level (0-255)
+
+**Returns:** None
+
+## Audio Ring Buffer Functions
+
+### vmupro_audio_start_listen_mode()
+
+Starts audio listen mode, enabling audio input capture to the ring buffer.
+
+```lua
+vmupro_audio_start_listen_mode()
+```
+
+**Parameters:** None
+
+**Returns:** None
+
+---
+
+### vmupro_audio_clear_ring_buffer()
+
+Clears the audio ring buffer, removing all captured audio data.
+
+```lua
+vmupro_audio_clear_ring_buffer()
+```
+
+**Parameters:** None
+
+**Returns:** None
+
+---
+
+### vmupro_audio_exit_listen_mode()
+
+Exits audio listen mode, stopping audio input capture.
+
+```lua
+vmupro_audio_exit_listen_mode()
+```
+
+**Parameters:** None
+
+**Returns:** None
+
+---
+
+### vmupro_get_ringbuffer_fill_state()
+
+Gets the current fill state of the audio ring buffer.
+
+```lua
+local fill_level = vmupro_get_ringbuffer_fill_state()
+print("Ring buffer is " .. fill_level .. "% full")
+```
+
+**Parameters:** None
+
+**Returns:**
+- `fill_level` (number): Ring buffer fill percentage (0-100)
 
 ## Supported Audio Formats
 

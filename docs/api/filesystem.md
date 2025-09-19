@@ -14,77 +14,39 @@ LUA applications have restricted access to the file system. You can only access 
 
 ## Functions
 
-### vmupro_file_open(filename, mode)
+### vmupro_read_file_complete(filename)
 
-Opens a file for reading or writing.
+Reads an entire file's contents into memory.
 
 ```lua
-local file = vmupro_file_open("/sdcard/data.txt", "r")
+local data = vmupro_read_file_complete("/sdcard/data.txt")
+if data then
+    print("File contents: " .. data)
+end
 ```
 
 **Parameters:**
 - `filename` (string): Path to the file (must be in /sdcard)
-- `mode` (string): File mode ("r", "w", "a", "rb", "wb", "ab")
 
 **Returns:**
-- `file` (userdata or nil): File handle or nil if failed
-
-**File Modes:**
-- `"r"`: Read text mode
-- `"w"`: Write text mode (truncates file)
-- `"a"`: Append text mode
-- `"rb"`: Read binary mode
-- `"wb"`: Write binary mode (truncates file)
-- `"ab"`: Append binary mode
+- `data` (string or nil): Complete file contents or nil if failed
 
 ---
 
-### vmupro_file_close(file)
+### vmupro_write_file_complete(filename, data)
 
-Closes an open file handle.
+Writes data to a file, replacing any existing content.
 
 ```lua
-vmupro_file_close(file)
+local success = vmupro_write_file_complete("/sdcard/save.txt", "Hello World")
 ```
 
 **Parameters:**
-- `file` (userdata): File handle from vmupro_file_open
-
-**Returns:** None
-
----
-
-### vmupro_file_read(file, count)
-
-Reads data from a file.
-
-```lua
-local data = vmupro_file_read(file, 1024) -- Read up to 1024 bytes
-```
-
-**Parameters:**
-- `file` (userdata): File handle
-- `count` (number): Maximum number of bytes to read
+- `filename` (string): Path to the file (must be in /sdcard)
+- `data` (string): Data to write to the file
 
 **Returns:**
-- `data` (string or nil): Data read from file or nil on error
-
----
-
-### vmupro_file_write(file, data)
-
-Writes data to a file.
-
-```lua
-local bytes_written = vmupro_file_write(file, "Hello World")
-```
-
-**Parameters:**
-- `file` (userdata): File handle
-- `data` (string): Data to write
-
-**Returns:**
-- `bytes_written` (number): Number of bytes actually written
+- `success` (boolean): True if file was written successfully
 
 ---
 
@@ -106,38 +68,59 @@ end
 
 ---
 
-### vmupro_file_delete(filename)
+### vmupro_folder_exists(foldername)
 
-Deletes a file.
-
-```lua
-local success = vmupro_file_delete("/sdcard/temp.txt")
-```
-
-**Parameters:**
-- `filename` (string): Path to file to delete
-
-**Returns:**
-- `success` (boolean): True if file was deleted
-
----
-
-### vmupro_file_list_directory(path)
-
-Lists files in a directory.
+Checks if a folder exists.
 
 ```lua
-local files = vmupro_file_list_directory("/sdcard/")
-for i, filename in ipairs(files) do
-    print(filename)
+if vmupro_folder_exists("/sdcard/saves") then
+    print("Saves folder found")
 end
 ```
 
 **Parameters:**
-- `path` (string): Directory path to list
+- `foldername` (string): Path to folder to check
 
 **Returns:**
-- `files` (table): Array of filenames
+- `exists` (boolean): True if folder exists
+
+---
+
+### vmupro_create_folder(foldername)
+
+Creates a new folder.
+
+```lua
+local success = vmupro_create_folder("/sdcard/saves")
+if success then
+    print("Saves folder created")
+end
+```
+
+**Parameters:**
+- `foldername` (string): Path to folder to create
+
+**Returns:**
+- `success` (boolean): True if folder was created successfully
+
+---
+
+### vmupro_get_file_size(filename)
+
+Gets the size of a file in bytes.
+
+```lua
+local size = vmupro_get_file_size("/sdcard/data.txt")
+if size then
+    print("File size: " .. size .. " bytes")
+end
+```
+
+**Parameters:**
+- `filename` (string): Path to the file
+
+**Returns:**
+- `size` (number or nil): File size in bytes or nil if file doesn't exist
 
 ## Example Usage
 

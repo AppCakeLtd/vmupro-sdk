@@ -111,6 +111,84 @@ function vmupro_draw_ellipse(x, y, rx, ry, color) end
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
 function vmupro_draw_ellipse_filled(x, y, rx, ry, color) end
 
+--- @brief Draw a polygon outline from an array of points
+--- @param points table Array of {x, y} coordinate pairs
+--- @param color number RGB565 color value
+--- @usage vmupro_draw_polygon({{50, 20}, {20, 80}, {80, 80}}, COLOR_RED) -- Red triangle outline
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro_draw_polygon(points, color) end
+
+--- @brief Draw a filled polygon from an array of points
+--- @param points table Array of {x, y} coordinate pairs
+--- @param color number RGB565 color value
+--- @usage vmupro_draw_polygon_filled({{50, 20}, {20, 80}, {80, 80}}, COLOR_RED) -- Red filled triangle
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro_draw_polygon_filled(points, color) end
+
+--- @brief Perform a flood fill operation starting from the specified point
+--- @param x number Starting X coordinate
+--- @param y number Starting Y coordinate
+--- @param fill_color number Color to fill with (RGB565)
+--- @param boundary_color number Boundary color to stop at (RGB565)
+--- @usage vmupro_flood_fill(50, 50, COLOR_GREEN, COLOR_BLACK) -- Fill with green until hitting black
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro_flood_fill(x, y, fill_color, boundary_color) end
+
+--- @brief Perform a flood fill with color tolerance
+--- @param x number Starting X coordinate
+--- @param y number Starting Y coordinate
+--- @param fill_color number Color to fill with (RGB565)
+--- @param tolerance number Color tolerance for matching
+--- @usage vmupro_flood_fill_tolerance(50, 50, COLOR_GREEN, 10) -- Fill with tolerance
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro_flood_fill_tolerance(x, y, fill_color, tolerance) end
+
+--- @brief Get the current global brightness level
+--- @return number Current brightness level (0-255)
+--- @usage local brightness = vmupro_get_global_brightness()
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro_get_global_brightness() end
+
+--- @brief Set the global brightness level
+--- @param brightness number Brightness level (0-255)
+--- @usage vmupro_set_global_brightness(128) -- 50% brightness
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro_set_global_brightness(brightness) end
+
+--- @brief Get a reference to the back framebuffer
+--- @return userdata Back framebuffer reference
+--- @usage local back_fb = vmupro_get_back_fb()
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro_get_back_fb() end
+
+--- @brief Get a reference to the front framebuffer
+--- @return userdata Front framebuffer reference
+--- @usage local front_fb = vmupro_get_front_fb()
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro_get_front_fb() end
+
+--- @brief Get a reference to the back buffer
+--- @return userdata Back buffer reference
+--- @usage local back_buffer = vmupro_get_back_buffer()
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro_get_back_buffer() end
+
+--- @brief Get the last blitted framebuffer side (for double buffering)
+--- @return number Framebuffer side identifier
+--- @usage local fb_side = vmupro_get_last_blitted_fb_side()
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro_get_last_blitted_fb_side() end
+
 -- Color constants (provided by firmware)
 COLOR_RED = COLOR_RED or 0x00f8           --- Red color
 COLOR_ORANGE = COLOR_ORANGE or 0xa0fb     --- Orange color

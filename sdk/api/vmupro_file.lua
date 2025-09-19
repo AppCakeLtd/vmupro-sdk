@@ -55,3 +55,13 @@ function vmupro_create_folder(path) end
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
 function vmupro_get_file_size(path) end
+
+--- @brief Write data to a file, replacing any existing content
+--- @param path string File path (must start with "/sdcard/")
+--- @param data string Data to write to the file
+--- @return boolean true if file was written successfully, false otherwise
+--- @usage local success = vmupro_write_file_complete("/sdcard/save.dat", "player_score=1000")
+--- @note File access is restricted to /sdcard only for security
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro_write_file_complete(path, data) end
