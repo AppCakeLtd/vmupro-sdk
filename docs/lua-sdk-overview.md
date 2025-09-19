@@ -70,12 +70,12 @@ Applications are packaged into `.vmupack` files:
 ### Memory Management
 - LUA VM has limited heap space
 - Avoid excessive object creation in loops
-- Use `vmupro_util_get_free_memory()` to monitor usage
+- Use `vmupro_get_memory_usage()` to monitor usage
 - Implement object pooling for frequently created objects
 
 ### Frame Rate
 - Target 60 FPS with 16ms frame time
-- Use `vmupro_util_sleep()` for timing control
+- Use `vmupro_sleep_ms()` for timing control
 - Optimize rendering calls
 - Batch graphics operations when possible
 

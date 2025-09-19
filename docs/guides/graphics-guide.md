@@ -42,14 +42,14 @@ local BLACK = rgb_to_565(0, 0, 0)
 The graphics system uses a double-buffered approach:
 
 1. **Draw to Back Buffer**: All drawing operations render to an off-screen buffer
-2. **Present Frame**: `vmupro_display_present()` copies the back buffer to the visible display
+2. **Present Frame**: `vmupro_display_refresh()` copies the back buffer to the visible display
 3. **Clear Buffer**: `vmupro_display_clear()` prepares for the next frame
 
 ```lua
 -- Typical frame rendering cycle
 vmupro_display_clear()        -- Clear back buffer
 -- ... draw operations ...
-vmupro_display_present()      -- Show frame
+vmupro_display_refresh()      -- Show frame
 ```
 
 ### Coordinate System
@@ -69,40 +69,32 @@ vmupro_display_present()      -- Show frame
 
 ## Drawing Primitives
 
-### Pixels
+### Lines
 
-The most basic drawing operation:
+Draw straight lines between two points. Since there's no direct pixel function, lines are the most basic drawing primitive:
 
 ```lua
-vmupro_display_set_pixel(x, y, color)
+vmupro_draw_line(x1, y1, x2, y2, color)
 ```
 
 **Example - Draw a colorful diagonal:**
 ```lua
-for i = 0, 239 do
+for i = 0, 238 do
     local color = rgb_to_565((i * 255) / 239, 128, 255 - (i * 255) / 239)
-    vmupro_display_set_pixel(i, i, color)
+    vmupro_draw_line(i, i, i+1, i+1, color)
 end
-```
-
-### Lines
-
-Draw straight lines between two points:
-
-```lua
-vmupro_display_draw_line(x1, y1, x2, y2, color)
 ```
 
 **Examples:**
 ```lua
 -- Horizontal line in red
-vmupro_display_draw_line(20, 120, 220, 120, RED)
+vmupro_draw_line(20, 120, 220, 120, RED)
 
 -- Vertical line in green
-vmupro_display_draw_line(120, 20, 120, 220, GREEN)
+vmupro_draw_line(120, 20, 120, 220, GREEN)
 
 -- Diagonal line in blue
-vmupro_display_draw_line(0, 0, 239, 239, BLUE)
+vmupro_draw_line(0, 0, 239, 239, BLUE)
 ```
 
 ### Rectangles
@@ -110,16 +102,17 @@ vmupro_display_draw_line(0, 0, 239, 239, BLUE)
 Draw rectangular shapes:
 
 ```lua
-vmupro_display_draw_rect(x, y, width, height, color, filled)
+vmupro_draw_rect(x, y, width, height, color)     -- outline
+vmupro_draw_fill_rect(x, y, width, height, color) -- filled
 ```
 
 **Examples:**
 ```lua
 -- Outline rectangle in white
-vmupro_display_draw_rect(50, 50, 100, 80, WHITE, false)
+vmupro_draw_rect(50, 50, 100, 80, WHITE)
 
 -- Filled rectangle in red
-vmupro_display_draw_rect(70, 70, 60, 40, RED, true)
+vmupro_draw_fill_rect(70, 70, 60, 40, RED)
 ```
 
 ### Text Rendering
@@ -127,7 +120,7 @@ vmupro_display_draw_rect(70, 70, 60, 40, RED, true)
 Display text on screen:
 
 ```lua
-vmupro_display_draw_text(x, y, text, color)
+vmupro_draw_text(text, x, y, color)
 ```
 
 **Font Characteristics:**
@@ -141,7 +134,7 @@ vmupro_display_draw_text(x, y, text, color)
 local function draw_centered_text(y, text, color)
     local text_width = #text * 6
     local x = (240 - text_width) / 2
-    vmupro_display_draw_text(x, y, text, color)
+    vmupro_draw_text(text, x, y, color)
 end
 
 draw_centered_text(50, "GAME OVER", RED)
@@ -166,7 +159,7 @@ function draw_horizontal_gradient(x, y, width, height, color1, color2)
         local b = b1 + (b2 - b1) * ratio
 
         local color = rgb_to_565(r, g, b)
-        vmupro_display_draw_line(x + i, y, x + i, y + height - 1, color)
+        vmupro_draw_line(x + i, y, x + i, y + height - 1, color)
     end
 end
 
@@ -195,7 +188,7 @@ end
 
 -- Usage in main loop
 local rainbow_color = get_cycling_color(1.0)
-vmupro_display_draw_text(50, 100, "RAINBOW TEXT", rainbow_color)
+vmupro_draw_text("RAINBOW TEXT", 50, 100, rainbow_color)
 ```
 
 ## Advanced Graphics Techniques
@@ -221,7 +214,8 @@ function Sprite:draw(x, y)
         for col = 1, self.width do
             local color = self.data[row][col]
             if color > 0 then -- 0 = transparent
-                vmupro_display_set_pixel(x + col - 1, y + row - 1, color)
+                -- Draw as 1x1 filled rectangle since no pixel function
+                vmupro_draw_fill_rect(x + col - 1, y + row - 1, 1, 1, color)
             end
         end
     end
@@ -300,7 +294,7 @@ Minimize API calls by batching operations:
 ```lua
 function draw_multiple_pixels(pixels)
     for _, pixel in ipairs(pixels) do
-        vmupro_display_set_pixel(pixel.x, pixel.y, pixel.color)
+        vmupro_draw_fill_rect(pixel.x, pixel.y, 1, 1, pixel.color)
     end
 end
 

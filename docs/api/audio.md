@@ -118,7 +118,7 @@ end
 local notes = {261, 294, 329, 349, 392, 440, 493, 523} -- C major scale
 for i, freq in ipairs(notes) do
     vmupro_audio_play_tone(freq, 500)
-    vmupro_util_sleep(600) -- Wait between notes
+    vmupro_sleep_ms(600) -- Wait between notes
 end
 
 -- Stop all audio

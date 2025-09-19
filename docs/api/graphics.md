@@ -367,19 +367,19 @@ end
 vmupro_display_clear()
 
 -- Draw a colorful border
-vmupro_display_draw_rect(0, 0, 240, 240, 0xF800, false) -- Red border
+vmupro_draw_rect(0, 0, 240, 240, 0xF800) -- Red border
 
 -- Draw some text in different colors
-vmupro_display_draw_text(50, 50, "VMU Pro", 0xFFFF)  -- White text
-vmupro_display_draw_text(50, 70, "RGB565", 0x07E0)   -- Green text
+vmupro_draw_text("VMU Pro", 50, 50, 0xFFFF)  -- White text
+vmupro_draw_text("RGB565", 50, 70, 0x07E0)   -- Green text
 
 -- Draw a rainbow diagonal line
 for i = 0, 239 do
     local hue = (i * 360) / 239
     local color = hue_to_rgb565(hue)
-    vmupro_display_set_pixel(i, i, color)
+    vmupro_draw_fill_rect(i, i, 1, 1, color)
 end
 
 -- Present to display
-vmupro_display_present()
+vmupro_display_refresh()
 ```

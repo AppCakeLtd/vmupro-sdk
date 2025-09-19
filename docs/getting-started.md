@@ -67,14 +67,14 @@ function update()
     vmupro_display_clear()
 
     -- Draw hello world text
-    vmupro_display_draw_text(10, 10, "Hello World!", 1)
-    vmupro_display_draw_text(10, 25, "Press START to exit", 1)
+    vmupro_draw_text("Hello World!", 10, 10, 1)
+    vmupro_draw_text("Press START to exit", 10, 25, 1)
 
     -- Present to display
-    vmupro_display_present()
+    vmupro_display_refresh()
 
     -- Check for exit
-    if vmupro_input_is_button_pressed("start") then
+    if vmupro_btn_pressed(BTN_MODE) then
         return false -- Exit application
     end
 
@@ -84,7 +84,7 @@ end
 function cleanup()
     print("Hello World app ending...")
     vmupro_display_clear()
-    vmupro_display_present()
+    vmupro_display_refresh()
 end
 
 -- Application entry point
@@ -93,7 +93,7 @@ if not init() then
 end
 
 while update() do
-    vmupro_util_sleep(16) -- ~60 FPS
+    vmupro_sleep_ms(16) -- ~60 FPS
 end
 
 cleanup()
@@ -162,13 +162,13 @@ my_app/
 
 ### Frame Rate Management
 
-Use `vmupro_util_sleep(16)` in your main loop for approximately 60 FPS:
+Use `vmupro_sleep_ms(16)` in your main loop for approximately 60 FPS:
 
 ```lua
 while running do
     update()
     render()
-    vmupro_util_sleep(16) -- ~60 FPS
+    vmupro_sleep_ms(16) -- ~60 FPS
 end
 ```
 
@@ -176,7 +176,7 @@ end
 
 - The LUA VM has limited memory available
 - Avoid creating excessive temporary objects in tight loops
-- Use `vmupro_util_get_free_memory()` to monitor memory usage
+- Use `vmupro_get_memory_usage()` to monitor memory usage
 
 ### File Access
 
@@ -205,7 +205,7 @@ LUA applications can access files and folders within the `/sdcard` directory:
 **Application won't run:**
 - Check LUA syntax errors
 - Verify entry_point in metadata.json
-- Use `vmupro_util_debug_print()` for debugging
+- Use `vmupro_log(VMUPRO_LOG_DEBUG, "tag", "message")` for debugging
 
 **Device connection issues:**
 - Verify correct COM port

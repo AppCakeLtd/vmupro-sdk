@@ -37,10 +37,8 @@ local CLICK_COOLDOWN = 200 -- milliseconds
 
 function load_high_score()
     if vmupro_file_exists(SAVE_FILE) then
-        local file = vmupro_file_open(SAVE_FILE, "r")
-        if file then
-            local data = vmupro_file_read(file, 100)
-            vmupro_file_close(file)
+        local data = vmupro_read_file_complete(SAVE_FILE)
+        if data then
             high_score = tonumber(data) or 0
             print("Loaded high score: " .. high_score)
         end
@@ -48,19 +46,17 @@ function load_high_score()
 end
 
 function save_high_score()
-    local file = vmupro_file_open(SAVE_FILE, "w")
-    if file then
-        vmupro_file_write(file, tostring(high_score))
-        vmupro_file_close(file)
+    local success = vmupro_write_file_complete(SAVE_FILE, tostring(high_score))
+    if success then
         print("Saved high score: " .. high_score)
     end
 end
 
 function handle_input()
-    local current_time = vmupro_util_get_time()
+    local current_time = vmupro_get_time_us()
 
     -- Check for click (A button)
-    if vmupro_input_is_button_pressed("a") then
+    if vmupro_btn_pressed(BTN_A) then
         if current_time - last_click_time > CLICK_COOLDOWN then
             score = score + 1
             click_animation = 20 -- frames of animation
@@ -75,13 +71,13 @@ function handle_input()
     end
 
     -- Reset game (B button)
-    if vmupro_input_is_button_pressed("b") then
+    if vmupro_btn_pressed(BTN_B) then
         score = 0
         click_animation = 0
     end
 
     -- Exit game (START button)
-    if vmupro_input_is_button_pressed("start") then
+    if vmupro_btn_pressed(BTN_MODE) then
         return false
     end
 
@@ -100,27 +96,27 @@ function render()
     vmupro_display_clear()
 
     -- Draw title
-    vmupro_display_draw_text(35, 5, "CLICKER", 1)
+    vmupro_draw_text("CLICKER", 35, 5, 1)
 
     -- Draw current score
-    vmupro_display_draw_text(10, 20, "Score: " .. score, 1)
+    vmupro_draw_text("Score: " .. score, 10, 20, 1)
 
     -- Draw high score
-    vmupro_display_draw_text(10, 30, "Best: " .. high_score, 1)
+    vmupro_draw_text("Best: " .. high_score, 10, 30, 1)
 
     -- Draw click animation
     if click_animation > 0 then
         local size = click_animation
-        vmupro_display_draw_rect(64 - size/2, 40 - size/2, size, size, 1, false)
-        vmupro_display_draw_text(45, 42, "+1", 1)
+        vmupro_draw_rect(64 - size/2, 40 - size/2, size, size, 1)
+        vmupro_draw_text("+1", 45, 42, 1)
     end
 
     -- Draw instructions
-    vmupro_display_draw_text(5, 50, "A:Click B:Reset", 1)
-    vmupro_display_draw_text(5, 58, "START:Exit", 1)
+    vmupro_draw_text("A:Click B:Reset", 5, 50, 1)
+    vmupro_draw_text("START:Exit", 5, 58, 1)
 
     -- Present to screen
-    vmupro_display_present()
+    vmupro_display_refresh()
 end
 
 function init()
@@ -132,7 +128,7 @@ end
 function cleanup()
     print("Clicker game ending...")
     vmupro_display_clear()
-    vmupro_display_present()
+    vmupro_display_refresh()
 end
 
 -- Main execution
@@ -146,7 +142,7 @@ while running do
     running = handle_input()
     update()
     render()
-    vmupro_util_sleep(16) -- ~60 FPS
+    vmupro_sleep_ms(16) -- ~60 FPS
 end
 
 cleanup()
@@ -195,7 +191,7 @@ python ../tools/packer/send.py --func send --localfile clicker.vmupack --remotef
 
 ### 2. Input Handling
 ```lua
-if vmupro_input_is_button_pressed("a") then
+if vmupro_btn_pressed(BTN_A) then
     -- Handle A button press
 end
 ```
@@ -203,21 +199,19 @@ end
 ### 3. Graphics Rendering
 ```lua
 vmupro_display_clear()           -- Clear screen
-vmupro_display_draw_text(x, y, text, 1)  -- Draw text
-vmupro_display_present()         -- Show frame
+vmupro_draw_text(text, x, y, 1)  -- Draw text
+vmupro_display_refresh()         -- Show frame
 ```
 
 ### 4. File I/O
 ```lua
-local file = vmupro_file_open(filename, "w")
-vmupro_file_write(file, data)
-vmupro_file_close(file)
+vmupro_write_file_complete(filename, data)
 ```
 
 ### 5. Timing and Animation
 ```lua
-local time = vmupro_util_get_time()
-vmupro_util_sleep(16)  -- Control frame rate
+local time = vmupro_get_time_us()
+vmupro_sleep_ms(16)  -- Control frame rate
 ```
 
 ## Enhancing Your App
@@ -231,8 +225,8 @@ vmupro_audio_play_tone(440, 100)  -- Short beep
 ### Add Visual Effects
 ```lua
 -- Add particle effects or screen shake
-local shake_x = vmupro_util_random(-2, 2)
-local shake_y = vmupro_util_random(-2, 2)
+local shake_x = math.random(-2, 2)
+local shake_y = math.random(-2, 2)
 ```
 
 ### Add Game Modes
@@ -249,7 +243,7 @@ local game_mode = "normal"  -- "normal", "timed", "challenge"
 - Ensure all required files are present
 
 ### Graphics Not Showing
-- Call `vmupro_display_present()` after drawing
+- Call `vmupro_display_refresh()` after drawing
 - Check coordinate ranges (0-127 x, 0-63 y)
 - Ensure color values are 0 or 1
 

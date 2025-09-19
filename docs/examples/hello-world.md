@@ -20,18 +20,18 @@ function update()
     vmupro_display_clear()
 
     -- Draw welcome text
-    vmupro_display_draw_text(20, 15, "Hello World!", 1)
-    vmupro_display_draw_text(10, 30, "VMU Pro LUA SDK", 1)
-    vmupro_display_draw_text(5, 45, "Press START to exit", 1)
+    vmupro_draw_text("Hello World!", 20, 15, 1)
+    vmupro_draw_text("VMU Pro LUA SDK", 10, 30, 1)
+    vmupro_draw_text("Press START to exit", 5, 45, 1)
 
     -- Draw a simple border
-    vmupro_display_draw_rect(0, 0, 128, 64, 1, false)
+    vmupro_draw_rect(0, 0, 128, 64, 1)
 
     -- Present the frame buffer to the display
-    vmupro_display_present()
+    vmupro_display_refresh()
 
     -- Check for exit condition
-    if vmupro_input_is_button_pressed("start") then
+    if vmupro_btn_pressed(BTN_MODE) then
         return false -- Exit application
     end
 
@@ -41,7 +41,7 @@ end
 function cleanup()
     print("Hello World app ending...")
     vmupro_display_clear()
-    vmupro_display_present()
+    vmupro_display_refresh()
 end
 
 -- Application entry point
@@ -52,7 +52,7 @@ end
 
 -- Main application loop
 while update() do
-    vmupro_util_sleep(16) -- Target ~60 FPS
+    vmupro_sleep_ms(16) -- Target ~60 FPS
 end
 
 -- Clean up before exit
@@ -86,15 +86,15 @@ The example follows the standard three-phase application lifecycle:
 
 ```lua
 vmupro_display_clear()                    -- Clear frame buffer
-vmupro_display_draw_text(x, y, text, 1)  -- Draw text
-vmupro_display_draw_rect(x, y, w, h, 1, false) -- Draw rectangle border
-vmupro_display_present()                  -- Display frame buffer
+vmupro_draw_text(text, x, y, 1)  -- Draw text
+vmupro_draw_rect(x, y, w, h, 1) -- Draw rectangle border
+vmupro_display_refresh()                  -- Display frame buffer
 ```
 
 ### 3. Input Handling
 
 ```lua
-if vmupro_input_is_button_pressed("start") then
+if vmupro_btn_pressed(BTN_MODE) then
     return false -- Exit application
 end
 ```
@@ -102,7 +102,7 @@ end
 ### 4. Timing Control
 
 ```lua
-vmupro_util_sleep(16) -- Sleep for 16ms (~60 FPS)
+vmupro_sleep_ms(16) -- Sleep for 16ms (~60 FPS)
 ```
 
 ## Building and Running
@@ -133,13 +133,13 @@ function update()
 
     -- Animate text color
     local color = (frame_count % 60 < 30) and 1 or 0
-    vmupro_display_draw_text(20, 15, "Hello World!", color)
+    vmupro_draw_text("Hello World!", 20, 15, color)
 
     frame_count = frame_count + 1
 
-    vmupro_display_present()
+    vmupro_display_refresh()
 
-    if vmupro_input_is_button_pressed("start") then
+    if vmupro_btn_pressed(BTN_MODE) then
         return false
     end
 
@@ -157,16 +157,16 @@ local message = "Press A button!"
 function update()
     vmupro_display_clear()
 
-    if vmupro_input_is_button_pressed("a") then
+    if vmupro_btn_pressed(BTN_A) then
         message = "A button pressed!"
-    elseif vmupro_input_is_button_pressed("b") then
+    elseif vmupro_btn_pressed(BTN_B) then
         message = "B button pressed!"
     end
 
-    vmupro_display_draw_text(10, 25, message, 1)
-    vmupro_display_present()
+    vmupro_draw_text(message, 10, 25, 1)
+    vmupro_display_refresh()
 
-    if vmupro_input_is_button_pressed("start") then
+    if vmupro_btn_pressed(BTN_MODE) then
         return false
     end
 
@@ -192,10 +192,10 @@ function update()
         dx = -dx -- Reverse direction
     end
 
-    vmupro_display_draw_text(text_x, text_y, "Moving!", 1)
-    vmupro_display_present()
+    vmupro_draw_text("Moving!", text_x, text_y, 1)
+    vmupro_display_refresh()
 
-    if vmupro_input_is_button_pressed("start") then
+    if vmupro_btn_pressed(BTN_MODE) then
         return false
     end
 

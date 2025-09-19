@@ -8,12 +8,13 @@ These utility functions provide essential functionality for LUA applications run
 
 ## Functions
 
-### vmupro_util_sleep(milliseconds)
+### vmupro_sleep_ms(milliseconds)
 
 Pauses execution for the specified number of milliseconds.
 
 ```lua
-vmupro_util_sleep(1000) -- Sleep for 1 second
+vmupro_sleep_ms(1000) -- Sleep for 1 second
+vmupro_sleep_ms(16)   -- Sleep for ~60 FPS frame time
 ```
 
 **Parameters:**
@@ -23,161 +24,142 @@ vmupro_util_sleep(1000) -- Sleep for 1 second
 
 ---
 
-### vmupro_util_get_time()
+### vmupro_get_time_us()
 
-Gets the current system time in milliseconds since boot.
+Gets the current system time in microseconds since boot.
 
 ```lua
-local time = vmupro_util_get_time()
-print("Current time: " .. time .. "ms")
+local time = vmupro_get_time_us()
+print("Current time: " .. time .. "us")
+
+-- Measure elapsed time
+local start_time = vmupro_get_time_us()
+-- ... do something ...
+local elapsed = vmupro_get_time_us() - start_time
 ```
 
 **Parameters:** None
 
 **Returns:**
-- `time` (number): Time in milliseconds since system boot
+- `time` (number): Time in microseconds since system boot
 
 ---
 
-### vmupro_util_get_battery_level()
+### vmupro_get_memory_usage()
 
-Gets the current battery level as a percentage.
+Gets the current LUA memory usage statistics.
 
 ```lua
-local battery = vmupro_util_get_battery_level()
-print("Battery: " .. battery .. "%")
+local current, max = vmupro_get_memory_usage()
+print("Memory: " .. current .. "/" .. max .. " bytes")
 ```
 
 **Parameters:** None
 
 **Returns:**
-- `level` (number): Battery level (0-100)
+- `current_memory` (number): Current memory usage in bytes
+- `max_memory` (number): Maximum allowed memory in bytes
 
 ---
 
-### vmupro_util_random(min, max)
+### vmupro_delay_us(microseconds)
 
-Generates a random number between min and max (inclusive).
+Delays execution for the specified number of microseconds.
 
 ```lua
-local dice_roll = vmupro_util_random(1, 6)
-print("Rolled: " .. dice_roll)
+vmupro_delay_us(1000) -- Delay for 1 millisecond (1000 microseconds)
 ```
 
 **Parameters:**
-- `min` (number): Minimum value
-- `max` (number): Maximum value
-
-**Returns:**
-- `value` (number): Random number between min and max
-
----
-
-### vmupro_util_get_version()
-
-Gets the VMU Pro firmware version information.
-
-```lua
-local version = vmupro_util_get_version()
-print("Firmware: " .. version.major .. "." .. version.minor .. "." .. version.patch)
-```
-
-**Parameters:** None
-
-**Returns:**
-- `version` (table): Version information
-
-**Version Fields:**
-- `major` (number): Major version number
-- `minor` (number): Minor version number
-- `patch` (number): Patch version number
-- `build` (string): Build identifier
-
----
-
-### vmupro_util_get_free_memory()
-
-Gets the amount of free memory available to the LUA VM.
-
-```lua
-local free_mem = vmupro_util_get_free_memory()
-print("Free memory: " .. free_mem .. " bytes")
-```
-
-**Parameters:** None
-
-**Returns:**
-- `bytes` (number): Free memory in bytes
-
----
-
-### vmupro_util_debug_print(message)
-
-Outputs a debug message (only visible when connected to debugger).
-
-```lua
-vmupro_util_debug_print("Debug: Player position updated")
-```
-
-**Parameters:**
-- `message` (string): Debug message to print
+- `microseconds` (number): Time to delay in microseconds
 
 **Returns:** None
 
 ---
 
-### vmupro_util_crc32(data)
+### vmupro_delay_ms(milliseconds)
 
-Calculates CRC32 checksum of the provided data.
+Delays execution for the specified number of milliseconds.
 
 ```lua
-local checksum = vmupro_util_crc32("Hello World")
-print("CRC32: " .. string.format("%08X", checksum))
+vmupro_delay_ms(500) -- Delay for 0.5 seconds
 ```
 
 **Parameters:**
-- `data` (string): Data to calculate checksum for
+- `milliseconds` (number): Time to delay in milliseconds
 
-**Returns:**
-- `crc32` (number): CRC32 checksum
+**Returns:** None
+
+---
+
+### vmupro_set_log_level(level)
+
+Sets the global logging level for debug output.
+
+```lua
+vmupro_set_log_level(VMUPRO_LOG_DEBUG) -- Enable all logging
+vmupro_set_log_level(VMUPRO_LOG_ERROR) -- Only show errors
+```
+
+**Parameters:**
+- `level` (number): Log level constant (VMUPRO_LOG_ERROR, VMUPRO_LOG_WARN, VMUPRO_LOG_INFO, VMUPRO_LOG_DEBUG)
+
+**Returns:** None
 
 ## Example Usage
 
+### Timing Operations
+
 ```lua
--- Timing example
-local start_time = vmupro_util_get_time()
-print("Starting task...")
+-- 60 FPS game loop timing
+local frame_start = vmupro_get_time_us()
 
--- Simulate some work
-for i = 1, 100 do
-    vmupro_util_sleep(10)
+-- ... game logic and rendering ...
+
+local frame_time = vmupro_get_time_us() - frame_start
+local target_frame_time = 16667 -- 16.667ms in microseconds for 60 FPS
+
+if frame_time < target_frame_time then
+    vmupro_delay_us(target_frame_time - frame_time)
+end
+```
+
+### Memory Monitoring
+
+```lua
+function check_memory_usage()
+    local current, max = vmupro_get_memory_usage()
+    local percentage = (current / max) * 100
+
+    if percentage > 80 then
+        vmupro_log(VMUPRO_LOG_WARN, "Memory", "High memory usage: " .. percentage .. "%")
+    end
+
+    return current, max
+end
+```
+
+### Simple Timing
+
+```lua
+function delay_with_feedback(ms)
+    print("Waiting " .. ms .. "ms...")
+    vmupro_sleep_ms(ms)
+    print("Done waiting!")
 end
 
-local end_time = vmupro_util_get_time()
-print("Task completed in " .. (end_time - start_time) .. "ms")
+delay_with_feedback(1000) -- Wait 1 second
+```
 
--- System information
-local version = vmupro_util_get_version()
-local battery = vmupro_util_get_battery_level()
-local memory = vmupro_util_get_free_memory()
+### High-Precision Timing
 
-print("System Info:")
-print("  Firmware: " .. version.major .. "." .. version.minor .. "." .. version.patch)
-print("  Battery: " .. battery .. "%")
-print("  Free Memory: " .. memory .. " bytes")
-
--- Random number generation
-print("Rolling dice 5 times:")
-for i = 1, 5 do
-    local roll = vmupro_util_random(1, 6)
-    print("  Roll " .. i .. ": " .. roll)
+```lua
+function precise_delay(us)
+    local start = vmupro_get_time_us()
+    while vmupro_get_time_us() - start < us do
+        -- Busy wait for precise timing
+    end
 end
 
--- Data integrity check
-local data = "Important save data"
-local checksum = vmupro_util_crc32(data)
-print("Data checksum: " .. string.format("%08X", checksum))
-
--- Debug output
-vmupro_util_debug_print("Application initialized successfully")
+precise_delay(500) -- Wait exactly 500 microseconds
 ```

@@ -125,40 +125,32 @@ end
 
 ```lua
 -- Write data to a file
-local file = vmupro_file_open("/sdcard/save_data.txt", "w")
-if file then
-    vmupro_file_write(file, "Player Score: 1250\n")
-    vmupro_file_write(file, "Level: 5\n")
-    vmupro_file_close(file)
+local success = vmupro_write_file_complete("/sdcard/save_data.txt", "Player Score: 1250\nLevel: 5\n")
+if success then
     print("Save data written")
 else
-    print("Failed to open file for writing")
+    print("Failed to write file")
 end
 
 -- Read data from a file
 if vmupro_file_exists("/sdcard/save_data.txt") then
-    local file = vmupro_file_open("/sdcard/save_data.txt", "r")
-    if file then
-        local data = vmupro_file_read(file, 1024)
-        vmupro_file_close(file)
+    local data = vmupro_read_file_complete("/sdcard/save_data.txt")
+    if data then
         print("Save data: " .. data)
     end
 else
     print("No save data found")
 end
 
--- List all files in a directory
-local files = vmupro_file_list_directory("/sdcard/")
-print("Files found:")
-for i, filename in ipairs(files) do
-    print("  " .. filename)
-end
-
--- Binary file operations
-local binary_file = vmupro_file_open("/sdcard/image.bmp", "rb")
-if binary_file then
-    local header = vmupro_file_read(binary_file, 54) -- BMP header
-    vmupro_file_close(binary_file)
-    print("Read binary header: " .. #header .. " bytes")
+-- Check file size before reading
+local size = vmupro_get_file_size("/sdcard/image.bmp")
+if size then
+    print("Image file size: " .. size .. " bytes")
+    if size > 0 then
+        local data = vmupro_read_file_complete("/sdcard/image.bmp")
+        if data then
+            print("Read binary data: " .. #data .. " bytes")
+        end
+    end
 end
 ```
