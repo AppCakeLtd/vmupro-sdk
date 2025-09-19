@@ -178,13 +178,13 @@ end
 - Avoid creating excessive temporary objects in tight loops
 - Use `vmupro_util_get_free_memory()` to monitor memory usage
 
-### Security Sandbox
+### File Access
 
-Remember that your application runs in a sandboxed environment:
+LUA applications can access files and folders within the `/sdcard` directory:
 
-- File access is restricted to `/sdcard` only
-- No access to system functions or raw pointers
-- All API calls are validated
+- Read and write files for save data and configuration
+- Create and manage folders for organizing assets
+- Load sprites, sounds, and other game resources
 
 ## Next Steps
 

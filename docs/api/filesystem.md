@@ -4,13 +4,12 @@ The File System API provides functions for reading and writing files on the VMU 
 
 ## Overview
 
-LUA applications have restricted access to the file system. You can only access files within the `/sdcard` directory for security reasons. The API provides standard file operations for reading, writing, and managing files.
+LUA applications have access to files within the `/sdcard` directory. The API provides standard file operations for reading, writing, and managing files.
 
-## Security Restrictions
+## Access Restrictions
 
 - **Read/Write Access**: Limited to `/sdcard` directory only
-- **No Flash Access**: Cannot access internal flash storage
-- **Sandboxed**: File operations are validated and sandboxed
+- **No System Access**: Cannot access system directories or firmware files
 
 ## Functions
 

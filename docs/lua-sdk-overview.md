@@ -1,27 +1,6 @@
 # LUA SDK Overview
 
-The VMU Pro LUA SDK provides a comprehensive scripting environment for developing applications on the VMU Pro device. This overview covers the architecture, capabilities, and key concepts of the SDK.
-
-## Architecture
-
-### Dual Execution Model
-
-The VMU Pro supports two execution modes:
-
-- **VMUPRO_APP_MODE_NATIVE**: Traditional ELF-based C applications
-- **VMUPRO_APP_MODE_LUA**: New LUA-based applications with sandboxed execution
-
-LUA applications run in a secure, isolated environment while maintaining access to essential device functionality through a well-defined API bridge.
-
-### Security Sandbox
-
-The LUA runtime implements comprehensive security measures:
-
-- **Sandboxed LUA VM**: Restricted global functions and libraries
-- **Memory Isolation**: Controlled heap allocation with limits
-- **API Whitelisting**: Only approved functions are accessible
-- **File System Restrictions**: Access limited to `/sdcard` directory only
-- **No Raw Pointers**: All memory access is managed and validated
+The VMU Pro LUA SDK provides a comprehensive scripting environment for developing applications on the VMU Pro device. This overview covers the capabilities and key concepts of the SDK.
 
 ## API Categories
 
@@ -84,7 +63,6 @@ Standard application flow:
 Applications are packaged into `.vmupack` files:
 - Contains all application files and assets
 - Metadata for system integration
-- Digital signature for security
 - Compressed for efficient storage
 
 ## Performance Considerations
@@ -107,22 +85,12 @@ Applications are packaged into `.vmupack` files:
 - Use binary formats for better performance
 - Implement asynchronous loading patterns
 
-## Security Model
+## File System Access
 
-### Restricted Environment
-The LUA sandbox prevents:
-- Access to system-level functions
-- Direct memory manipulation
-- Network operations
-- Hardware register access
-- File system access outside `/sdcard`
-
-### API Validation
-All API calls are validated:
-- Parameter type checking
-- Range validation
-- Permission verification
-- Resource limit enforcement
+File operations are available within the `/sdcard` directory:
+- Read and write access to `/sdcard` for save data and assets
+- Create and manage folders within `/sdcard` for organization
+- Load game resources like sprites, sounds, and configuration files
 
 ## Best Practices
 
@@ -158,4 +126,4 @@ The SDK provides:
 - Follow the [Getting Started](getting-started.md) guide to create your first app
 - Explore the [API Reference](api/graphics.md) for detailed function documentation
 - Study the [Examples](examples/hello-world.md) for practical implementation patterns
-- Review the [Security Model](advanced/security.md) for detailed security information
+- Review the [Advanced Topics](advanced/troubleshooting.md) for optimization and troubleshooting

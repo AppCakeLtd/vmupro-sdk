@@ -4,24 +4,15 @@ Welcome to the VMU Pro LUA SDK documentation. This comprehensive guide will help
 
 ## What is the VMU Pro LUA SDK?
 
-The VMU Pro LUA SDK is a powerful, sandboxed scripting environment that allows developers to create applications for the VMU Pro device using the LUA programming language. The SDK provides secure access to graphics, audio, input, and file system APIs while maintaining system stability and security.
+The VMU Pro LUA SDK is a powerful scripting environment that allows developers to create applications for the VMU Pro device using the LUA programming language. The SDK provides access to graphics, audio, input, and file system APIs for building interactive applications.
 
 ## Key Features
 
-- **Sandboxed Execution**: Your LUA scripts run in a secure, isolated environment
 - **Rich APIs**: Access to graphics, audio, input, and file system functionality
-- **Memory Safety**: Controlled heap allocation and memory isolation
 - **Easy Development**: Simple tooling for packaging and deploying applications
-- **Cross-Platform**: Develop on any platform that supports Python and LUA
-
-## Architecture Overview
-
-The VMU Pro LUA SDK uses a dual execution mode architecture:
-
-- **VMUPRO_APP_MODE_NATIVE**: Traditional ELF-based C applications
-- **VMUPRO_APP_MODE_LUA**: New LUA-based applications with sandboxed execution
-
-Your LUA applications run in a secure VM with restricted global functions and whitelisted API access only.
+- **Cross-Platform Development**: Develop on any platform that supports Python and LUA
+- **Advanced Graphics**: Support for layers, effects, blitting, and collision detection
+- **Comprehensive File I/O**: Read and write files for save data and assets
 
 ## Quick Start
 
@@ -30,15 +21,20 @@ Your LUA applications run in a secure VM with restricted global functions and wh
 3. **Package**: Use the packer tool to create a .vmupack file
 4. **Deploy**: Send your application to the VMU Pro device
 
-## Security Model
+## API Categories
 
-The LUA SDK implements a comprehensive security model:
+The SDK provides several categories of functionality:
 
-- Sandboxed LUA VM with restricted global functions
-- Memory isolation and controlled heap allocation
-- File system access restricted to `/sdcard` only
-- No raw pointer access from LUA
-- Parameter validation on all API calls
+- **Graphics**: Drawing primitives, text rendering, and display management
+- **Blitting**: Advanced buffer operations, transformations, and effects
+- **Audio**: Volume control and audio input monitoring
+- **Input**: Button reading and event handling
+- **File System**: File and folder operations (limited to `/sdcard` directory)
+- **Utilities**: Timing, system information, and helper functions
+- **Layers**: Multi-layer rendering and compositing
+- **Effects**: Visual effects and color manipulation
+- **Collision**: Sprite and pixel-perfect collision detection
+- **Double Buffer**: Smooth rendering without flicker
 
 ## Getting Help
 

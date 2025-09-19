@@ -37,6 +37,5 @@
 
 ## Advanced Topics
 
-* [Security Model](advanced/security.md)
 * [Performance Tips](advanced/performance.md)
 * [Troubleshooting](advanced/troubleshooting.md)
