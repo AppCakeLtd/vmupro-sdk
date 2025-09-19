@@ -1,4 +1,4 @@
-name: Generate Documentation
+name: Build and Deploy GitBook Documentation
 
 on:
   push:
@@ -17,37 +17,39 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  docs:
+  build-and-deploy:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        submodules: recursive
         fetch-depth: 0
 
-    - name: Initialize submodules
-      run: git submodule update --init --recursive
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
 
-    - name: Install Doxygen
+    - name: Install GitBook CLI
       run: |
-        sudo apt-get update
-        sudo apt-get install -y doxygen graphviz
+        npm install -g gitbook-cli
+        gitbook install
 
-    - name: Generate Documentation
+    - name: Build GitBook
       run: |
-        cd sdk
-        doxygen Doxyfile
+        cd docs
+        gitbook build . _book
 
     - name: Upload documentation artifacts
       uses: actions/upload-artifact@v4
       with:
         name: documentation
-        path: docs/html/
+        path: docs/_book/
         retention-days: 30
 
     - name: Setup Pages
@@ -58,7 +60,7 @@ jobs:
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
       uses: actions/upload-pages-artifact@v3
       with:
-        path: ./docs/html
+        path: ./docs/_book
 
     - name: Deploy to GitHub Pages
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'

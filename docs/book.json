@@ -1,0 +1,32 @@
+{
+  "title": "VMU Pro LUA SDK",
+  "description": "Comprehensive LUA SDK for VMU Pro Applications",
+  "author": "8BitMods",
+  "language": "en",
+  "gitbook": ">=3.0.0",
+  "plugins": [
+    "theme-default",
+    "highlight",
+    "search",
+    "sharing",
+    "fontsettings",
+    "livereload"
+  ],
+  "pluginsConfig": {
+    "theme-default": {
+      "showLevel": true
+    },
+    "sharing": {
+      "facebook": false,
+      "twitter": false,
+      "google": false,
+      "weibo": false,
+      "instapaper": false,
+      "vk": false,
+      "all": ["github"]
+    }
+  },
+  "variables": {
+    "version": "1.0.0"
+  }
+}
