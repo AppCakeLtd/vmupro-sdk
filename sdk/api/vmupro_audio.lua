@@ -9,7 +9,7 @@
 --- All audio functions are available globally in the LUA environment.
 
 --- @brief Get the current global volume level
---- @return number Volume level (0-255)
+--- @return number Volume level (0-10)
 --- @usage local volume = vmupro_get_global_volume()
 --- @usage vmupro_log(VMUPRO_LOG_INFO, "Audio", "Current volume: " .. volume)
 --- @note This is a stub definition for IDE support only.
@@ -17,16 +17,16 @@
 function vmupro_get_global_volume() end
 
 --- @brief Set the global volume level
---- @param volume number Volume level (0-255, where 0 is mute and 255 is maximum)
---- @usage vmupro_set_global_volume(128) -- Set to 50% volume
---- @usage vmupro_set_global_volume(255) -- Set to maximum volume
+--- @param volume number Volume level (0-10, where 0 is mute and 10 is maximum)
+--- @usage vmupro_set_global_volume(5) -- Set to 50% volume
+--- @usage vmupro_set_global_volume(10) -- Set to maximum volume
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
 function vmupro_set_global_volume(volume) end
 
 --- @brief Start audio listen mode for input capture
 --- @usage vmupro_audio_start_listen_mode()
---- @note Enables audio input capture to the ring buffer
+--- @note Enables audio input capture for streaming samples
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
 function vmupro_audio_start_listen_mode() end
@@ -51,3 +51,19 @@ function vmupro_audio_exit_listen_mode() end
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
 function vmupro_get_ringbuffer_fill_state() end
+
+--- @brief Add audio samples to the stream while in listen mode
+--- @param samples userdata Pointer to int16_t array of audio sample values
+--- @param numSamples number Number of samples in the array
+--- @param stereo_mode number VMUPRO_AUDIO_MONO or VMUPRO_AUDIO_STEREO
+--- @param applyGlobalVolume boolean Whether to apply global volume to samples
+--- @usage vmupro_audio_add_stream_samples(sample_buffer, 1024, VMUPRO_AUDIO_MONO, true)
+--- @note Must be called while in listen mode to push samples to the audio stream
+--- @note Samples should be int16_t values (range -32768 to 32767)
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro_audio_add_stream_samples(samples, numSamples, stereo_mode, applyGlobalVolume) end
+
+-- Audio mode constants (provided by firmware)
+VMUPRO_AUDIO_MONO = VMUPRO_AUDIO_MONO or 0     --- Mono audio mode
+VMUPRO_AUDIO_STEREO = VMUPRO_AUDIO_STEREO or 1 --- Stereo audio mode
