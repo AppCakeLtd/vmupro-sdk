@@ -48,6 +48,11 @@ sect_header = bytearray()
 
 finalBinary = bytearray()
 
+crypto = None
+doSign = False
+doProductKey = False
+doDeviceKey = False
+
 
 class MetadataError(Exception):
     pass
@@ -60,6 +65,10 @@ class PathException(Exception):
 def main():
 
     global debugOutput
+
+    global doSign
+    global absPublisherPrivateKeyPath
+    global deviceKeypath
 
     print("\n")
     print("8BM VMUPro Packer")
@@ -135,6 +144,8 @@ def main():
         print("\n  Hint: check <yourelfname>.app.elf exists in the `build` folder\n")
         sys.exit(1)
 
+    CheckKeys()
+
     #
     # Read and validate the .elf file
     #
@@ -184,6 +195,27 @@ def main():
     sys.exit(0)
 
 
+def CheckKeys():
+
+    global crypto
+    global doSign
+    global doProductKey
+    global doDeviceKey
+
+    import os, importlib.util, sys
+    from pathlib import Path
+    
+    cryptoPath = os.environ.get("VMUPRO_CRYPTO_PATH")
+    if cryptoPath:
+        path = Path(cryptoPath).resolve()
+        spec = importlib.util.spec_from_file_location("crypto", path)        
+        crypto = importlib.util.module_from_spec(spec)
+        sys.modules["crypto"] = crypto
+        spec.loader.exec_module(crypto)
+
+        doSign, doProductKey, doDeviceKey = crypto.ValidateSigningLogic()
+
+
 def GetOutputFilenameAbs(absProjectDir, relElfNameNoExt):
     # type: (str,str)->Path
     absOutputVMUPack = os.path.join(
@@ -207,10 +239,21 @@ def ValidatePath(base, tail):
     return str(joined)
 
 
+def EncryptBuffer(inBuffer: bytearray):
+
+    global doDeviceKey
+    global doProductKey
+
+    if doDeviceKey or doProductKey:        
+        crypto.Encrypt(inBuffer)
+
+
 def PrepareElf(elfPath):
     # type: (str)->bool
 
     global sect_mainElf
+    global doDeviceKey
+    global doProductKey
 
     print("Loading elf file")
     print("  Path: {}".format(elfPath))
@@ -222,6 +265,7 @@ def PrepareElf(elfPath):
     try:
         with open(elfPath, "rb") as f:
             sect_mainElf = bytearray(f.read())
+            EncryptBuffer(sect_mainElf)
             sect_mainElfSize = len(sect_mainElf)
 
     except Exception as e:
@@ -464,7 +508,7 @@ def ValidateMetadata(inJsonData, absMetaFileName, absProjectDir):
                     "Expected key '{}' to be an int".format(key))
             if val < 0 or val > 0xFFFFFFFF:
                 raise MetadataError(
-                    "Expected key '{}' to be an unsigned 32 bit int"(key))
+                    "Expected key '{}' to be an unsigned 32 bit int".format(key))
         except Exception as e:
             raise MetadataError(
                 "Failed to parse key uint32_t '{}' from {}".format(key, absMetaFileName))
@@ -599,12 +643,27 @@ def ParseResources(inJsonData, absMetaFileName, absProjectDir):
     return True
 
 
+#
+# Enforcced:
+#   Native Apps:
+#     Signing: Required
+#     Encryption: Optional
+#   LUA:
+#     Signing: Optional
+#     Encryption: Optional
+#
+
+#
+# 00-04: reserved0
+# 04-08: reserved1
+# 08-0C: reserved0
+# 0C-0F: reserved1
+#
+
 def AddBinding():
     # type: () -> bool
 
     global sect_binding
-
-    print("  Adding dummy binding")
 
     sect_binding = bytearray(16)
 
@@ -649,6 +708,67 @@ def PrintSectionSizes(printVal):
     print("  Elf      : {} / {}".format(len(sect_mainElf), hex(len(sect_mainElf))))
 
 
+def SignPackage():
+
+    global doSign
+    global finalBinary
+
+    if not doSign:
+        print("""WARNING: BINARY IS NOT SIGNED""")
+        return
+
+    signedHash = crypto.CryptoSign(finalBinary)
+
+    sect_signing = bytearray()
+
+    # 0x00 - 0x10: header
+    signHdr = b"SIGN"
+
+    verHdr = struct.pack("<I", 0)
+
+    byteLen = len(signedHash)
+    lenHdr = struct.pack("<I", byteLen)
+
+    reserved3 = struct.pack("<I", 0)
+
+    sect_signing.extend(signHdr)
+    sect_signing.extend(verHdr)
+    sect_signing.extend(lenHdr)
+    sect_signing.extend(reserved3)
+
+    # 0x10 - 0xXX: RSA-signed SHA256 signature
+    sect_signing.extend(signedHash)
+
+    PadByteArray(sect_signing, 512)
+
+    # and finally pop that on the end of the entire .vmupack
+    finalBinary.extend(sect_signing)
+
+
+def ValidateSignature(absFilePath):
+
+    global doSign
+    
+    # If we're not signing, it can't really fail
+    if not doSign:
+        return True
+
+    #import crypto
+
+    with open(absFilePath, "rb") as vmuPack:
+
+        # Read the whole thing in
+        # let the crypto function handle the header, size, etc
+        fileBytes = vmuPack.read()
+
+        success = crypto.CryptoTestSign(fileBytes)
+        if not success:
+            raise Exception("Failed to validate signed package")
+        else:
+            print("Signature validation success!")
+            return True
+
+
 # adds to the header in the final binary
 # not the header stub
 def AddToArray(targ, pos, val):
@@ -663,13 +783,14 @@ def AddToArray(targ, pos, val):
 
     # 00-08: uint8_t magic[8] = "VMUPACK\0"
     # 08-0C: uint32_t version = 1
-    # 0C-10: uint32_t encryptionVersion = 0 (not encrypted)
+    # 0C-10: uint32_t encryptionFlags = 0 (not encrypted)
     #
     # 10-30: uint8_t appName[32] = "My awesome app\0"
     #
-    # 30-34: uint32_t appMode     # 1= applet, 2= fullscreen
-    # 34-38: uint32_t appEnv      # 0 = native, 1 = LUA
-    # 38-40: uint32_t reserved[2]
+    # 30-34: uint32_t appMode        # 1= applet, 2= fullscreen
+    # 34-38: uint32_t appEnv         # 0 = native, 1 = LUA
+    # 38-38: uint32_t reserved
+    # 3C-40: uint32_t fileSizeBytesMinusSignature    # aka SignaturePos
     #
     # 40-44: uint32_t iconOffset
     # 44-48: uint32_t iconLength
@@ -679,8 +800,6 @@ def AddToArray(targ, pos, val):
     #
     # 50-54: uint32_t resourceOffset
     # 54-58: uint32_t resourceLength
-    #
-    # V---- Encrypted section ----V
     #
     # 58-5C: uint32_t bindingOffset
     # 5C-60: uint32_t bindingLength
@@ -706,6 +825,7 @@ def CreateHeader(absProjectDir, relElfNameNoExt):
     global sect_mainElf
     #
     global finalBinary
+    global doSign
 
     # 0-8: magic
     magic = b"VMUPACK\0"
@@ -819,6 +939,15 @@ def CreateHeader(absProjectDir, relElfNameNoExt):
     print("  Wrote elf at pos {} size {}".format(
         hex(elfStart), hex(len(sect_mainElf))))
 
+    # Pad it to 512 for fast SD access
+    PadByteArray(finalBinary, 512)
+
+    # and set the main file size in bytes before appending the signing data
+    AddToArray(finalBinary, 0x3C, len(finalBinary))
+
+    # and finally, sign it
+    SignPackage()
+
     sect_finalBinarySize = len(finalBinary)
     print("Final binary size: {} / {}".format(
         sect_finalBinarySize, hex(sect_finalBinarySize)))
@@ -834,6 +963,10 @@ def CreateHeader(absProjectDir, relElfNameNoExt):
         return False
 
     print("Write file to: {}".format(absOutPath))
+
+    valid = ValidateSignature(absOutPath)
+    if not valid:
+        raise Exception("Signature validation failed")
 
     return True
 
