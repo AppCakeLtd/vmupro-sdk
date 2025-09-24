@@ -5,20 +5,9 @@
 # 2025, 8BM
 #
 
-# c:\myprojects\vmusdk\examples\minimal
-PROJECTDIR="$1"
-# "vmupro_minimal" (matches your .elf filename in projectdir/build/<yourfile>.app.elf)
-ELFNAME="$2"
-# usually "icon.bmp"
-ICON="$3"
-# usually "metadata.json"
-META="$4"
-# set to true for extra spam
-DEBUG="$5"
-
-# Need the tool's folder path to properly locate requirements.txxt
+# Need the tool's folder path to properly locate requirements.txt
 # i.e. the location where THIS script resides
-# relative/abs pathssupported
+# relative/abs paths supported
 SCRIPT_PATH="$0"
 while [ -L "$SCRIPT_PATH" ]; do
     SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
@@ -27,15 +16,11 @@ SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 TOOLDIR="$SCRIPT_DIR"
 echo "Packer tool's dir: $TOOLDIR"
 
-# if [ -z "$PROJECTDIR" ]; then
-#     echo "Inferring projectdir..."
-#     PROJECTDIR="$(pwd)"
-# fi
-
+# Projectdir is always current working directory
+PROJECTDIR="$(pwd)"
 echo "Project's dir: $PROJECTDIR"
 
-VENVNAME="vmupacker_venv"
-VENVDIR="$PROJECTDIR/$VENVNAME"
+VENVDIR="$PROJECTDIR/vmupacker_venv"
 
 echo "VMUPacker: checking virtual environment"
 if [ -z "$VIRTUAL_ENV" ]; then
@@ -61,13 +46,11 @@ echo "Ready!"
 
 # Running `which python` should point at the ESP IDF's python
 # this will be automatic if you've ran the idf export script before building
+
 python3 "$TOOLDIR/packer.py" \
---projectdir "$PROJECTDIR" \
---elfname "$ELFNAME" \
---icon "$ICON" \
---meta "$META" \
---sdkversion 1.0.0 \
---debug "$DEBUG"
+  --projectdir "$PROJECTDIR" \
+  --sdkversion "1.0.0" \
+  "$@"
 
 echo "closing the python vmupacker venv"
 deactivate
