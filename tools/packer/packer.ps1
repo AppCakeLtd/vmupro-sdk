@@ -2,37 +2,18 @@
 # Creates the python venv and passes the build params
 # 2025, 8BM
 #
-param (
-    # c:\myprojects\vmusdk\examples\minimal
-    [string]$projectdir, 
-    # "vmupro_minimal" (matches your .elf filename in projectdir/build/<yourfile>.app.elf)
-    [string]$elfname, 
-    # usually "icon.bmp"
-    [string]$icon, 
-    # usually "metadata.json"
-    [string]$meta, 
-    # set to true for extra spam
-    [string]$debug       
-)
 
-# Debug
-# Write-Host "args: $args"
-# Write-Host base=$projectdir elfname=$elfname icon=$icon meta=$meta debug=$debug
 
 # Need the tool's folder path to properly locate requirements.txxt
 # i.e. the location where THIS script resides
 $tooldir = Split-Path -Parent $PSCommandPath
 Write-Host "Packer tool's dir: $tooldir"
 
-if ([string]::IsNullOrEmpty($projectdir)) {
-    # base directory of your project, where it was invoked from
-    $projectdir = Get-Location 
-    Write-Host WARNING: Inferring project dir from current directory
-}
-Write-Host "Project's dir: $projectdir"
+$projectdir = $(Get-Location)
+Write-Host "Project dir: $projectdir"
 
-$venvname = "vmupacker_venv"
-$venvdir = "$projectdir\$venvname"
+$venvdir = "$projectdir\vmupacker_venv"
+Write-Host "Venv dir: $venvdir"
 
 write-host "VMUPacker: checking virtual environment"
 if (-not $env:VIRTUAL_ENV) {
@@ -56,8 +37,8 @@ else {
 }
 
 
-# source $projectdir\Scripts\activate
-. $projectdir\vmupacker_venv\Scripts\Activate.ps1
+# source cwd\vmupacker_venv\Scripts\activate
+. $venvdir\Scripts\Activate.ps1
 
 # Add crcmod, pillow, etc
 pip install -r $tooldir\requirements.txt
@@ -65,9 +46,16 @@ pip install -r $tooldir\requirements.txt
 Write-Host "VMUPacker env created"
 Write-Host "Ready!"
 
+# start with required args
+$argsList = @(
+    "$tooldir/packer.py",
+    "--projectdir", $projectdir,
+    "--sdkversion", "1.0.0"
+) + $args
+
 # Running `where.exe python` should point at the ESP IDF's python
 # this will be automatic if you've ran the idf export script before building
-python $tooldir/packer.py --projectdir $projectdir --elfname $elfname --icon $icon --meta $meta --sdkversion 1.0.0 --debug true
+python @argsList
 
 Write-Host "closing the python vmupacker venv"
 deactivate
