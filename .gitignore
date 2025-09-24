@@ -11,3 +11,5 @@ sdkconfig.old
 vmupacker_venv/
 vmupacker_debug/
 CLAUDE.md
+*.cmd
+*_ignore_*
