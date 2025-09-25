@@ -893,14 +893,15 @@ def CreateHeader(absProjectDir, relElfNameNoExt):
     # Pad out some byte arrays and then let's start piecing them together
     #
 
-    PrintSectionSizes("Section sizes:")
+    # save a little extra work
+    unpaddedElfSize = len(sect_mainElf)
+    PrintSectionSizes("Section sizes: (padded)")
     PadByteArray(sect_header, 512)
     PadByteArray(sect_icon, 512)
     PadByteArray(sect_outMeta, 512)
     PadByteArray(sect_binding, 512)
     PadByteArray(sect_mainElf, 512)
-    PrintSectionSizes("Padded section sizes:")
-
+    
     #
     # Write Header int the final binary
     # Update header fields as we append new sections
@@ -942,10 +943,10 @@ def CreateHeader(absProjectDir, relElfNameNoExt):
     elfStart = len(finalBinary)
     headerFieldPos += AddToArray(finalBinary, headerFieldPos, elfStart)
     headerFieldPos += AddToArray(finalBinary,
-                                 headerFieldPos, len(sect_mainElf))
+                                 headerFieldPos, unpaddedElfSize)
     finalBinary.extend(sect_mainElf)
-    print("  Wrote elf at pos {} size {}".format(
-        hex(elfStart), hex(len(sect_mainElf))))
+    print("  Wrote elf at pos {} size {} ({})".format(
+        hex(elfStart), hex(len(sect_mainElf)), hex(unpaddedElfSize) ))
 
     # Pad it to 512 for fast SD access
     PadByteArray(finalBinary, 512)
