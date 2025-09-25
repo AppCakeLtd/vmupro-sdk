@@ -17,9 +17,6 @@ from pathlib import Path
 # - parse the json metadata (name, author, icon trans)
 # - load and encode the icon
 
-headerVersion = 1
-encryptionVersion = 0
-
 # save the raw binary for each section to a file
 # (set via args)
 debugOutput = False
@@ -202,13 +199,15 @@ def CheckKeys():
     global doProductKey
     global doDeviceKey
 
-    import os, importlib.util, sys
+    import os
+    import importlib.util
+    import sys
     from pathlib import Path
-    
+
     cryptoPath = os.environ.get("VMUPRO_CRYPTO_PATH")
     if cryptoPath:
         path = Path(cryptoPath).resolve()
-        spec = importlib.util.spec_from_file_location("crypto", path)        
+        spec = importlib.util.spec_from_file_location("crypto", path)
         crypto = importlib.util.module_from_spec(spec)
         sys.modules["crypto"] = crypto
         spec.loader.exec_module(crypto)
@@ -244,7 +243,7 @@ def EncryptBuffer(inBuffer: bytearray):
     global doDeviceKey
     global doProductKey
 
-    if doDeviceKey or doProductKey:        
+    if doDeviceKey or doProductKey:
         crypto.Encrypt(inBuffer)
 
 
@@ -653,18 +652,17 @@ def ParseResources(inJsonData, absMetaFileName, absProjectDir):
 #     Encryption: Optional
 #
 
-#
+
+# Placeholder for now
 # 00-04: reserved0
 # 04-08: reserved1
-# 08-0C: reserved0
-# 0C-0F: reserved1
-#
+# 08-0C: reserved2
+# 0C-0F: reserved3
 
 def AddBinding():
     # type: () -> bool
 
     global sect_binding
-
     sect_binding = bytearray(16)
 
     return True
@@ -748,12 +746,12 @@ def SignPackage():
 def ValidateSignature(absFilePath):
 
     global doSign
-    
+
     # If we're not signing, it can't really fail
     if not doSign:
         return True
 
-    #import crypto
+    # import crypto
 
     with open(absFilePath, "rb") as vmuPack:
 
@@ -782,8 +780,11 @@ def AddToArray(targ, pos, val):
     return 4
 
     # 00-08: uint8_t magic[8] = "VMUPACK\0"
-    # 08-0C: uint32_t version = 1
-    # 0C-10: uint32_t encryptionFlags = 0 (not encrypted)
+    # 08-0C: uint8_t vmuPackVersion = 1
+    #        uint8_t targetDevice = 0
+    #        uint8_t productBindingVersion
+    #        uint8_t deviceBindingVersion
+    # 0C-10: uint32_t reserved
     #
     # 10-30: uint8_t appName[32] = "My awesome app\0"
     #
@@ -811,12 +812,11 @@ def AddToArray(targ, pos, val):
     #
     # padded to 512 bytes
 
-
+# TODO: we'll put this in an actual struct once the file format and requirements have settled a bit
 def CreateHeader(absProjectDir, relElfNameNoExt):
     # type: (str, str) -> bool
 
     global headerVersion
-    global encryptionVersion
     #
     global sect_header
     global sect_icon
@@ -833,11 +833,19 @@ def CreateHeader(absProjectDir, relElfNameNoExt):
 
     # Add the values we know immediately
 
-    # 8-C: version
-    sect_header.extend(headerVersion.to_bytes(4, 'little'))
+    # 8-C: version, targ device, 
+    vmuPackVersion = 1
+    sect_header.extend(vmuPackVersion.to_bytes(1, 'little'))
+    targDevice = 0
+    sect_header.extend(targDevice.to_bytes(1,'little'))
+    prodBindingVersion = 1 if doProductKey else 0
+    sect_header.extend(prodBindingVersion.to_bytes(1,'little'))
+    devBindingversion = 1 if doDeviceKey else 0
+    sect_header.extend(devBindingversion.to_bytes(1,'little'))
 
-    # C-10: encryption
-    sect_header.extend(encryptionVersion.to_bytes(4, 'little'))
+    # C-10: reserved
+    reserved0 = 0    
+    sect_header.extend(reserved0.to_bytes(4, 'little'))
 
     # 10-30 - mini header identifier
     appName = outMetaJSON["app_name"]
