@@ -5,6 +5,7 @@
     "app_author":"8BitMods",
     "app_version": "1.0.1",
     "app_mode": 2,
+    "app_environment":"native",
     "icon_transparency": true,    
     "app_entry_point":"app_main",    
     "resources": [

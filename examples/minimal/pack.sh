@@ -1,2 +1,2 @@
 #!/bin/sh
-../../tools/packer/packer.sh . vmupro_minimal icon.bmp ./metadata.json true
+../../tools/packer/packer.sh --elfname vmupro_minimal --icon icon.bmp --meta ./metadata.json --debug true
