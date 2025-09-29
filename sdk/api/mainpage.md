@@ -6,31 +6,35 @@ Welcome to the VMU Pro LUA SDK documentation. This SDK enables you to create app
 
 The VMU Pro LUA SDK provides a comprehensive set of APIs for developing applications:
 
-- **@ref vmupro_log.lua "Logging"** - Application logging and debugging
-- **@ref vmupro_display.lua "Display"** - Graphics rendering and display management
-- **@ref vmupro_input.lua "Input"** - Button and control input handling
-- **@ref vmupro_audio.lua "Audio"** - Volume and brightness control
-- **@ref vmupro_file.lua "File System"** - File and folder operations
-- **@ref vmupro_utilities.lua "Utilities"** - Timing, memory, and helper functions
+- **@ref system.lua "System"** - Application logging, timing, and system utilities
+- **@ref display.lua "Display"** - Graphics rendering and display management
+- **@ref input.lua "Input"** - Button and control input handling
+- **@ref audio.lua "Audio"** - Volume control and audio functionality
+- **@ref file.lua "File System"** - File and folder operations
+- **@ref sprites.lua "Sprites"** - Sprite management and collision detection
 
 ## Application Structure
 
 Every VMU Pro LUA application must have:
 
-1. **app.lua** - Main entry point with `app_main()` function
+1. **app.lua** - Main entry point with `AppMain()` function
 2. **metadata.json** - Application configuration and metadata
 3. **icon.bmp** - 76x76 pixel application icon
 
 ## Example Application
 
 ```lua
-function app_main()
-    vmupro_log(VMUPRO_LOG_INFO, "MyApp", "Hello VMU Pro!")
+import "api/system"
+import "api/display"
+import "api/input"
+
+function AppMain()
+    vmupro.system.log(vmupro.system.LOG_INFO, "MyApp", "Hello VMU Pro!")
 
     -- Clear display and show text
-    vmupro_display_clear()
-    vmupro_display_text(10, 10, "Hello World!", VMUPRO_COLOR_WHITE)
-    vmupro_display_show()
+    vmupro.graphics.clear(vmupro.graphics.BLACK)
+    vmupro.graphics.drawText("Hello World!", 10, 10, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
+    vmupro.graphics.refresh()
 
     return 0  -- Success
 end

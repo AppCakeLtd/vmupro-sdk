@@ -128,17 +128,17 @@ Modify the text color to cycle through different values:
 local frame_count = 0
 
 function update()
-    vmupro_display_clear()
+    vmupro.graphics.clear(vmupro.graphics.BLACK)
 
     -- Animate text color
-    local color = (frame_count % 60 < 30) and 1 or 0
-    vmupro_draw_text("Hello World!", 20, 15, color)
+    local color = (frame_count % 60 < 30) and vmupro.graphics.WHITE or vmupro.graphics.BLACK
+    vmupro.graphics.drawText("Hello World!", 20, 15, color, vmupro.graphics.BLACK)
 
     frame_count = frame_count + 1
 
-    vmupro_display_refresh()
+    vmupro.graphics.refresh()
 
-    if vmupro_btn_pressed(BTN_MODE) then
+    if vmupro.input.pressed(vmupro.input.MODE) then
         return false
     end
 
@@ -154,18 +154,18 @@ Make the text respond to button presses:
 local message = "Press A button!"
 
 function update()
-    vmupro_display_clear()
+    vmupro.graphics.clear(vmupro.graphics.BLACK)
 
-    if vmupro_btn_pressed(BTN_A) then
+    if vmupro.input.pressed(vmupro.input.A) then
         message = "A button pressed!"
-    elseif vmupro_btn_pressed(BTN_B) then
+    elseif vmupro.input.pressed(vmupro.input.B) then
         message = "B button pressed!"
     end
 
-    vmupro_draw_text(message, 10, 25, 1)
-    vmupro_display_refresh()
+    vmupro.graphics.drawText(message, 10, 25, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
+    vmupro.graphics.refresh()
 
-    if vmupro_btn_pressed(BTN_MODE) then
+    if vmupro.input.pressed(vmupro.input.MODE) then
         return false
     end
 
@@ -183,7 +183,7 @@ local text_y = 25
 local dx = 1
 
 function update()
-    vmupro_display_clear()
+    vmupro.graphics.clear(vmupro.graphics.BLACK)
 
     -- Move text horizontally
     text_x = text_x + dx
@@ -191,10 +191,10 @@ function update()
         dx = -dx -- Reverse direction
     end
 
-    vmupro_draw_text("Moving!", text_x, text_y, 1)
-    vmupro_display_refresh()
+    vmupro.graphics.drawText("Moving!", text_x, text_y, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
+    vmupro.graphics.refresh()
 
-    if vmupro_btn_pressed(BTN_MODE) then
+    if vmupro.input.pressed(vmupro.input.MODE) then
         return false
     end
 

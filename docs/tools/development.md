@@ -91,15 +91,7 @@ Create `.vscode/settings.json` in your project root:
         "${workspaceFolder}/vmupro-sdk/sdk/api"
     ],
     "lua.diagnostics.globals": [
-        "vmupro_display_clear", "vmupro_display_refresh",
-        "vmupro_draw_text", "vmupro_draw_line", "vmupro_draw_rect", "vmupro_draw_fill_rect",
-        "vmupro_btn_read", "vmupro_btn_pressed", "vmupro_sleep_ms", "vmupro_get_time_us",
-        "vmupro_file_exists", "vmupro_read_file_complete", "vmupro_write_file_complete",
-        "vmupro_log", "BTN_A", "BTN_B", "BTN_MODE", "BTN_POWER",
-        "BTN_DPAD_UP", "BTN_DPAD_DOWN", "BTN_DPAD_LEFT", "BTN_DPAD_RIGHT",
-        "COLOR_RED", "COLOR_GREEN", "COLOR_BLUE", "COLOR_WHITE", "COLOR_BLACK",
-        "VMUPRO_AUDIO_MONO", "VMUPRO_AUDIO_STEREO",
-        "VMUPRO_LOG_ERROR", "VMUPRO_LOG_WARN", "VMUPRO_LOG_INFO", "VMUPRO_LOG_DEBUG"
+        "vmupro", "import"
     ],
     "files.associations": {
         "*.lua": "lua"
@@ -166,29 +158,32 @@ Create `.vscode/tasks.json` for building and deploying:
 **src/main.lua (Application):**
 ```lua
 -- My VMU Pro Application
+import "api/system"
+import "api/display"
+import "api/input"
 
 function init()
-    vmupro_log(VMUPRO_LOG_INFO, "App", "Starting...")
+    vmupro.system.log(vmupro.system.LOG_INFO, "App", "Starting...")
     -- TODO: Initialize your application state here
     return true
 end
 
 function update()
-    vmupro_display_clear()
+    vmupro.graphics.clear(vmupro.graphics.BLACK)
 
     -- TODO: Handle input
-    vmupro_btn_read()
+    vmupro.input.read()
 
     -- TODO: Update application logic here
 
     -- TODO: Draw your application UI here
-    vmupro_draw_text("My App", 50, 20, COLOR_WHITE)
-    vmupro_draw_text("Press MODE to exit", 20, 200, COLOR_GREY)
+    vmupro.graphics.drawText("My App", 50, 20, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
+    vmupro.graphics.drawText("Press MODE to exit", 20, 200, vmupro.graphics.GREY, vmupro.graphics.BLACK)
 
-    vmupro_display_refresh()
+    vmupro.graphics.refresh()
 
     -- Handle exit
-    if vmupro_btn_pressed(BTN_MODE) then
+    if vmupro.input.pressed(vmupro.input.MODE) then
         return false
     end
 
@@ -196,10 +191,10 @@ function update()
 end
 
 function cleanup()
-    vmupro_log(VMUPRO_LOG_INFO, "App", "Ending...")
+    vmupro.system.log(vmupro.system.LOG_INFO, "App", "Ending...")
     -- TODO: Clean up resources here
-    vmupro_display_clear()
-    vmupro_display_refresh()
+    vmupro.graphics.clear(vmupro.graphics.BLACK)
+    vmupro.graphics.refresh()
 end
 
 -- Main execution
@@ -208,7 +203,7 @@ if not init() then
 end
 
 while update() do
-    vmupro_sleep_ms(16) -- ~60 FPS
+    vmupro.system.delayMs(16) -- ~60 FPS
 end
 
 cleanup()
@@ -236,6 +231,9 @@ cleanup()
 **src/main.lua (Game):**
 ```lua
 -- My VMU Pro Game
+import "api/system"
+import "api/display"
+import "api/input"
 
 -- Game state
 local game_state = {
@@ -244,29 +242,29 @@ local game_state = {
 }
 
 function init()
-    vmupro_log(VMUPRO_LOG_INFO, "Game", "Starting...")
+    vmupro.system.log(vmupro.system.LOG_INFO, "Game", "Starting...")
     -- TODO: Initialize your game systems here
     return true
 end
 
 function update()
-    vmupro_display_clear()
+    vmupro.graphics.clear(vmupro.graphics.BLACK)
 
     -- Handle input
-    vmupro_btn_read()
+    vmupro.input.read()
 
     -- TODO: Update game logic here
     -- TODO: Handle player input
     -- TODO: Update physics, AI, etc.
 
     -- TODO: Render your game here
-    vmupro_draw_text("My Game", 80, 10, COLOR_WHITE)
+    vmupro.graphics.drawText("My Game", 80, 10, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
     -- TODO: Draw game objects, UI, etc.
 
-    vmupro_display_refresh()
+    vmupro.graphics.refresh()
 
     -- Handle exit
-    if vmupro_btn_pressed(BTN_MODE) then
+    if vmupro.input.pressed(vmupro.input.MODE) then
         game_state.running = false
     end
 
@@ -274,10 +272,10 @@ function update()
 end
 
 function cleanup()
-    vmupro_log(VMUPRO_LOG_INFO, "Game", "Ending...")
+    vmupro.system.log(vmupro.system.LOG_INFO, "Game", "Ending...")
     -- TODO: Clean up game resources here
-    vmupro_display_clear()
-    vmupro_display_refresh()
+    vmupro.graphics.clear(vmupro.graphics.BLACK)
+    vmupro.graphics.refresh()
 end
 
 -- Main execution
@@ -286,7 +284,7 @@ if not init() then
 end
 
 while update() do
-    vmupro_sleep_ms(16) -- ~60 FPS
+    vmupro.system.delayMs(16) -- ~60 FPS
 end
 
 cleanup()

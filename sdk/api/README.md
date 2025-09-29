@@ -11,22 +11,26 @@ This directory contains LUA type definition files for IDE support and documentat
 ## Usage in Your LUA Scripts
 
 ```lua
--- Load SDK type definitions for IDE support (safe require)
-if package and package.path then
-    package.path = package.path .. ";../../sdk/api/?.lua"
-    pcall(require, "vmupro_log")  -- Won't fail if file doesn't exist
-end
+-- Import API modules for type definitions and runtime functionality
+import "api/system"
+import "api/display"
+import "api/input"
 
--- Use the functions directly - provided by firmware at runtime
-function app_main()
-    log.info("Hello World!")  -- IDE will show autocomplete
+-- Use the namespaced functions - provided by firmware at runtime
+function AppMain()
+    vmupro.system.log(vmupro.system.LOG_INFO, "App", "Hello World!")  -- IDE will show autocomplete
     return 0
 end
 ```
 
 ## Available Type Definitions
 
-- `vmupro_log.lua` - Logging functions (log.info, log.debug, log.warn, log.error)
+- `system.lua` - System functions (vmupro.system.log, vmupro.system.getTimeUs, vmupro.system.delayMs)
+- `display.lua` - Display functions (vmupro.graphics.clear, vmupro.graphics.drawText, vmupro.graphics.refresh)
+- `input.lua` - Input functions (vmupro.input.read, vmupro.input.pressed)
+- `audio.lua` - Audio functions (vmupro.audio.setGlobalVolume, vmupro.audio.getGlobalVolume)
+- `file.lua` - File system functions (vmupro.file.readFileComplete, vmupro.file.writeFileComplete)
+- `sprites.lua` - Sprite functions (vmupro.sprites.draw, vmupro.sprites.setCollision)
 
 ## How It Works
 

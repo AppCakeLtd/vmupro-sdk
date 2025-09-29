@@ -49,8 +49,8 @@ local BLACK = rgb_to_565(0, 0, 0)
 The graphics system uses a double-buffered approach:
 
 1. **Draw to Back Buffer**: All drawing operations render to an off-screen buffer
-2. **Present Frame**: `vmupro_display_refresh()` copies the back buffer to the visible display
-3. **Clear Buffer**: `vmupro_display_clear()` prepares for the next frame
+2. **Present Frame**: `vmupro.graphics.refresh()` copies the back buffer to the visible display
+3. **Clear Buffer**: `vmupro.graphics.clear()` prepares for the next frame
 
 ```lua
 import "api/display"
