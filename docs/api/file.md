@@ -13,14 +13,14 @@ LUA applications have access to files within the `/sdcard` directory. The API pr
 
 ## Functions
 
-### vmupro_read_file_complete(filename)
+### vmupro.file.readFileComplete(filename)
 
 Reads an entire file's contents into memory.
 
 ```lua
-local data = vmupro_read_file_complete("/sdcard/data.txt")
+local data = vmupro.file.readFileComplete("/sdcard/data.txt")
 if data then
-    print("File contents: " .. data)
+    vmupro.system.log(vmupro.system.LOG_INFO, "File", "File contents: " .. data)
 end
 ```
 
@@ -32,12 +32,12 @@ end
 
 ---
 
-### vmupro_write_file_complete(filename, data)
+### vmupro.file.writeFileComplete(filename, data)
 
 Writes data to a file, replacing any existing content.
 
 ```lua
-local success = vmupro_write_file_complete("/sdcard/save.txt", "Hello World")
+local success = vmupro.file.writeFileComplete("/sdcard/save.txt", "Hello World")
 ```
 
 **Parameters:**
@@ -49,13 +49,13 @@ local success = vmupro_write_file_complete("/sdcard/save.txt", "Hello World")
 
 ---
 
-### vmupro_file_exists(filename)
+### vmupro.file.fileExists(filename)
 
 Checks if a file exists.
 
 ```lua
-if vmupro_file_exists("/sdcard/config.txt") then
-    print("Config file found")
+if vmupro.file.fileExists("/sdcard/config.txt") then
+    vmupro.system.log(vmupro.system.LOG_INFO, "File", "Config file found")
 end
 ```
 
@@ -67,13 +67,13 @@ end
 
 ---
 
-### vmupro_folder_exists(foldername)
+### vmupro.file.folderExists(foldername)
 
 Checks if a folder exists.
 
 ```lua
-if vmupro_folder_exists("/sdcard/saves") then
-    print("Saves folder found")
+if vmupro.file.folderExists("/sdcard/saves") then
+    vmupro.system.log(vmupro.system.LOG_INFO, "File", "Saves folder found")
 end
 ```
 
@@ -85,14 +85,14 @@ end
 
 ---
 
-### vmupro_create_folder(foldername)
+### vmupro.file.createFolder(foldername)
 
 Creates a new folder.
 
 ```lua
-local success = vmupro_create_folder("/sdcard/saves")
+local success = vmupro.file.createFolder("/sdcard/saves")
 if success then
-    print("Saves folder created")
+    vmupro.system.log(vmupro.system.LOG_INFO, "File", "Saves folder created")
 end
 ```
 
@@ -104,14 +104,14 @@ end
 
 ---
 
-### vmupro_get_file_size(filename)
+### vmupro.file.getFileSize(filename)
 
 Gets the size of a file in bytes.
 
 ```lua
-local size = vmupro_get_file_size("/sdcard/data.txt")
+local size = vmupro.file.getFileSize("/sdcard/data.txt")
 if size then
-    print("File size: " .. size .. " bytes")
+    vmupro.system.log(vmupro.system.LOG_INFO, "File", "File size: " .. size .. " bytes")
 end
 ```
 
@@ -124,32 +124,35 @@ end
 ## Example Usage
 
 ```lua
+import "api/file"
+import "api/system"
+
 -- Write data to a file
-local success = vmupro_write_file_complete("/sdcard/save_data.txt", "Player Score: 1250\nLevel: 5\n")
+local success = vmupro.file.writeFileComplete("/sdcard/save_data.txt", "Player Score: 1250\nLevel: 5\n")
 if success then
-    print("Save data written")
+    vmupro.system.log(vmupro.system.LOG_INFO, "File", "Save data written")
 else
-    print("Failed to write file")
+    vmupro.system.log(vmupro.system.LOG_ERROR, "File", "Failed to write file")
 end
 
 -- Read data from a file
-if vmupro_file_exists("/sdcard/save_data.txt") then
-    local data = vmupro_read_file_complete("/sdcard/save_data.txt")
+if vmupro.file.fileExists("/sdcard/save_data.txt") then
+    local data = vmupro.file.readFileComplete("/sdcard/save_data.txt")
     if data then
-        print("Save data: " .. data)
+        vmupro.system.log(vmupro.system.LOG_INFO, "File", "Save data: " .. data)
     end
 else
-    print("No save data found")
+    vmupro.system.log(vmupro.system.LOG_WARN, "File", "No save data found")
 end
 
 -- Check file size before reading
-local size = vmupro_get_file_size("/sdcard/image.bmp")
+local size = vmupro.file.getFileSize("/sdcard/image.bmp")
 if size then
-    print("Image file size: " .. size .. " bytes")
+    vmupro.system.log(vmupro.system.LOG_INFO, "File", "Image file size: " .. size .. " bytes")
     if size > 0 then
-        local data = vmupro_read_file_complete("/sdcard/image.bmp")
+        local data = vmupro.file.readFileComplete("/sdcard/image.bmp")
         if data then
-            print("Read binary data: " .. #data .. " bytes")
+            vmupro.system.log(vmupro.system.LOG_INFO, "File", "Read binary data: " .. #data .. " bytes")
         end
     end
 end

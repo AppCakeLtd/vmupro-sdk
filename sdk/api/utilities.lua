@@ -1,4 +1,4 @@
---- @file vmupro_utilities.lua
+--- @file utilities.lua
 --- @brief VMU Pro LUA SDK - Utility Functions
 --- @author 8BitMods
 --- @version 1.0.0
@@ -6,50 +6,54 @@
 --- @copyright Copyright (c) 2025 8BitMods. All rights reserved.
 ---
 --- Utility functions for VMU Pro LUA applications.
---- All utility functions are available globally in the LUA environment.
+--- Functions are available under the vmupro.system namespace.
+
+-- Ensure vmupro namespace exists
+vmupro = vmupro or {}
+vmupro.system = vmupro.system or {}
 
 --- @brief Sleep for a specified number of milliseconds
 --- @param milliseconds number Time to sleep in milliseconds
---- @usage vmupro_sleep_ms(1000) -- Sleep for 1 second
---- @usage vmupro_sleep_ms(500)  -- Sleep for 0.5 seconds
+--- @usage vmupro.system.sleepMs(1000) -- Sleep for 1 second
+--- @usage vmupro.system.sleepMs(500)  -- Sleep for 0.5 seconds
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
-function vmupro_sleep_ms(milliseconds) end
+function vmupro.system.sleepMs(milliseconds) end
 
 --- @brief Get current time in microseconds
 --- @return number Current time in microseconds since boot
---- @usage local time = vmupro_get_time_us()
---- @usage local elapsed = vmupro_get_time_us() - start_time
+--- @usage local time = vmupro.system.getTimeUs()
+--- @usage local elapsed = vmupro.system.getTimeUs() - start_time
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
-function vmupro_get_time_us() end
+function vmupro.system.getTimeUs() end
 
 --- @brief Get current LUA memory usage statistics
 --- @return number current_memory Current memory usage in bytes
 --- @return number max_memory Maximum allowed memory in bytes
---- @usage local current, max = vmupro_get_memory_usage()
---- @usage vmupro_log(VMUPRO_LOG_INFO, "Memory", "Using " .. current .. " / " .. max .. " bytes")
+--- @usage local current, max = vmupro.system.getMemoryUsage()
+--- @usage vmupro.system.log(vmupro.system.LOG_INFO, "Memory", "Using " .. current .. " / " .. max .. " bytes")
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
-function vmupro_get_memory_usage() end
+function vmupro.system.getMemoryUsage() end
 
 --- @brief Delay execution for microseconds
 --- @param microseconds number Time to delay in microseconds
---- @usage vmupro_delay_us(1000) -- Delay for 1 millisecond
+--- @usage vmupro.system.delayUs(1000) -- Delay for 1 millisecond
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
-function vmupro_delay_us(microseconds) end
+function vmupro.system.delayUs(microseconds) end
 
 --- @brief Delay execution for milliseconds
 --- @param milliseconds number Time to delay in milliseconds
---- @usage vmupro_delay_ms(100) -- Delay for 100 milliseconds
+--- @usage vmupro.system.delayMs(100) -- Delay for 100 milliseconds
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
-function vmupro_delay_ms(milliseconds) end
+function vmupro.system.delayMs(milliseconds) end
 
 --- @brief Set the global log level
---- @param level number Log level (VMUPRO_LOG_ERROR=1, VMUPRO_LOG_WARN=2, VMUPRO_LOG_INFO=3, VMUPRO_LOG_DEBUG=4)
---- @usage vmupro_set_log_level(VMUPRO_LOG_DEBUG) -- Enable all log levels
+--- @param level number Log level (LOG_ERROR=1, LOG_WARN=2, LOG_INFO=3, LOG_DEBUG=4)
+--- @usage vmupro.system.setLogLevel(vmupro.system.LOG_DEBUG) -- Enable all log levels
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
-function vmupro_set_log_level(level) end
+function vmupro.system.setLogLevel(level) end

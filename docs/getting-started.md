@@ -53,50 +53,47 @@ cd my_first_app
 
 ### 2. Create the Main Script
 
-Create a file called `main.lua`:
+Create a file called `app.lua`:
 
 ```lua
+import "api/system"
+import "api/display"
+import "api/input"
+
 -- Hello World VMU Pro Application
 
-function init()
-    print("Hello World app starting...")
-end
+local app_running = true
 
-function update()
-    -- Clear the display
-    vmupro_display_clear()
+function AppMain()
+    vmupro.system.log(vmupro.system.LOG_INFO, "HelloWorld", "Starting Hello World app...")
 
-    -- Draw hello world text
-    vmupro_draw_text("Hello World!", 10, 10, 1)
-    vmupro_draw_text("Press START to exit", 10, 25, 1)
+    -- Main loop
+    while app_running do
+        -- Read input
+        vmupro.input.read()
 
-    -- Present to display
-    vmupro_display_refresh()
+        -- Check for exit
+        if vmupro.input.pressed(vmupro.input.B) then
+            app_running = false
+        end
 
-    -- Check for exit
-    if vmupro_btn_pressed(BTN_MODE) then
-        return false -- Exit application
+        -- Clear the display
+        vmupro.graphics.clear(vmupro.graphics.BLACK)
+
+        -- Draw hello world text
+        vmupro.graphics.drawText("Hello World!", 10, 10, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
+        vmupro.graphics.drawText("Press B to exit", 10, 30, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
+
+        -- Present to display
+        vmupro.graphics.refresh()
+
+        -- Frame rate control (~60 FPS)
+        vmupro.system.delayMs(16)
     end
 
-    return true -- Continue running
+    vmupro.system.log(vmupro.system.LOG_INFO, "HelloWorld", "Hello World app ending...")
+    return 0
 end
-
-function cleanup()
-    print("Hello World app ending...")
-    vmupro_display_clear()
-    vmupro_display_refresh()
-end
-
--- Application entry point
-if not init() then
-    return
-end
-
-while update() do
-    vmupro_sleep_ms(16) -- ~60 FPS
-end
-
-cleanup()
 ```
 
 ### 3. Create Metadata File
@@ -105,18 +102,23 @@ Create `metadata.json`:
 
 ```json
 {
-    "name": "Hello World",
-    "version": "1.0.0",
-    "author": "Your Name",
-    "description": "My first VMU Pro application",
-    "entry_point": "main.lua",
-    "icon": "icon.bmp"
+    "metadata_version": 1,
+    "app_name": "Hello World",
+    "app_author": "Your Name",
+    "app_version": "1.0.0",
+    "app_entry_point": "app.lua",
+    "app_mode": 1,
+    "app_environment": "lua",
+    "icon_transparency": false,
+    "resources": [
+        "app.lua"
+    ]
 }
 ```
 
 ### 4. Create an Icon (Optional)
 
-Create a 32x32 BMP file named `icon.bmp` or copy one from the examples directory.
+Create a 76x76 BMP file named `icon.bmp` or copy one from the examples directory.
 
 ### 5. Package Your Application
 
@@ -142,13 +144,13 @@ A typical VMU Pro LUA application follows this structure:
 
 ```
 my_app/
-├── main.lua          # Main application script
+├── app.lua          # Main application script
 ├── metadata.json     # Application metadata
-├── icon.bmp         # Application icon (32x32 BMP)
+├── icon.bmp         # Application icon (76x76 BMP)
 ├── assets/          # Additional assets (images, sounds)
 │   ├── sprites/
 │   └── sounds/
-└── libs/            # Additional LUA modules
+└── libraries/       # Additional LUA modules
     └── helper.lua
 ```
 
@@ -162,13 +164,13 @@ my_app/
 
 ### Frame Rate Management
 
-Use `vmupro_sleep_ms(16)` in your main loop for approximately 60 FPS:
+Use `vmupro.system.delayMs(16)` in your main loop for approximately 60 FPS:
 
 ```lua
 while running do
     update()
     render()
-    vmupro_sleep_ms(16) -- ~60 FPS
+    vmupro.system.delayMs(16) -- ~60 FPS
 end
 ```
 
@@ -176,7 +178,7 @@ end
 
 - The LUA VM has limited memory available
 - Avoid creating excessive temporary objects in tight loops
-- Use `vmupro_get_memory_usage()` to monitor memory usage
+- Use `vmupro.system.getMemoryUsage()` to monitor memory usage
 
 ### File Access
 
@@ -200,12 +202,12 @@ LUA applications can access files and folders within the `/sdcard` directory:
 **Application won't package:**
 - Check that all required files exist
 - Verify metadata.json syntax
-- Ensure icon.bmp is valid 32x32 BMP format
+- Ensure icon.bmp is valid 76x76 BMP format
 
 **Application won't run:**
 - Check LUA syntax errors
-- Verify entry_point in metadata.json
-- Use `vmupro_log(VMUPRO_LOG_DEBUG, "tag", "message")` for debugging
+- Verify app_entry_point in metadata.json
+- Use `vmupro.system.log(vmupro.system.LOG_DEBUG, "tag", "message")` for debugging
 
 **Device connection issues:**
 - Verify correct COM port

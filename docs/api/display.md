@@ -8,12 +8,12 @@ The graphics system uses a double-buffered frame buffer approach with extensive 
 
 ## Display Management
 
-### vmupro_display_clear(color)
+### vmupro.graphics.clear(color)
 
 Clears the entire display buffer with the specified color.
 
 ```lua
-vmupro_display_clear(0x0000) -- Clear to black
+vmupro.graphics.clear(vmupro.graphics.BLACK) -- Clear to black
 ```
 
 **Parameters:**
@@ -23,12 +23,12 @@ vmupro_display_clear(0x0000) -- Clear to black
 
 ---
 
-### vmupro_display_refresh()
+### vmupro.graphics.refresh()
 
 Refreshes the display, presenting the back buffer to the screen.
 
 ```lua
-vmupro_display_refresh()
+vmupro.graphics.refresh()
 ```
 
 **Parameters:** None
@@ -37,12 +37,12 @@ vmupro_display_refresh()
 
 ---
 
-### vmupro_get_global_brightness()
+### vmupro.graphics.getGlobalBrightness()
 
 Gets the current global brightness level.
 
 ```lua
-local brightness = vmupro_get_global_brightness()
+local brightness = vmupro.graphics.getGlobalBrightness()
 ```
 
 **Parameters:** None
@@ -52,12 +52,12 @@ local brightness = vmupro_get_global_brightness()
 
 ---
 
-### vmupro_set_global_brightness(brightness)
+### vmupro.graphics.setGlobalBrightness(brightness)
 
 Sets the global brightness level.
 
 ```lua
-vmupro_set_global_brightness(128) -- 50% brightness
+vmupro.graphics.setGlobalBrightness(128) -- 50% brightness
 ```
 
 **Parameters:**
@@ -67,12 +67,12 @@ vmupro_set_global_brightness(128) -- 50% brightness
 
 ## Framebuffer Access
 
-### vmupro_get_back_fb()
+### vmupro.graphics.getBackFb()
 
 Gets a reference to the back framebuffer.
 
 ```lua
-local back_fb = vmupro_get_back_fb()
+local back_fb = vmupro.graphics.getBackFb()
 ```
 
 **Parameters:** None
@@ -82,12 +82,12 @@ local back_fb = vmupro_get_back_fb()
 
 ---
 
-### vmupro_get_front_fb()
+### vmupro.graphics.getFrontFb()
 
 Gets a reference to the front framebuffer.
 
 ```lua
-local front_fb = vmupro_get_front_fb()
+local front_fb = vmupro.graphics.getFrontFb()
 ```
 
 **Parameters:** None
@@ -97,12 +97,12 @@ local front_fb = vmupro_get_front_fb()
 
 ---
 
-### vmupro_get_back_buffer()
+### vmupro.graphics.getBackBuffer()
 
 Gets a reference to the back buffer.
 
 ```lua
-local back_buffer = vmupro_get_back_buffer()
+local back_buffer = vmupro.graphics.getBackBuffer()
 ```
 
 **Parameters:** None
@@ -112,12 +112,12 @@ local back_buffer = vmupro_get_back_buffer()
 
 ## Basic Drawing Functions
 
-### vmupro_draw_line(x1, y1, x2, y2, color)
+### vmupro.graphics.drawLine(x1, y1, x2, y2, color)
 
 Draws a line between two points.
 
 ```lua
-vmupro_draw_line(0, 0, 239, 239, 0x07E0) -- Green diagonal line
+vmupro.graphics.drawLine(0, 0, 239, 239, vmupro.graphics.GREEN) -- Green diagonal line
 ```
 
 **Parameters:**
@@ -131,12 +131,12 @@ vmupro_draw_line(0, 0, 239, 239, 0x07E0) -- Green diagonal line
 
 ---
 
-### vmupro_draw_rect(x1, y1, x2, y2, color)
+### vmupro.graphics.drawRect(x1, y1, x2, y2, color)
 
 Draws a rectangle outline.
 
 ```lua
-vmupro_draw_rect(10, 10, 60, 40, 0x001F) -- Blue rectangle outline
+vmupro.graphics.drawRect(10, 10, 60, 40, vmupro.graphics.BLUE) -- Blue rectangle outline
 ```
 
 **Parameters:**
@@ -150,12 +150,12 @@ vmupro_draw_rect(10, 10, 60, 40, 0x001F) -- Blue rectangle outline
 
 ---
 
-### vmupro_draw_fill_rect(x1, y1, x2, y2, color)
+### vmupro.graphics.drawFillRect(x1, y1, x2, y2, color)
 
 Draws a filled rectangle.
 
 ```lua
-vmupro_draw_fill_rect(10, 10, 60, 40, 0xF800) -- Red filled rectangle
+vmupro.graphics.drawFillRect(10, 10, 60, 40, vmupro.graphics.RED) -- Red filled rectangle
 ```
 
 **Parameters:**
@@ -169,12 +169,12 @@ vmupro_draw_fill_rect(10, 10, 60, 40, 0xF800) -- Red filled rectangle
 
 ---
 
-### vmupro_draw_text(text, x, y, color, bg_color)
+### vmupro.graphics.drawText(text, x, y, color, bg_color)
 
 Draws text at the specified position with foreground and background colors.
 
 ```lua
-vmupro_draw_text("Hello World", 10, 10, 0xFFFF, 0x0000) -- White text on black background
+vmupro.graphics.drawText("Hello World", 10, 10, vmupro.graphics.WHITE, vmupro.graphics.BLACK) -- White text on black background
 ```
 
 **Parameters:**
@@ -188,12 +188,12 @@ vmupro_draw_text("Hello World", 10, 10, 0xFFFF, 0x0000) -- White text on black b
 
 ---
 
-### vmupro_draw_circle(center_x, center_y, radius, color)
+### vmupro.graphics.drawCircle(center_x, center_y, radius, color)
 
 Draws a circle outline.
 
 ```lua
-vmupro_draw_circle(120, 120, 50, 0xFFE0) -- Yellow circle outline
+vmupro.graphics.drawCircle(120, 120, 50, vmupro.graphics.YELLOW) -- Yellow circle outline
 ```
 
 **Parameters:**
@@ -206,12 +206,12 @@ vmupro_draw_circle(120, 120, 50, 0xFFE0) -- Yellow circle outline
 
 ---
 
-### vmupro_draw_circle_filled(center_x, center_y, radius, color)
+### vmupro.graphics.drawCircleFilled(center_x, center_y, radius, color)
 
 Draws a filled circle.
 
 ```lua
-vmupro_draw_circle_filled(120, 120, 50, 0xF81F) -- Magenta filled circle
+vmupro.graphics.drawCircleFilled(120, 120, 50, vmupro.graphics.MAGENTA) -- Magenta filled circle
 ```
 
 **Parameters:**
@@ -224,12 +224,12 @@ vmupro_draw_circle_filled(120, 120, 50, 0xF81F) -- Magenta filled circle
 
 ---
 
-### vmupro_draw_ellipse(center_x, center_y, radius_x, radius_y, color)
+### vmupro.graphics.drawEllipse(center_x, center_y, radius_x, radius_y, color)
 
 Draws an ellipse outline.
 
 ```lua
-vmupro_draw_ellipse(120, 120, 60, 40, 0x07FF) -- Cyan ellipse outline
+vmupro.graphics.drawEllipse(120, 120, 60, 40, vmupro.graphics.CYAN) -- Cyan ellipse outline
 ```
 
 **Parameters:**
@@ -243,12 +243,12 @@ vmupro_draw_ellipse(120, 120, 60, 40, 0x07FF) -- Cyan ellipse outline
 
 ---
 
-### vmupro_draw_ellipse_filled(center_x, center_y, radius_x, radius_y, color)
+### vmupro.graphics.drawEllipseFilled(center_x, center_y, radius_x, radius_y, color)
 
 Draws a filled ellipse.
 
 ```lua
-vmupro_draw_ellipse_filled(120, 120, 60, 40, 0x07FF) -- Cyan filled ellipse
+vmupro.graphics.drawEllipseFilled(120, 120, 60, 40, vmupro.graphics.CYAN) -- Cyan filled ellipse
 ```
 
 **Parameters:**
@@ -262,13 +262,13 @@ vmupro_draw_ellipse_filled(120, 120, 60, 40, 0x07FF) -- Cyan filled ellipse
 
 ---
 
-### vmupro_draw_polygon(points, color)
+### vmupro.graphics.drawPolygon(points, color)
 
 Draws a polygon outline from an array of points.
 
 ```lua
 local triangle = {{50, 20}, {20, 80}, {80, 80}}
-vmupro_draw_polygon(triangle, 0xF800) -- Red triangle outline
+vmupro.graphics.drawPolygon(triangle, vmupro.graphics.RED) -- Red triangle outline
 ```
 
 **Parameters:**
@@ -279,13 +279,13 @@ vmupro_draw_polygon(triangle, 0xF800) -- Red triangle outline
 
 ---
 
-### vmupro_draw_polygon_filled(points, color)
+### vmupro.graphics.drawPolygonFilled(points, color)
 
 Draws a filled polygon from an array of points.
 
 ```lua
 local triangle = {{50, 20}, {20, 80}, {80, 80}}
-vmupro_draw_polygon_filled(triangle, 0xF800) -- Red filled triangle
+vmupro.graphics.drawPolygonFilled(triangle, vmupro.graphics.RED) -- Red filled triangle
 ```
 
 **Parameters:**
@@ -296,12 +296,12 @@ vmupro_draw_polygon_filled(triangle, 0xF800) -- Red filled triangle
 
 ## Fill Operations
 
-### vmupro_flood_fill(x, y, fill_color, boundary_color)
+### vmupro.graphics.floodFill(x, y, fill_color, boundary_color)
 
 Performs a flood fill operation starting from the specified point.
 
 ```lua
-vmupro_flood_fill(50, 50, 0x07E0, 0x0000) -- Fill with green until hitting black
+vmupro.graphics.floodFill(50, 50, vmupro.graphics.GREEN, vmupro.graphics.BLACK) -- Fill with green until hitting black
 ```
 
 **Parameters:**
@@ -314,12 +314,12 @@ vmupro_flood_fill(50, 50, 0x07E0, 0x0000) -- Fill with green until hitting black
 
 ---
 
-### vmupro_flood_fill_tolerance(x, y, fill_color, tolerance)
+### vmupro.graphics.floodFillTolerance(x, y, fill_color, tolerance)
 
 Performs a flood fill with color tolerance.
 
 ```lua
-vmupro_flood_fill_tolerance(50, 50, 0x07E0, 10) -- Fill with tolerance
+vmupro.graphics.floodFillTolerance(50, 50, vmupro.graphics.GREEN, 10) -- Fill with tolerance
 ```
 
 **Parameters:**
@@ -339,14 +339,14 @@ The VMU Pro uses RGB565 format for colors:
 
 ### Common Colors
 ```lua
-local RED = 0xF800      -- Full red
-local GREEN = 0x07E0    -- Full green
-local BLUE = 0x001F     -- Full blue
-local WHITE = 0xFFFF    -- White
-local BLACK = 0x0000    -- Black
-local YELLOW = 0xFFE0   -- Red + Green
-local MAGENTA = 0xF81F  -- Red + Blue
-local CYAN = 0x07FF     -- Green + Blue
+vmupro.graphics.RED = 0xF800      -- Full red
+vmupro.graphics.GREEN = 0x07E0    -- Full green
+vmupro.graphics.BLUE = 0x001F     -- Full blue
+vmupro.graphics.WHITE = 0xFFFF    -- White
+vmupro.graphics.BLACK = 0x0000    -- Black
+vmupro.graphics.YELLOW = 0xFFE0   -- Red + Green
+vmupro.graphics.MAGENTA = 0xF81F  -- Red + Blue
+vmupro.graphics.CYAN = 0x07FF     -- Green + Blue
 ```
 
 ### Color Conversion Helper
@@ -363,23 +363,25 @@ end
 ## Example Usage
 
 ```lua
+import "api/display"
+
 -- Clear the display
-vmupro_display_clear()
+vmupro.graphics.clear(vmupro.graphics.BLACK)
 
 -- Draw a colorful border
-vmupro_draw_rect(0, 0, 240, 240, 0xF800) -- Red border
+vmupro.graphics.drawRect(0, 0, 240, 240, vmupro.graphics.RED) -- Red border
 
 -- Draw some text in different colors
-vmupro_draw_text("VMU Pro", 50, 50, 0xFFFF)  -- White text
-vmupro_draw_text("RGB565", 50, 70, 0x07E0)   -- Green text
+vmupro.graphics.drawText("VMU Pro", 50, 50, vmupro.graphics.WHITE, vmupro.graphics.BLACK)  -- White text
+vmupro.graphics.drawText("RGB565", 50, 70, vmupro.graphics.GREEN, vmupro.graphics.BLACK)   -- Green text
 
 -- Draw a rainbow diagonal line
 for i = 0, 239 do
     local hue = (i * 360) / 239
     local color = hue_to_rgb565(hue)
-    vmupro_draw_fill_rect(i, i, 1, 1, color)
+    vmupro.graphics.drawFillRect(i, i, 1, 1, color)
 end
 
 -- Present to display
-vmupro_display_refresh()
+vmupro.graphics.refresh()
 ```

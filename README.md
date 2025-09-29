@@ -37,16 +37,19 @@ my_app/
 
 2. **Write your main application (`app.lua`):**
 ```lua
+import "api/system"
+import "api/display"
+
 -- Load custom modules (if any)
 local utils = require("libraries.utils")
 
-function app_main()
-    vmupro_log(VMUPRO_LOG_INFO, "MyApp", "Hello VMU Pro!")
+function AppMain()
+    vmupro.system.log(vmupro.system.LOG_INFO, "MyApp", "Hello VMU Pro!")
 
     -- Your application logic here
-    vmupro_display_clear()
-    vmupro_display_text(10, 10, "Hello World!", VMUPRO_COLOR_WHITE)
-    vmupro_display_show()
+    vmupro.graphics.clear(vmupro.graphics.BLACK)
+    vmupro.graphics.drawText("Hello World!", 10, 10, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
+    vmupro.graphics.refresh()
 
     return 0  -- Success
 end
@@ -93,23 +96,23 @@ python tools/packer/send.py \
 
 ### Core APIs
 
-- **Logging**: `vmupro_log(level, tag, message)`
-- **Display**: Graphics rendering and display management
-- **Input**: Button and control input handling
-- **Audio**: Volume and brightness control
-- **File System**: File operations (restricted to `/sdcard`)
-- **Utilities**: Timing, memory, and helper functions
+- **System**: `vmupro.system.*` - Logging, timing, and system utilities
+- **Graphics**: `vmupro.graphics.*` - Display rendering and management
+- **Sprites**: `vmupro.sprites.*` - Sprite collision and batch operations
+- **Input**: `vmupro.input.*` - Button and control input handling
+- **Audio**: `vmupro.audio.*` - Audio playback and control
+- **File System**: `vmupro.file.*` - File operations (restricted to `/sdcard`)
 
 ### API Categories
 
 | Category | File | Description |
 |----------|------|-------------|
-| Logging | `vmupro_log.lua` | Application logging and debugging |
-| Display | `vmupro_display.lua` | Graphics, text, shapes, and colors |
-| Input | `vmupro_input.lua` | Button input and control handling |
-| Audio | `vmupro_audio.lua` | Volume and brightness control |
-| File System | `vmupro_file.lua` | File and folder operations |
-| Utilities | `vmupro_utilities.lua` | Timing, memory, and helper functions |
+| System | `system.lua` | Application logging, timing, and system utilities |
+| Graphics | `display.lua` | Graphics rendering, text, shapes, and colors |
+| Sprites | `sprites.lua` | Sprite collision detection and batch operations |
+| Input | `input.lua` | Button input and control handling |
+| Audio | `audio.lua` | Audio playback and control |
+| File System | `file.lua` | File and folder operations |
 
 ## Project Structure
 
@@ -119,12 +122,14 @@ vmupro-sdk/
 ├── CLAUDE.md                # Project documentation for Claude
 ├── sdk/                     # LUA SDK definitions
 │   └── api/                 # API documentation and type definitions
-│       ├── vmupro_log.lua
-│       ├── vmupro_display.lua
-│       ├── vmupro_input.lua
-│       ├── vmupro_audio.lua
-│       ├── vmupro_file.lua
-│       └── vmupro_utilities.lua
+│       ├── __stubs.lua      # Auto-completion stubs
+│       ├── system.lua       # System, logging, and utility functions
+│       ├── display.lua      # Graphics rendering and display
+│       ├── sprites.lua      # Sprite collision and batch operations
+│       ├── input.lua        # Button and control input
+│       ├── audio.lua        # Audio playback and control
+│       ├── file.lua         # File system operations
+│       └── utilities.lua    # Additional utility functions
 ├── examples/                # Example applications
 │   ├── hello_world/         # Basic "Hello World" example
 │   └── nested_example/      # Nested modules demonstration
@@ -240,7 +245,7 @@ python tools/packer/send.py \
 3. Use the provided type definitions for API documentation
 
 ### Debugging
-- Use `vmupro_log()` for runtime debugging
+- Use `vmupro.system.log()` for runtime debugging
 - Enable `--debug true` when packaging to generate debug files
 - Check the VMU Pro device logs for runtime errors
 

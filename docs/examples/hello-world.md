@@ -4,71 +4,69 @@ This is the classic "Hello World" example that demonstrates the basic structure 
 
 ## Source Code
 
-### main.lua
+### app.lua
 
 ```lua
+import "api/system"
+import "api/display"
+import "api/input"
+
 -- Hello World VMU Pro Application
 -- Demonstrates basic graphics and input handling
 
-function init()
-    print("Hello World app starting...")
-    return true
-end
+local app_running = true
 
-function update()
-    -- Clear the display buffer
-    vmupro_display_clear()
+function AppMain()
+    vmupro.system.log(vmupro.system.LOG_INFO, "HelloWorld", "Starting Hello World app...")
 
-    -- Draw welcome text
-    vmupro_draw_text("Hello World!", 20, 15, 1)
-    vmupro_draw_text("VMU Pro LUA SDK", 10, 30, 1)
-    vmupro_draw_text("Press START to exit", 5, 45, 1)
+    -- Main application loop
+    while app_running do
+        -- Read input
+        vmupro.input.read()
 
-    -- Draw a simple border
-    vmupro_draw_rect(0, 0, 128, 64, 1)
+        -- Check for exit condition
+        if vmupro.input.pressed(vmupro.input.B) then
+            app_running = false
+        end
 
-    -- Present the frame buffer to the display
-    vmupro_display_refresh()
+        -- Clear the display buffer
+        vmupro.graphics.clear(vmupro.graphics.BLACK)
 
-    -- Check for exit condition
-    if vmupro_btn_pressed(BTN_MODE) then
-        return false -- Exit application
+        -- Draw welcome text
+        vmupro.graphics.drawText("Hello World!", 20, 15, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
+        vmupro.graphics.drawText("VMU Pro LUA SDK", 10, 30, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
+        vmupro.graphics.drawText("Press B to exit", 5, 45, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
+
+        -- Draw a simple border
+        vmupro.graphics.drawRect(0, 0, 240, 240, vmupro.graphics.WHITE)
+
+        -- Present the frame buffer to the display
+        vmupro.graphics.refresh()
+
+        -- Target ~60 FPS
+        vmupro.system.delayMs(16)
     end
 
-    return true -- Continue running
+    vmupro.system.log(vmupro.system.LOG_INFO, "HelloWorld", "Hello World app ending...")
+    return 0
 end
-
-function cleanup()
-    print("Hello World app ending...")
-    vmupro_display_clear()
-    vmupro_display_refresh()
-end
-
--- Application entry point
-if not init() then
-    print("Failed to initialize application")
-    return
-end
-
--- Main application loop
-while update() do
-    vmupro_sleep_ms(16) -- Target ~60 FPS
-end
-
--- Clean up before exit
-cleanup()
 ```
 
 ### metadata.json
 
 ```json
 {
-    "name": "Hello World",
-    "version": "1.0.0",
-    "author": "VMU Pro SDK",
-    "description": "Basic Hello World example demonstrating text rendering",
-    "entry_point": "main.lua",
-    "icon": "icon.bmp"
+    "metadata_version": 1,
+    "app_name": "Hello World",
+    "app_author": "VMU Pro SDK",
+    "app_version": "1.0.0",
+    "app_entry_point": "app.lua",
+    "app_mode": 1,
+    "app_environment": "lua",
+    "icon_transparency": false,
+    "resources": [
+        "app.lua"
+    ]
 }
 ```
 
@@ -76,33 +74,34 @@ cleanup()
 
 ### 1. Application Structure
 
-The example follows the standard three-phase application lifecycle:
+The example follows the VMU Pro application structure:
 
-- **`init()`**: Initialize application state and resources
+- **`AppMain()`**: Main entry point that contains the entire application logic
 - **Main Loop**: Continuously update and render until exit condition
-- **`cleanup()`**: Clean up resources before termination
+- **Proper Cleanup**: Application exits cleanly with return code
 
 ### 2. Graphics Rendering
 
 ```lua
-vmupro_display_clear()                    -- Clear frame buffer
-vmupro_draw_text(text, x, y, 1)  -- Draw text
-vmupro_draw_rect(x, y, w, h, 1) -- Draw rectangle border
-vmupro_display_refresh()                  -- Display frame buffer
+vmupro.graphics.clear(vmupro.graphics.BLACK)                          -- Clear frame buffer
+vmupro.graphics.drawText(text, x, y, color, bg_color)  -- Draw text
+vmupro.graphics.drawRect(x, y, w, h, color)            -- Draw rectangle border
+vmupro.graphics.refresh()                              -- Display frame buffer
 ```
 
 ### 3. Input Handling
 
 ```lua
-if vmupro_btn_pressed(BTN_MODE) then
-    return false -- Exit application
+vmupro.input.read()  -- Read input state
+if vmupro.input.pressed(vmupro.input.B) then
+    app_running = false -- Exit application
 end
 ```
 
 ### 4. Timing Control
 
 ```lua
-vmupro_sleep_ms(16) -- Sleep for 16ms (~60 FPS)
+vmupro.system.delayMs(16) -- Sleep for 16ms (~60 FPS)
 ```
 
 ## Building and Running

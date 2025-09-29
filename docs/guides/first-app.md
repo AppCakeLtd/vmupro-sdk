@@ -20,7 +20,7 @@ cd my_first_app
 
 ## Step 2: Create the Main Script
 
-Create `main.lua`:
+Create `app.lua`:
 
 ```lua
 -- Clicker Game - Your First VMU Pro App
@@ -36,17 +36,17 @@ local SAVE_FILE = "/sdcard/clicker_save.txt"
 local CLICK_COOLDOWN = 200 -- milliseconds
 
 function load_high_score()
-    if vmupro_file_exists(SAVE_FILE) then
-        local data = vmupro_read_file_complete(SAVE_FILE)
+    if vmupro.file.fileExists(SAVE_FILE) then
+        local data = vmupro.file.readFileComplete(SAVE_FILE)
         if data then
             high_score = tonumber(data) or 0
-            print("Loaded high score: " .. high_score)
+            vmupro.system.log(vmupro.system.LOG_INFO, "Clicker", "Loaded high score: " .. high_score)
         end
     end
 end
 
 function save_high_score()
-    local success = vmupro_write_file_complete(SAVE_FILE, tostring(high_score))
+    local success = vmupro.file.writeFileComplete(SAVE_FILE, tostring(high_score))
     if success then
         print("Saved high score: " .. high_score)
     end

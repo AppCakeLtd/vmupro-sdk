@@ -27,7 +27,14 @@ function rgb_to_565(r, g, b)
     return (r5 << 11) | (g6 << 5) | b5
 end
 
--- Common colors
+-- Use namespace colors (preferred)
+vmupro.graphics.RED = 0xF800
+vmupro.graphics.GREEN = 0x07E0
+vmupro.graphics.BLUE = 0x001F
+vmupro.graphics.WHITE = 0xFFFF
+vmupro.graphics.BLACK = 0x0000
+
+-- Or convert RGB values if needed
 local RED = rgb_to_565(255, 0, 0)
 local GREEN = rgb_to_565(0, 255, 0)
 local BLUE = rgb_to_565(0, 0, 255)
@@ -46,10 +53,12 @@ The graphics system uses a double-buffered approach:
 3. **Clear Buffer**: `vmupro_display_clear()` prepares for the next frame
 
 ```lua
+import "api/display"
+
 -- Typical frame rendering cycle
-vmupro_display_clear()        -- Clear back buffer
+vmupro.graphics.clear(vmupro.graphics.BLACK)  -- Clear back buffer
 -- ... draw operations ...
-vmupro_display_refresh()      -- Show frame
+vmupro.graphics.refresh()                     -- Show frame
 ```
 
 ### Coordinate System
@@ -74,27 +83,27 @@ vmupro_display_refresh()      -- Show frame
 Draw straight lines between two points. Since there's no direct pixel function, lines are the most basic drawing primitive:
 
 ```lua
-vmupro_draw_line(x1, y1, x2, y2, color)
+vmupro.graphics.drawLine(x1, y1, x2, y2, color)
 ```
 
 **Example - Draw a colorful diagonal:**
 ```lua
 for i = 0, 238 do
     local color = rgb_to_565((i * 255) / 239, 128, 255 - (i * 255) / 239)
-    vmupro_draw_line(i, i, i+1, i+1, color)
+    vmupro.graphics.drawLine(i, i, i+1, i+1, color)
 end
 ```
 
 **Examples:**
 ```lua
 -- Horizontal line in red
-vmupro_draw_line(20, 120, 220, 120, RED)
+vmupro.graphics.drawLine(20, 120, 220, 120, vmupro.graphics.RED)
 
 -- Vertical line in green
-vmupro_draw_line(120, 20, 120, 220, GREEN)
+vmupro.graphics.drawLine(120, 20, 120, 220, vmupro.graphics.GREEN)
 
 -- Diagonal line in blue
-vmupro_draw_line(0, 0, 239, 239, BLUE)
+vmupro.graphics.drawLine(0, 0, 239, 239, vmupro.graphics.BLUE)
 ```
 
 ### Rectangles
@@ -102,17 +111,17 @@ vmupro_draw_line(0, 0, 239, 239, BLUE)
 Draw rectangular shapes:
 
 ```lua
-vmupro_draw_rect(x, y, width, height, color)     -- outline
-vmupro_draw_fill_rect(x, y, width, height, color) -- filled
+vmupro.graphics.drawRect(x, y, width, height, color)     -- outline
+vmupro.graphics.drawFillRect(x, y, width, height, color) -- filled
 ```
 
 **Examples:**
 ```lua
 -- Outline rectangle in white
-vmupro_draw_rect(50, 50, 100, 80, WHITE)
+vmupro.graphics.drawRect(50, 50, 100, 80, vmupro.graphics.WHITE)
 
 -- Filled rectangle in red
-vmupro_draw_fill_rect(70, 70, 60, 40, RED)
+vmupro.graphics.drawFillRect(70, 70, 60, 40, vmupro.graphics.RED)
 ```
 
 ### Text Rendering
@@ -120,7 +129,7 @@ vmupro_draw_fill_rect(70, 70, 60, 40, RED)
 Display text on screen:
 
 ```lua
-vmupro_draw_text(text, x, y, color)
+vmupro.graphics.drawText(text, x, y, color, bg_color)
 ```
 
 **Font Characteristics:**
@@ -131,14 +140,14 @@ vmupro_draw_text(text, x, y, color)
 
 **Text Layout Example:**
 ```lua
-local function draw_centered_text(y, text, color)
+local function draw_centered_text(y, text, color, bg_color)
     local text_width = #text * 6
     local x = (240 - text_width) / 2
-    vmupro_draw_text(text, x, y, color)
+    vmupro.graphics.drawText(text, x, y, color, bg_color)
 end
 
-draw_centered_text(50, "GAME OVER", RED)
-draw_centered_text(80, "Score: 1250", WHITE)
+draw_centered_text(50, "GAME OVER", vmupro.graphics.RED, vmupro.graphics.BLACK)
+draw_centered_text(80, "Score: 1250", vmupro.graphics.WHITE, vmupro.graphics.BLACK)
 ```
 
 ## Color and Visual Effects
@@ -159,7 +168,7 @@ function draw_horizontal_gradient(x, y, width, height, color1, color2)
         local b = b1 + (b2 - b1) * ratio
 
         local color = rgb_to_565(r, g, b)
-        vmupro_draw_line(x + i, y, x + i, y + height - 1, color)
+        vmupro.graphics.drawLine(x + i, y, x + i, y + height - 1, color)
     end
 end
 
@@ -188,7 +197,7 @@ end
 
 -- Usage in main loop
 local rainbow_color = get_cycling_color(1.0)
-vmupro_draw_text("RAINBOW TEXT", 50, 100, rainbow_color)
+vmupro.graphics.drawText("RAINBOW TEXT", 50, 100, rainbow_color, vmupro.graphics.BLACK)
 ```
 
 ## Advanced Graphics Techniques
@@ -215,7 +224,7 @@ function Sprite:draw(x, y)
             local color = self.data[row][col]
             if color > 0 then -- 0 = transparent
                 -- Draw as 1x1 filled rectangle since no pixel function
-                vmupro_draw_fill_rect(x + col - 1, y + row - 1, 1, 1, color)
+                vmupro.graphics.drawFillRect(x + col - 1, y + row - 1, 1, 1, color)
             end
         end
     end
@@ -262,18 +271,21 @@ end
 ### Efficient Color Operations
 
 ```lua
--- Pre-calculate common colors
+-- Use namespace colors (preferred)
 local COLORS = {
-    RED = rgb_to_565(255, 0, 0),
-    GREEN = rgb_to_565(0, 255, 0),
-    BLUE = rgb_to_565(0, 0, 255),
-    YELLOW = rgb_to_565(255, 255, 0),
-    MAGENTA = rgb_to_565(255, 0, 255),
-    CYAN = rgb_to_565(0, 255, 255),
-    WHITE = rgb_to_565(255, 255, 255),
-    BLACK = rgb_to_565(0, 0, 0),
-    GRAY = rgb_to_565(128, 128, 128)
+    RED = vmupro.graphics.RED,
+    GREEN = vmupro.graphics.GREEN,
+    BLUE = vmupro.graphics.BLUE,
+    YELLOW = vmupro.graphics.YELLOW,
+    MAGENTA = vmupro.graphics.MAGENTA,
+    CYAN = vmupro.graphics.CYAN,
+    WHITE = vmupro.graphics.WHITE,
+    BLACK = vmupro.graphics.BLACK,
+    GRAY = vmupro.graphics.GREY
 }
+
+-- Or calculate custom colors
+local CUSTOM_GRAY = rgb_to_565(128, 128, 128)
 
 -- Use lookup tables for gradients
 function create_gradient_lut(color1, color2, steps)
@@ -294,7 +306,7 @@ Minimize API calls by batching operations:
 ```lua
 function draw_multiple_pixels(pixels)
     for _, pixel in ipairs(pixels) do
-        vmupro_draw_fill_rect(pixel.x, pixel.y, 1, 1, pixel.color)
+        vmupro.graphics.drawFillRect(pixel.x, pixel.y, 1, 1, pixel.color)
     end
 end
 

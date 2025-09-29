@@ -1,67 +1,71 @@
---- @file vmupro_file.lua
+--- @file file.lua
 --- @brief VMU Pro LUA SDK - File System Functions
 --- @author 8BitMods
 --- @version 1.0.0
---- @date 2025-09-18
+--- @date 2025-09-29
 --- @copyright Copyright (c) 2025 8BitMods. All rights reserved.
 ---
 --- File system utilities for VMU Pro LUA applications.
---- All file functions are available globally in the LUA environment.
+--- Functions are available under the vmupro.file namespace.
 --- NOTE: File access is restricted to /sdcard directory for security.
+
+-- Ensure vmupro namespace exists
+vmupro = vmupro or {}
+vmupro.file = vmupro.file or {}
 
 --- @brief Check if a file exists
 --- @param path string File path (must start with "/sdcard/")
 --- @return boolean true if file exists, false otherwise
---- @usage if vmupro_file_exists("/sdcard/save.dat") then load_game() end
---- @usage local exists = vmupro_file_exists("/sdcard/config.txt")
+--- @usage if vmupro.file.exists("/sdcard/save.dat") then load_game() end
+--- @usage local exists = vmupro.file.exists("/sdcard/config.txt")
 --- @note File access is restricted to /sdcard only for security
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
-function vmupro_file_exists(path) end
+function vmupro.file.exists(path) end
 
 --- @brief Read entire file contents as string
 --- @param path string File path (must start with "/sdcard/")
 --- @return string|nil File contents as string, or nil if file doesn't exist or error
---- @usage local data = vmupro_read_file_complete("/sdcard/save.dat")
---- @usage local config = vmupro_read_file_complete("/sdcard/config.txt")
+--- @usage local data = vmupro.file.read("/sdcard/save.dat")
+--- @usage local config = vmupro.file.read("/sdcard/config.txt")
 --- @note File access is restricted to /sdcard only for security
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
-function vmupro_read_file_complete(path) end
+function vmupro.file.read(path) end
 
 --- @brief Check if a folder exists
 --- @param path string Folder path (must start with "/sdcard/")
 --- @return boolean true if folder exists, false otherwise
---- @usage if vmupro_folder_exists("/sdcard/saves") then load_saves() end
+--- @usage if vmupro.file.folderExists("/sdcard/saves") then load_saves() end
 --- @note File access is restricted to /sdcard only for security
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
-function vmupro_folder_exists(path) end
+function vmupro.file.folderExists(path) end
 
 --- @brief Create a new folder
 --- @param path string Folder path to create (must start with "/sdcard/")
 --- @return boolean true if folder was created successfully, false otherwise
---- @usage local success = vmupro_create_folder("/sdcard/saves")
+--- @usage local success = vmupro.file.createFolder("/sdcard/saves")
 --- @note File access is restricted to /sdcard only for security
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
-function vmupro_create_folder(path) end
+function vmupro.file.createFolder(path) end
 
 --- @brief Get the size of a file in bytes
 --- @param path string File path (must start with "/sdcard/")
 --- @return number Size of file in bytes, or 0 if file doesn't exist
---- @usage local size = vmupro_get_file_size("/sdcard/save.dat")
+--- @usage local size = vmupro.file.getSize("/sdcard/save.dat")
 --- @note File access is restricted to /sdcard only for security
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
-function vmupro_get_file_size(path) end
+function vmupro.file.getSize(path) end
 
 --- @brief Write data to a file, replacing any existing content
 --- @param path string File path (must start with "/sdcard/")
 --- @param data string Data to write to the file
 --- @return boolean true if file was written successfully, false otherwise
---- @usage local success = vmupro_write_file_complete("/sdcard/save.dat", "player_score=1000")
+--- @usage local success = vmupro.file.write("/sdcard/save.dat", "player_score=1000")
 --- @note File access is restricted to /sdcard only for security
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
-function vmupro_write_file_complete(path, data) end
+function vmupro.file.write(path, data) end

@@ -18,7 +18,7 @@ The most basic audio operations involve managing the global volume level:
 
 ```lua
 -- Get current volume
-local volume = vmupro_get_global_volume()
+local volume = vmupro.audio.getGlobalVolume()
 print("Current volume: " .. volume .. "/10")
 
 -- Set volume to 50%
@@ -63,11 +63,11 @@ VMUPRO_AUDIO_STEREO -- 1, for stereo audio
 Create a simple volume control interface:
 
 ```lua
-local volume = vmupro_get_global_volume()
+local volume = vmupro.audio.getGlobalVolume()
 local volume_changed = false
 
 function update_volume_control()
-    vmupro_display_clear()
+    vmupro.graphics.clear(vmupro.graphics.BLACK)
 
     -- Display current volume
     vmupro_draw_text("Volume Control", 50, 20, COLOR_WHITE)
@@ -87,7 +87,7 @@ function update_volume_control()
     vmupro_draw_text("A: Mute/Unmute", 20, 170, COLOR_GREY)
     vmupro_draw_text("MODE: Exit", 20, 190, COLOR_GREY)
 
-    vmupro_display_refresh()
+    vmupro.graphics.refresh()
 end
 
 function handle_volume_input()
@@ -170,32 +170,32 @@ Create a simple audio status display:
 
 ```lua
 function show_audio_status()
-    vmupro_display_clear()
+    vmupro.graphics.clear(vmupro.graphics.BLACK)
 
     -- Display current volume
-    local volume = vmupro_get_global_volume()
-    vmupro_draw_text("Audio Status", 70, 20, COLOR_WHITE)
-    vmupro_draw_text("Volume: " .. volume .. "/10", 50, 50, COLOR_WHITE)
+    local volume = vmupro.audio.getGlobalVolume()
+    vmupro.graphics.drawText("Audio Status", 70, 20, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
+    vmupro.graphics.drawText("Volume: " .. volume .. "/255", 50, 50, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
 
     -- Volume bar
-    local bar_width = (volume * 100) / 10
-    vmupro_draw_rect(50, 70, 100, 10, COLOR_WHITE)
+    local bar_width = (volume * 100) / 255
+    vmupro.graphics.drawRect(50, 70, 100, 10, vmupro.graphics.WHITE)
     if volume > 0 then
-        vmupro_draw_fill_rect(51, 71, bar_width - 2, 8, COLOR_GREEN)
+        vmupro.graphics.drawFillRect(51, 71, bar_width - 2, 8, vmupro.graphics.GREEN)
     end
 
-    -- Audio mode info
-    vmupro_draw_text("Modes:", 50, 100, COLOR_WHITE)
-    vmupro_draw_text("MONO: " .. VMUPRO_AUDIO_MONO, 50, 120, COLOR_GREY)
-    vmupro_draw_text("STEREO: " .. VMUPRO_AUDIO_STEREO, 50, 140, COLOR_GREY)
+    -- Audio info
+    vmupro.graphics.drawText("Audio System:", 50, 100, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
+    vmupro.graphics.drawText("Ring Buffer Available", 50, 120, vmupro.graphics.GREY, vmupro.graphics.BLACK)
+    vmupro.graphics.drawText("Listen Mode Support", 50, 140, vmupro.graphics.GREY, vmupro.graphics.BLACK)
 
-    -- Sample format info
-    vmupro_draw_text("Sample Format:", 50, 170, COLOR_WHITE)
-    vmupro_draw_text("int16_t (-32768 to 32767)", 50, 190, COLOR_GREY)
+    -- Volume info
+    vmupro.graphics.drawText("Volume Range:", 50, 170, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
+    vmupro.graphics.drawText("0-255 (8-bit)", 50, 190, vmupro.graphics.GREY, vmupro.graphics.BLACK)
 
-    vmupro_draw_text("Press MODE to exit", 50, 220, COLOR_GREY)
+    vmupro.graphics.drawText("Press MODE to exit", 50, 220, vmupro.graphics.GREY, vmupro.graphics.BLACK)
 
-    vmupro_display_refresh()
+    vmupro.graphics.refresh()
 end
 
 -- Display audio status

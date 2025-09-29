@@ -1,6 +1,6 @@
-# Collision Detection API
+# Sprites API
 
-The Collision Detection API provides functions for detecting collisions between sprites and game objects, supporting both simple bounding box collision and precise pixel-perfect collision detection.
+The Sprites API provides functions for sprite collision detection and batch operations, supporting both simple bounding box collision and precise pixel-perfect collision detection.
 
 ## Overview
 
@@ -8,13 +8,13 @@ Collision detection is essential for games and interactive applications. The VMU
 
 ## Collision Detection Functions
 
-### vmupro_sprite_collision_check(sprite1_x, sprite1_y, sprite1_width, sprite1_height, sprite2_x, sprite2_y, sprite2_width, sprite2_height)
+### vmupro.sprites.collisionCheck(sprite1_x, sprite1_y, sprite1_width, sprite1_height, sprite2_x, sprite2_y, sprite2_width, sprite2_height)
 
 Performs fast bounding box collision detection between two rectangular sprites.
 
 ```lua
 -- Check if player collides with enemy
-if vmupro_sprite_collision_check(player_x, player_y, 16, 16, enemy_x, enemy_y, 16, 16) then
+if vmupro.sprites.collisionCheck(player_x, player_y, 16, 16, enemy_x, enemy_y, 16, 16) then
     handle_player_enemy_collision()
 end
 ```
@@ -40,13 +40,13 @@ end
 
 ---
 
-### vmupro_sprite_pixel_collision(sprite1, sprite1_x, sprite1_y, sprite1_width, sprite1_height, sprite2, sprite2_x, sprite2_y, sprite2_width, sprite2_height)
+### vmupro.sprites.pixelCollision(sprite1, sprite1_x, sprite1_y, sprite1_width, sprite1_height, sprite2, sprite2_x, sprite2_y, sprite2_width, sprite2_height)
 
 Performs precise pixel-perfect collision detection between two sprites.
 
 ```lua
 -- Precise collision between complex sprite shapes
-if vmupro_sprite_pixel_collision(player_sprite, player_x, player_y, 16, 16,
+if vmupro.sprites.pixelCollision(player_sprite, player_x, player_y, 16, 16,
                                  rock_sprite, rock_x, rock_y, 24, 24) then
     handle_precise_collision()
 end
@@ -100,7 +100,7 @@ function GameObject:check_collision(other)
         return false
     end
 
-    return vmupro_sprite_collision_check(
+    return vmupro.sprites.collisionCheck(
         self.x, self.y, self.width, self.height,
         other.x, other.y, other.width, other.height
     )
@@ -117,7 +117,7 @@ function GameObject:check_pixel_collision(other)
     end
 
     -- Then do pixel-perfect check
-    return vmupro_sprite_pixel_collision(
+    return vmupro.sprites.pixelCollision(
         self.sprite, self.x, self.y, self.width, self.height,
         other.sprite, other.x, other.y, other.width, other.height
     )
@@ -167,7 +167,7 @@ end
 
 function CollisionSystem:handle_collision(obj1, obj2)
     -- Handle collision response
-    print("Collision between " .. obj1.type .. " and " .. obj2.type)
+    vmupro.system.log(vmupro.system.LOG_INFO, "Collision", "Collision between " .. obj1.type .. " and " .. obj2.type)
 end
 ```
 
@@ -212,7 +212,7 @@ function update_bullet_collisions()
             local enemy = enemies[j]
 
             -- Use bounding box for bullets (fast and sufficient)
-            if vmupro_sprite_collision_check(
+            if vmupro.sprites.collisionCheck(
                 bullet.x, bullet.y, bullet.width, bullet.height,
                 enemy.x, enemy.y, enemy.width, enemy.height) then
 
@@ -238,7 +238,7 @@ function update_collectible_collision()
         local item = collectibles[i]
 
         -- Use pixel-perfect collision for precise pickup detection
-        if vmupro_sprite_pixel_collision(
+        if vmupro.sprites.pixelCollision(
             player.sprite, player.x, player.y, player.width, player.height,
             item.sprite, item.x, item.y, item.width, item.height) then
 
@@ -257,14 +257,14 @@ end
 ```lua
 function optimized_collision_check(obj1, obj2)
     -- Phase 1: Fast bounding box check
-    if not vmupro_sprite_collision_check(
+    if not vmupro.sprites.collisionCheck(
         obj1.x, obj1.y, obj1.width, obj1.height,
         obj2.x, obj2.y, obj2.width, obj2.height) then
         return false
     end
 
     -- Phase 2: Pixel-perfect check only if bounding boxes overlap
-    return vmupro_sprite_pixel_collision(
+    return vmupro.sprites.pixelCollision(
         obj1.sprite, obj1.x, obj1.y, obj1.width, obj1.height,
         obj2.sprite, obj2.x, obj2.y, obj2.width, obj2.height
     )

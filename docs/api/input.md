@@ -9,24 +9,24 @@ The VMU Pro has 8 buttons that can be read through the input API. The system pro
 ## Button Constants
 
 ```lua
-BTN_DPAD_UP = 0      -- D-Pad Up
-BTN_DPAD_DOWN = 1    -- D-Pad Down
-BTN_DPAD_RIGHT = 2   -- D-Pad Right
-BTN_DPAD_LEFT = 3    -- D-Pad Left
-BTN_POWER = 4        -- Power button
-BTN_MODE = 5         -- Mode button
-BTN_A = 6            -- A button
-BTN_B = 7            -- B button
+vmupro.input.UP = 0      -- D-Pad Up
+vmupro.input.DOWN = 1    -- D-Pad Down
+vmupro.input.RIGHT = 2   -- D-Pad Right
+vmupro.input.LEFT = 3    -- D-Pad Left
+vmupro.input.POWER = 4   -- Power button
+vmupro.input.MODE = 5    -- Mode button
+vmupro.input.A = 6       -- A button
+vmupro.input.B = 7       -- B button
 ```
 
 ## Functions
 
-### vmupro_btn_read()
+### vmupro.input.read()
 
 Updates the button state (call once per frame before checking button states).
 
 ```lua
-vmupro_btn_read() -- Update button states
+vmupro.input.read() -- Update button states
 ```
 
 **Parameters:** None
@@ -35,13 +35,13 @@ vmupro_btn_read() -- Update button states
 
 ---
 
-### vmupro_btn_pressed(button)
+### vmupro.input.pressed(button)
 
 Checks if a button was just pressed (edge detection).
 
 ```lua
-if vmupro_btn_pressed(BTN_A) then
-    print("A button was just pressed")
+if vmupro.input.pressed(vmupro.input.A) then
+    vmupro.system.log(vmupro.system.LOG_INFO, "Input", "A button was just pressed")
 end
 ```
 
@@ -53,13 +53,13 @@ end
 
 ---
 
-### vmupro_btn_released(button)
+### vmupro.input.released(button)
 
 Checks if a button was just released (edge detection).
 
 ```lua
-if vmupro_btn_released(BTN_A) then
-    print("A button was just released")
+if vmupro.input.released(vmupro.input.A) then
+    vmupro.system.log(vmupro.system.LOG_INFO, "Input", "A button was just released")
 end
 ```
 
@@ -71,13 +71,13 @@ end
 
 ---
 
-### vmupro_btn_held(button)
+### vmupro.input.held(button)
 
 Checks if a button is currently being held down.
 
 ```lua
-if vmupro_btn_held(BTN_A) then
-    print("A button is being held")
+if vmupro.input.held(vmupro.input.A) then
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Input", "A button is being held")
 end
 ```
 
@@ -89,13 +89,13 @@ end
 
 ---
 
-### vmupro_btn_anything_held()
+### vmupro.input.anythingHeld()
 
 Checks if any button is currently being held.
 
 ```lua
-if vmupro_btn_anything_held() then
-    print("Some button is being pressed")
+if vmupro.input.anythingHeld() then
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Input", "Some button is being pressed")
 end
 ```
 
@@ -106,13 +106,13 @@ end
 
 ---
 
-### vmupro_btn_confirm_pressed()
+### vmupro.input.confirmPressed()
 
 Checks if the confirm button (A) was just pressed.
 
 ```lua
-if vmupro_btn_confirm_pressed() then
-    print("Confirmed!")
+if vmupro.input.confirmPressed() then
+    vmupro.system.log(vmupro.system.LOG_INFO, "Input", "Confirmed!")
 end
 ```
 
@@ -123,13 +123,13 @@ end
 
 ---
 
-### vmupro_btn_confirm_released()
+### vmupro.input.confirmReleased()
 
 Checks if the confirm button (A) was just released.
 
 ```lua
-if vmupro_btn_confirm_released() then
-    print("Confirm button released")
+if vmupro.input.confirmReleased() then
+    vmupro.system.log(vmupro.system.LOG_INFO, "Input", "Confirm button released")
 end
 ```
 
@@ -140,13 +140,13 @@ end
 
 ---
 
-### vmupro_btn_dismiss_pressed()
+### vmupro.input.dismissPressed()
 
 Checks if the dismiss button (B) was just pressed.
 
 ```lua
-if vmupro_btn_dismiss_pressed() then
-    print("Dismissed!")
+if vmupro.input.dismissPressed() then
+    vmupro.system.log(vmupro.system.LOG_INFO, "Input", "Dismissed!")
 end
 ```
 
@@ -157,13 +157,13 @@ end
 
 ---
 
-### vmupro_btn_dismiss_released()
+### vmupro.input.dismissReleased()
 
 Checks if the dismiss button (B) was just released.
 
 ```lua
-if vmupro_btn_dismiss_released() then
-    print("Dismiss button released")
+if vmupro.input.dismissReleased() then
+    vmupro.system.log(vmupro.system.LOG_INFO, "Input", "Dismiss button released")
 end
 ```
 
@@ -191,40 +191,37 @@ VMU Pro Device Layout:
 ## Example Usage
 
 ```lua
+import "api/input"
+import "api/system"
+
 -- Simple button checking
-while true do
-    local buttons = vmupro_input_get_buttons()
+local running = true
+while running do
+    vmupro.input.read()
 
-    if buttons.a then
-        print("A button pressed!")
+    if vmupro.input.pressed(vmupro.input.A) then
+        vmupro.system.log(vmupro.system.LOG_INFO, "Input", "A button pressed!")
     end
 
-    if buttons.start then
-        print("Exiting...")
-        break
+    if vmupro.input.pressed(vmupro.input.B) then
+        vmupro.system.log(vmupro.system.LOG_INFO, "Input", "Exiting...")
+        running = false
     end
 
-    vmupro_util_sleep(16) -- ~60 FPS
+    -- Check for D-pad input
+    if vmupro.input.pressed(vmupro.input.UP) then
+        vmupro.system.log(vmupro.system.LOG_INFO, "Input", "Up pressed")
+    end
+    if vmupro.input.pressed(vmupro.input.DOWN) then
+        vmupro.system.log(vmupro.system.LOG_INFO, "Input", "Down pressed")
+    end
+    if vmupro.input.pressed(vmupro.input.LEFT) then
+        vmupro.system.log(vmupro.system.LOG_INFO, "Input", "Left pressed")
+    end
+    if vmupro.input.pressed(vmupro.input.RIGHT) then
+        vmupro.system.log(vmupro.system.LOG_INFO, "Input", "Right pressed")
+    end
+
+    vmupro.system.delayMs(16) -- ~60 FPS
 end
-
--- Event-driven input
-while true do
-    local event = vmupro_input_get_button_event()
-    if event then
-        if event.action == "pressed" then
-            if event.button == "a" then
-                print("A button pressed!")
-            elseif event.button == "start" then
-                print("Exiting...")
-                break
-            end
-        end
-    end
-    vmupro_util_sleep(10)
-end
-
--- Wait for specific input
-print("Press START to continue...")
-vmupro_input_wait_for_button("start")
-print("Continuing...")
 ```

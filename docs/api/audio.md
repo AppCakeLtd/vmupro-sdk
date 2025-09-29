@@ -8,13 +8,13 @@ The audio system provides volume control and audio monitoring capabilities. Audi
 
 ## Volume Control Functions
 
-### vmupro_get_global_volume()
+### vmupro.audio.getGlobalVolume()
 
 Gets the current global audio volume level.
 
 ```lua
-local volume = vmupro_get_global_volume()
-print("Current volume: " .. volume)
+local volume = vmupro.audio.getGlobalVolume()
+vmupro.system.log(vmupro.system.LOG_INFO, "Audio", "Current volume: " .. volume)
 ```
 
 **Parameters:** None
@@ -24,12 +24,12 @@ print("Current volume: " .. volume)
 
 ---
 
-### vmupro_set_global_volume(volume)
+### vmupro.audio.setGlobalVolume(volume)
 
 Sets the global audio volume level.
 
 ```lua
-vmupro_set_global_volume(128) -- Set volume to 50%
+vmupro.audio.setGlobalVolume(128) -- Set volume to 50%
 ```
 
 **Parameters:**
@@ -39,12 +39,12 @@ vmupro_set_global_volume(128) -- Set volume to 50%
 
 ## Audio Ring Buffer Functions
 
-### vmupro_audio_start_listen_mode()
+### vmupro.audio.startListenMode()
 
 Starts audio listen mode, enabling audio input capture to the ring buffer.
 
 ```lua
-vmupro_audio_start_listen_mode()
+vmupro.audio.startListenMode()
 ```
 
 **Parameters:** None
@@ -53,12 +53,12 @@ vmupro_audio_start_listen_mode()
 
 ---
 
-### vmupro_audio_clear_ring_buffer()
+### vmupro.audio.clearRingBuffer()
 
 Clears the audio ring buffer, removing all captured audio data.
 
 ```lua
-vmupro_audio_clear_ring_buffer()
+vmupro.audio.clearRingBuffer()
 ```
 
 **Parameters:** None
@@ -67,12 +67,12 @@ vmupro_audio_clear_ring_buffer()
 
 ---
 
-### vmupro_audio_exit_listen_mode()
+### vmupro.audio.exitListenMode()
 
 Exits audio listen mode, stopping audio input capture.
 
 ```lua
-vmupro_audio_exit_listen_mode()
+vmupro.audio.exitListenMode()
 ```
 
 **Parameters:** None
@@ -81,13 +81,13 @@ vmupro_audio_exit_listen_mode()
 
 ---
 
-### vmupro_get_ringbuffer_fill_state()
+### vmupro.audio.getRingBufferFillState()
 
 Gets the current fill state of the audio ring buffer.
 
 ```lua
-local fill_level = vmupro_get_ringbuffer_fill_state()
-print("Ring buffer is " .. fill_level .. "% full")
+local fill_level = vmupro.audio.getRingBufferFillState()
+vmupro.system.log(vmupro.system.LOG_INFO, "Audio", "Ring buffer is " .. fill_level .. "% full")
 ```
 
 **Parameters:** None
@@ -104,23 +104,24 @@ print("Ring buffer is " .. fill_level .. "% full")
 ## Example Usage
 
 ```lua
+import "api/audio"
+import "api/system"
+
 -- Set volume to 75%
-vmupro_audio_set_volume(75)
+vmupro.audio.setGlobalVolume(192) -- 75% of 255
 
--- Play a startup sound
-if vmupro_audio_play_sound("/sdcard/sounds/startup.wav") then
-    print("Playing startup sound")
-else
-    print("Failed to play startup sound")
-end
+-- Start audio listen mode
+vmupro.audio.startListenMode()
+vmupro.system.log(vmupro.system.LOG_INFO, "Audio", "Audio listen mode started")
 
--- Play a tone sequence
-local notes = {261, 294, 329, 349, 392, 440, 493, 523} -- C major scale
-for i, freq in ipairs(notes) do
-    vmupro_audio_play_tone(freq, 500)
-    vmupro_sleep_ms(600) -- Wait between notes
-end
+-- Check ring buffer fill state
+local fill_level = vmupro.audio.getRingBufferFillState()
+vmupro.system.log(vmupro.system.LOG_INFO, "Audio", "Ring buffer fill: " .. fill_level .. "%")
 
--- Stop all audio
-vmupro_audio_stop()
+-- Clear ring buffer
+vmupro.audio.clearRingBuffer()
+
+-- Stop listen mode
+vmupro.audio.exitListenMode()
+vmupro.system.log(vmupro.system.LOG_INFO, "Audio", "Audio listen mode stopped")
 ```

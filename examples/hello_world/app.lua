@@ -2,49 +2,125 @@
 --- @brief Hello World example for VMU Pro LUA SDK
 --- @author 8BitMods
 --- @version 1.0.0
---- @date 2025-09-18
+--- @date 2025-09-29
 --- @copyright Copyright (c) 2025 8BitMods. All rights reserved.
 ---
---- A simple Hello World application that demonstrates basic VMU Pro LUA SDK usage.
---- This application logs a message to the console and exits gracefully.
+--- A comprehensive Hello World application that demonstrates VMU Pro LUA SDK features.
+--- Shows namespace usage, graphics, input handling, and proper application structure.
 
--- Log level constants (provided by firmware at runtime)
-VMUPRO_LOG_NONE = VMUPRO_LOG_NONE or 0
-VMUPRO_LOG_ERROR = VMUPRO_LOG_ERROR or 1
-VMUPRO_LOG_WARN = VMUPRO_LOG_WARN or 2
-VMUPRO_LOG_INFO = VMUPRO_LOG_INFO or 3
-VMUPRO_LOG_DEBUG = VMUPRO_LOG_DEBUG or 4
+import "api/system"
+import "api/display"
+import "api/input"
 
---- @brief Log a message to the console
---- @param level number Log level constant
---- @param tag string Source tag for the message
---- @param message string The message to log
-vmupro_log = vmupro_log or function(level, tag, message) end
+-- Application state
+local app_running = true
+local frame_count = 0
+local start_time = 0
 
--- Load SDK type definitions for IDE support (safe require - won't fail at runtime)
-if package and package.path then
-    package.path = package.path .. ";../../sdk/api/?.lua"
-    local success, result = pcall(require, "vmupro_log")
-    if not success then
-        -- Fallback: create empty table for IDE support if require fails
-        vmupro_log = vmupro_log or {}
+--- @brief Initialize the application
+local function init_app()
+    vmupro.system.log(vmupro.system.LOG_INFO, "HelloWorld", "Initializing VMU Pro Hello World Demo")
+
+    -- Get and log the actual SDK version from hardware
+    local sdk_version = vmupro.apiVersion()
+    vmupro.system.log(vmupro.system.LOG_INFO, "HelloWorld", "SDK Version: " .. sdk_version)
+
+    -- Get start time for uptime display
+    start_time = vmupro.system.getTimeUs()
+
+    -- Initialize graphics
+    vmupro.graphics.clear(vmupro.graphics.BLACK)
+    vmupro.graphics.refresh()
+
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "HelloWorld", "Initialization complete")
+end
+
+--- @brief Update application logic
+local function update()
+    frame_count = frame_count + 1
+
+    -- Read input
+    vmupro.input.read()
+
+    -- Check for exit condition (B button)
+    if vmupro.input.pressed(vmupro.input.B) then
+        vmupro.system.log(vmupro.system.LOG_INFO, "HelloWorld", "Exit requested by user")
+        app_running = false
     end
+end
+
+--- @brief Render the application
+local function render()
+    -- Clear screen with VMU green background
+    vmupro.graphics.clear(vmupro.graphics.VMUGREEN)
+
+    -- Draw title
+    vmupro.graphics.drawText("VMU Pro SDK Demo", 10, 10, vmupro.graphics.WHITE, vmupro.graphics.VMUGREEN)
+
+    -- Draw hello world message
+    vmupro.graphics.drawText("Hello World!", 10, 30, vmupro.graphics.WHITE, vmupro.graphics.VMUGREEN)
+
+    -- Draw frame counter
+    local frame_text = "Frame: " .. frame_count
+    vmupro.graphics.drawText(frame_text, 10, 50, vmupro.graphics.YELLOW, vmupro.graphics.VMUGREEN)
+
+    -- Draw uptime
+    local current_time = vmupro.system.getTimeUs()
+    local uptime_ms = math.floor((current_time - start_time) / 1000)
+    local uptime_text = "Uptime: " .. uptime_ms .. "ms"
+    vmupro.graphics.drawText(uptime_text, 10, 70, vmupro.graphics.CYAN, vmupro.graphics.VMUGREEN)
+
+    -- Draw available namespaces info
+    vmupro.graphics.drawText("Namespaces:", 10, 100, vmupro.graphics.WHITE, vmupro.graphics.VMUGREEN)
+    vmupro.graphics.drawText("graphics, sprites, audio", 10, 120, vmupro.graphics.GREY, vmupro.graphics.VMUGREEN)
+    vmupro.graphics.drawText("input, file, system", 10, 140, vmupro.graphics.GREY, vmupro.graphics.VMUGREEN)
+
+    -- Draw controls
+    vmupro.graphics.drawText("Press B to exit", 10, 180, vmupro.graphics.WHITE, vmupro.graphics.VMUGREEN)
+
+    -- Draw a simple rectangle as decoration
+    vmupro.graphics.drawRect(5, 5, 230, 230, vmupro.graphics.WHITE)
+
+    -- Refresh display
+    vmupro.graphics.refresh()
 end
 
 --- @brief Main application entry point
 --- @details This function is called by the VMU Pro firmware when the application starts.
 --- All LUA applications must implement this function.
 --- @return number Exit code (0 = success, non-zero = error)
-function app_main()
-    -- Log a greeting message (level, tag, message)
-    vmupro_log(VMUPRO_LOG_INFO, "HelloWorld", "Hello World from VMU Pro LUA SDK!")
+function AppMain()
+    -- Initialize application
+    init_app()
 
-    -- Log some additional information
-    vmupro_log(VMUPRO_LOG_INFO, "HelloWorld", "Application: Hello World Example")
-    vmupro_log(VMUPRO_LOG_INFO, "HelloWorld", "SDK Version: 1.0.0")
-    vmupro_log(VMUPRO_LOG_DEBUG, "HelloWorld", "Debug logging is working")
+    -- Main loop
+    vmupro.system.log(vmupro.system.LOG_INFO, "HelloWorld", "Entering main loop")
 
-    -- Exit gracefully
-    vmupro_log(VMUPRO_LOG_INFO, "HelloWorld", "Application completed successfully")
+    while app_running do
+        -- Update logic
+        update()
+
+        -- Render frame
+        render()
+
+        -- Small delay to prevent excessive CPU usage
+        vmupro.system.delayMs(16) -- ~60 FPS
+
+        -- Log every 60 frames
+        if frame_count % 60 == 0 then
+            vmupro.system.log(vmupro.system.LOG_DEBUG, "HelloWorld", "Running... Frame: " .. frame_count)
+        end
+
+        -- Safety exit after many frames (prevent infinite loop in testing)
+        if frame_count > 1800 then -- 30 seconds at 60fps
+            vmupro.system.log(vmupro.system.LOG_INFO, "HelloWorld", "Auto-exit after timeout")
+            break
+        end
+    end
+
+    -- Cleanup and exit
+    vmupro.system.log(vmupro.system.LOG_INFO, "HelloWorld", "Application completed successfully")
+    vmupro.system.log(vmupro.system.LOG_INFO, "HelloWorld", "Total frames rendered: " .. frame_count)
+
     return 0
 end
