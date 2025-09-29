@@ -27,6 +27,7 @@ end
 
 - `system.lua` - System functions (vmupro.system.log, vmupro.system.getTimeUs, vmupro.system.delayMs)
 - `display.lua` - Display functions (vmupro.graphics.clear, vmupro.graphics.drawText, vmupro.graphics.refresh)
+- `text.lua` - Text and font functions (vmupro.text.setFont, vmupro.text.calcLength, font constants)
 - `input.lua` - Input functions (vmupro.input.read, vmupro.input.pressed)
 - `audio.lua` - Audio functions (vmupro.audio.setGlobalVolume, vmupro.audio.getGlobalVolume)
 - `file.lua` - File system functions (vmupro.file.readFileComplete, vmupro.file.writeFileComplete)

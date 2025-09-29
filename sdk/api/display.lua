@@ -172,18 +172,19 @@ function vmupro.graphics.getFrontFramebuffer() end
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
 function vmupro.graphics.getBackBuffer() end
 
--- Color constants (provided by firmware)
-vmupro.graphics.RED = COLOR_RED or 0x00f8           --- Red color
-vmupro.graphics.ORANGE = COLOR_ORANGE or 0xa0fb     --- Orange color
-vmupro.graphics.YELLOW = COLOR_YELLOW or 0x80ff     --- Yellow color
-vmupro.graphics.YELLOWGREEN = COLOR_YELLOWGREEN or 0x807f --- Yellow-green color
-vmupro.graphics.GREEN = COLOR_GREEN or 0x0005       --- Green color
-vmupro.graphics.BLUE = COLOR_BLUE or 0x5f04         --- Blue color
-vmupro.graphics.NAVY = COLOR_NAVY or 0x0c00         --- Navy blue color
-vmupro.graphics.VIOLET = COLOR_VIOLET or 0x1f78     --- Violet color
-vmupro.graphics.MAGENTA = COLOR_MAGENTA or 0x0d78   --- Magenta color
-vmupro.graphics.GREY = COLOR_GREY or 0xb6b5         --- Grey color
-vmupro.graphics.BLACK = COLOR_BLACK or 0x0000       --- Black color
-vmupro.graphics.WHITE = COLOR_WHITE or 0xffff       --- White color
-vmupro.graphics.VMUGREEN = COLOR_VMUGREEN or 0xd26c --- VMU Pro green color
-vmupro.graphics.VMUINK = COLOR_VMUINK or 0x8a28     --- VMU Pro ink color
+-- Color constants (RGB565 format - since firmware doesn't export them)
+-- These values match the firmware's Colors enum in config.h
+vmupro.graphics.RED = 0xF800           --- Red color (RGB565)
+vmupro.graphics.ORANGE = 0xFBA0        --- Orange color (RGB565)
+vmupro.graphics.YELLOW = 0xFF80        --- Yellow color (RGB565)
+vmupro.graphics.YELLOWGREEN = 0x7F80   --- Yellow-green color (RGB565)
+vmupro.graphics.GREEN = 0x0500         --- Green color (RGB565)
+vmupro.graphics.BLUE = 0x045F          --- Blue color (RGB565)
+vmupro.graphics.NAVY = 0x000C          --- Navy blue color (RGB565)
+vmupro.graphics.VIOLET = 0x781F        --- Violet color (RGB565)
+vmupro.graphics.MAGENTA = 0x780D       --- Magenta color (RGB565)
+vmupro.graphics.GREY = 0xB5B6          --- Grey color (RGB565)
+vmupro.graphics.BLACK = 0x0000         --- Black color (RGB565)
+vmupro.graphics.WHITE = 0xFFFF         --- White color (RGB565)
+vmupro.graphics.VMUGREEN = 0x6CD2      --- VMU Pro green color (RGB565)
+vmupro.graphics.VMUINK = 0x288A        --- VMU Pro ink color (RGB565)

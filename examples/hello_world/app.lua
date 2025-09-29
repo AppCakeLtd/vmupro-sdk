@@ -28,7 +28,8 @@ local function init_app()
     -- Get start time for uptime display
     start_time = vmupro.system.getTimeUs()
 
-    -- Initialize graphics
+    -- Initialize graphics and set smaller font
+    vmupro.text.setFont(vmupro.text.FONT_SMALL)  -- Use small font for better spacing
     vmupro.graphics.clear(vmupro.graphics.BLACK)
     vmupro.graphics.refresh()
 
@@ -58,25 +59,25 @@ local function render()
     vmupro.graphics.drawText("VMU Pro SDK Demo", 10, 10, vmupro.graphics.WHITE, vmupro.graphics.VMUGREEN)
 
     -- Draw hello world message
-    vmupro.graphics.drawText("Hello World!", 10, 30, vmupro.graphics.WHITE, vmupro.graphics.VMUGREEN)
+    vmupro.graphics.drawText("Hello World!", 10, 25, vmupro.graphics.WHITE, vmupro.graphics.VMUGREEN)
 
     -- Draw frame counter
     local frame_text = "Frame: " .. frame_count
-    vmupro.graphics.drawText(frame_text, 10, 50, vmupro.graphics.YELLOW, vmupro.graphics.VMUGREEN)
+    vmupro.graphics.drawText(frame_text, 10, 40, vmupro.graphics.YELLOW, vmupro.graphics.VMUGREEN)
 
     -- Draw uptime
     local current_time = vmupro.system.getTimeUs()
     local uptime_ms = math.floor((current_time - start_time) / 1000)
     local uptime_text = "Uptime: " .. uptime_ms .. "ms"
-    vmupro.graphics.drawText(uptime_text, 10, 70, vmupro.graphics.CYAN, vmupro.graphics.VMUGREEN)
+    vmupro.graphics.drawText(uptime_text, 10, 55, vmupro.graphics.BLUE, vmupro.graphics.VMUGREEN)
 
     -- Draw available namespaces info
-    vmupro.graphics.drawText("Namespaces:", 10, 100, vmupro.graphics.WHITE, vmupro.graphics.VMUGREEN)
-    vmupro.graphics.drawText("graphics, sprites, audio", 10, 120, vmupro.graphics.GREY, vmupro.graphics.VMUGREEN)
-    vmupro.graphics.drawText("input, file, system", 10, 140, vmupro.graphics.GREY, vmupro.graphics.VMUGREEN)
+    vmupro.graphics.drawText("Namespaces:", 10, 80, vmupro.graphics.WHITE, vmupro.graphics.VMUGREEN)
+    vmupro.graphics.drawText("graphics, sprites, audio", 10, 95, vmupro.graphics.GREY, vmupro.graphics.VMUGREEN)
+    vmupro.graphics.drawText("input, file, system, text", 10, 110, vmupro.graphics.GREY, vmupro.graphics.VMUGREEN)
 
     -- Draw controls
-    vmupro.graphics.drawText("Press B to exit", 10, 180, vmupro.graphics.WHITE, vmupro.graphics.VMUGREEN)
+    vmupro.graphics.drawText("Press B to exit", 10, 135, vmupro.graphics.WHITE, vmupro.graphics.VMUGREEN)
 
     -- Draw a simple rectangle as decoration
     vmupro.graphics.drawRect(5, 5, 230, 230, vmupro.graphics.WHITE)

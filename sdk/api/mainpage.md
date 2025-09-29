@@ -8,6 +8,7 @@ The VMU Pro LUA SDK provides a comprehensive set of APIs for developing applicat
 
 - **@ref system.lua "System"** - Application logging, timing, and system utilities
 - **@ref display.lua "Display"** - Graphics rendering and display management
+- **@ref text.lua "Text"** - Font management and text rendering utilities
 - **@ref input.lua "Input"** - Button and control input handling
 - **@ref audio.lua "Audio"** - Volume control and audio functionality
 - **@ref file.lua "File System"** - File and folder operations
@@ -24,14 +25,11 @@ Every VMU Pro LUA application must have:
 ## Example Application
 
 ```lua
-import "api/system"
-import "api/display"
-import "api/input"
-
 function AppMain()
     vmupro.system.log(vmupro.system.LOG_INFO, "MyApp", "Hello VMU Pro!")
 
-    -- Clear display and show text
+    -- Set font and clear display
+    vmupro.text.setFont(vmupro.text.FONT_DEFAULT)
     vmupro.graphics.clear(vmupro.graphics.BLACK)
     vmupro.graphics.drawText("Hello World!", 10, 10, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
     vmupro.graphics.refresh()
