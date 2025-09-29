@@ -8,13 +8,13 @@ These functions allow you to apply various visual effects to buffers, manipulate
 
 ## Color Manipulation
 
-### vmupro_blit_buffer_color_multiply(buffer, x, y, width, height, multiply_color)
+### vmupro.graphics.blitBufferColorMultiply(buffer, x, y, width, height, multiply_color)
 
 Applies color multiplication to a buffer, useful for darkening or tinting effects.
 
 ```lua
 -- Darken a sprite by multiplying with a dark color
-vmupro_blit_buffer_color_multiply(sprite_buffer, 50, 50, 32, 32, 0x8410) -- Dark gray tint
+vmupro.graphics.blitBufferColorMultiply(sprite_buffer, 50, 50, 32, 32, 0x8410) -- Dark gray tint
 ```
 
 **Parameters:**
@@ -34,13 +34,13 @@ vmupro_blit_buffer_color_multiply(sprite_buffer, 50, 50, 32, 32, 0x8410) -- Dark
 
 ---
 
-### vmupro_blit_buffer_color_add(buffer, x, y, width, height, add_color)
+### vmupro.graphics.blitBufferColorAdd(buffer, x, y, width, height, add_color)
 
 Applies color addition to a buffer, useful for brightening or highlighting effects.
 
 ```lua
 -- Add a red glow effect to a sprite
-vmupro_blit_buffer_color_add(sprite_buffer, 50, 50, 32, 32, 0x4000) -- Red tint
+vmupro.graphics.blitBufferColorAdd(sprite_buffer, 50, 50, 32, 32, 0x4000) -- Red tint
 ```
 
 **Parameters:**
@@ -80,12 +80,12 @@ vmupro_set_color_window(0, 0, 240, 60, 0x001F)
 
 ---
 
-### vmupro_clear_color_window()
+### vmupro.graphics.clearColorWindow()
 
 Clears the current color window effect.
 
 ```lua
-vmupro_clear_color_window()
+vmupro.graphics.clearColorWindow()
 ```
 
 **Parameters:** None
@@ -145,13 +145,13 @@ vmupro_animate_palette_range(water_palette, 8, 15, 1)
 
 ---
 
-### vmupro_interpolate_palette(palette1, palette2, output_palette, interpolation_factor)
+### vmupro.graphics.interpolatePalette(palette1, palette2, output_palette, interpolation_factor)
 
 Interpolates between two palettes to create smooth color transitions.
 
 ```lua
 -- Create a 50% blend between day and night palettes
-vmupro_interpolate_palette(day_palette, night_palette, current_palette, 0.5)
+vmupro.graphics.interpolatePalette(day_palette, night_palette, current_palette, 0.5)
 ```
 
 **Parameters:**
@@ -184,10 +184,10 @@ function update_time_cycle()
     if time_of_day > 1.0 then time_of_day = 0.0 end
 
     -- Interpolate between day and night palettes
-    vmupro_interpolate_palette(day_palette, night_palette, current_palette, time_of_day)
+    vmupro.graphics.interpolatePalette(day_palette, night_palette, current_palette, time_of_day)
 
     -- Apply the current palette to the landscape
-    vmupro_blit_buffer_palette_swap(landscape_buffer, default_palette, current_palette, 0, 0, 240, 240)
+    vmupro.graphics.blitBufferPaletteSwap(landscape_buffer, default_palette, current_palette, 0, 0, 240, 240)
 end
 ```
 
@@ -204,7 +204,7 @@ function update_player_effects()
         local flash_intensity = damage_flash_timer / 30 -- Fade over 30 frames
         local red_add = math.floor(flash_intensity * 0x4000) -- Red component
 
-        vmupro_blit_buffer_color_add(player_sprite, player_x, player_y, 32, 32, red_add)
+        vmupro.graphics.blitBufferColorAdd(player_sprite, player_x, player_y, 32, 32, red_add)
     end
 end
 
@@ -223,11 +223,11 @@ function animate_water()
 
     -- Cycle through water colors every 8 frames
     if water_frame % 8 == 0 then
-        vmupro_animate_palette_range(water_palette, 12, 19, 1) -- Shift water colors
+        vmupro.graphics.animatePaletteRange(water_palette, 12, 19, 1) -- Shift water colors
     end
 
     -- Apply animated palette to water areas
-    vmupro_blit_buffer_palette_swap(level_buffer, base_palette, water_palette, 0, 0, 240, 240)
+    vmupro.graphics.blitBufferPaletteSwap(level_buffer, base_palette, water_palette, 0, 0, 240, 240)
 end
 ```
 
@@ -236,16 +236,16 @@ end
 ```lua
 function apply_underwater_effect()
     -- Apply blue tint to entire screen for underwater feeling
-    vmupro_set_color_window(0, 0, 240, 240, 0x001F) -- Blue tint
+    vmupro.graphics.setColorWindow(0, 0, 240, 240, vmupro.graphics.BLUE) -- Blue tint
 end
 
 function apply_sunset_effect()
     -- Apply orange tint to upper portion of screen
-    vmupro_set_color_window(0, 0, 240, 120, 0xFC00) -- Orange tint on top half
+    vmupro.graphics.setColorWindow(0, 0, 240, 120, 0xFC00) -- Orange tint on top half
 end
 
 function clear_screen_effects()
-    vmupro_clear_color_window()
+    vmupro.graphics.clearColorWindow()
 end
 ```
 

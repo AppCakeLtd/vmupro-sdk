@@ -4,12 +4,12 @@ The Buffer Blitting API provides advanced graphics operations for copying, trans
 
 ## Basic Blitting Operations
 
-### vmupro_blit_buffer_at(buffer, x, y, width, height)
+### vmupro.graphics.blitBufferAt(buffer, x, y, width, height)
 
 Blits a buffer to the screen at the specified position.
 
 ```lua
-vmupro_blit_buffer_at(sprite_buffer, 50, 50, 32, 32)
+vmupro.graphics.blitBufferAt(sprite_buffer, 50, 50, 32, 32)
 ```
 
 **Parameters:**
@@ -23,12 +23,12 @@ vmupro_blit_buffer_at(sprite_buffer, 50, 50, 32, 32)
 
 ---
 
-### vmupro_blit_tile(buffer, x, y, atlas_src_x, atlas_src_y, width, height, tilemap_width)
+### vmupro.graphics.blitTile(buffer, x, y, atlas_src_x, atlas_src_y, width, height, tilemap_width)
 
 Blits a tile from a tile atlas.
 
 ```lua
-vmupro_blit_tile(atlas_buffer, 100, 100, 64, 0, 32, 32, 256)
+vmupro.graphics.blitTile(atlas_buffer, 100, 100, 64, 0, 32, 32, 256)
 ```
 
 **Parameters:**
@@ -45,12 +45,12 @@ vmupro_blit_tile(atlas_buffer, 100, 100, 64, 0, 32, 32, 256)
 
 ---
 
-### vmupro_blit_buffer_with_palette(buffer, palette)
+### vmupro.graphics.blitBufferWithPalette(buffer, palette)
 
 Blits a buffer using a color palette.
 
 ```lua
-vmupro_blit_buffer_with_palette(indexed_buffer, color_palette)
+vmupro.graphics.blitBufferWithPalette(indexed_buffer, color_palette)
 ```
 
 **Parameters:**
@@ -61,12 +61,12 @@ vmupro_blit_buffer_with_palette(indexed_buffer, color_palette)
 
 ---
 
-### vmupro_blit_tile_pattern(tile_buffer, tile_width, tile_height, pattern_x, pattern_y, pattern_width, pattern_height)
+### vmupro.graphics.blitTilePattern(tile_buffer, tile_width, tile_height, pattern_x, pattern_y, pattern_width, pattern_height)
 
 Blits a repeating tile pattern across a specified area.
 
 ```lua
-vmupro_blit_tile_pattern(tile_buffer, 16, 16, 0, 0, 240, 240)
+vmupro.graphics.blitTilePattern(tile_buffer, 16, 16, 0, 0, 240, 240)
 ```
 
 **Parameters:**
@@ -82,12 +82,12 @@ vmupro_blit_tile_pattern(tile_buffer, 16, 16, 0, 0, 240, 240)
 
 ## Advanced Blitting Effects
 
-### vmupro_blit_buffer_transparent(buffer, x, y, width, height, transparent_color, flags)
+### vmupro.graphics.blitBufferTransparent(buffer, x, y, width, height, transparent_color, flags)
 
 Blits a buffer with color key transparency.
 
 ```lua
-vmupro_blit_buffer_transparent(sprite_buffer, 50, 50, 32, 32, 0xF81F, 0)
+vmupro.graphics.blitBufferTransparent(sprite_buffer, 50, 50, 32, 32, vmupro.graphics.MAGENTA, 0)
 ```
 
 **Parameters:**
@@ -103,12 +103,12 @@ vmupro_blit_buffer_transparent(sprite_buffer, 50, 50, 32, 32, 0xF81F, 0)
 
 ---
 
-### vmupro_blit_buffer_blended(buffer, x, y, width, height, alpha_level)
+### vmupro.graphics.blitBufferBlended(buffer, x, y, width, height, alpha_level)
 
 Blits a buffer with alpha blending.
 
 ```lua
-vmupro_blit_buffer_blended(sprite_buffer, 50, 50, 32, 32, 128) -- 50% alpha
+vmupro.graphics.blitBufferBlended(sprite_buffer, 50, 50, 32, 32, 128) -- 50% alpha
 ```
 
 **Parameters:**
@@ -123,12 +123,12 @@ vmupro_blit_buffer_blended(sprite_buffer, 50, 50, 32, 32, 128) -- 50% alpha
 
 ---
 
-### vmupro_blit_buffer_dithered(buffer, x, y, width, height, dither_strength)
+### vmupro.graphics.blitBufferDithered(buffer, x, y, width, height, dither_strength)
 
 Blits a buffer with dithering effect.
 
 ```lua
-vmupro_blit_buffer_dithered(sprite_buffer, 50, 50, 32, 32, 64)
+vmupro.graphics.blitBufferDithered(sprite_buffer, 50, 50, 32, 32, 64)
 ```
 
 **Parameters:**
@@ -143,14 +143,14 @@ vmupro_blit_buffer_dithered(sprite_buffer, 50, 50, 32, 32, 64)
 
 ---
 
-### vmupro_blit_buffer_flipped(buffer, x, y, width, height, flags)
+### vmupro.graphics.blitBufferFlipped(buffer, x, y, width, height, flags)
 
 Blits a buffer with horizontal and/or vertical flipping.
 
 ```lua
 local FLIP_HORIZONTAL = 1
 local FLIP_VERTICAL = 2
-vmupro_blit_buffer_flipped(sprite_buffer, 50, 50, 32, 32, FLIP_HORIZONTAL)
+vmupro.graphics.blitBufferFlipped(sprite_buffer, 50, 50, 32, 32, FLIP_HORIZONTAL)
 ```
 
 **Parameters:**
@@ -165,12 +165,12 @@ vmupro_blit_buffer_flipped(sprite_buffer, 50, 50, 32, 32, FLIP_HORIZONTAL)
 
 ---
 
-### vmupro_blit_buffer_fixed_alpha(buffer, x, y, width, height, alpha)
+### vmupro.graphics.blitBufferFixedAlpha(buffer, x, y, width, height, alpha)
 
 Blits a buffer with fixed alpha value.
 
 ```lua
-vmupro_blit_buffer_fixed_alpha(sprite_buffer, 50, 50, 32, 32, 192)
+vmupro.graphics.blitBufferFixedAlpha(sprite_buffer, 50, 50, 32, 32, 192)
 ```
 
 **Parameters:**
@@ -185,12 +185,12 @@ vmupro_blit_buffer_fixed_alpha(sprite_buffer, 50, 50, 32, 32, 192)
 
 ---
 
-### vmupro_blit_buffer_masked(buffer, mask, x, y, width, height)
+### vmupro.graphics.blitBufferMasked(buffer, mask, x, y, width, height)
 
 Blits a buffer using a mask buffer.
 
 ```lua
-vmupro_blit_buffer_masked(sprite_buffer, mask_buffer, 50, 50, 32, 32)
+vmupro.graphics.blitBufferMasked(sprite_buffer, mask_buffer, 50, 50, 32, 32)
 ```
 
 **Parameters:**
@@ -205,12 +205,12 @@ vmupro_blit_buffer_masked(sprite_buffer, mask_buffer, 50, 50, 32, 32)
 
 ## Transform Operations
 
-### vmupro_blit_buffer_scaled(buffer, x, y, src_width, src_height, dest_width, dest_height)
+### vmupro.graphics.blitBufferScaled(buffer, x, y, src_width, src_height, dest_width, dest_height)
 
 Blits a buffer with scaling.
 
 ```lua
-vmupro_blit_buffer_scaled(sprite_buffer, 50, 50, 32, 32, 64, 64) -- 2x scale
+vmupro.graphics.blitBufferScaled(sprite_buffer, 50, 50, 32, 32, 64, 64) -- 2x scale
 ```
 
 **Parameters:**
@@ -226,12 +226,12 @@ vmupro_blit_buffer_scaled(sprite_buffer, 50, 50, 32, 32, 64, 64) -- 2x scale
 
 ---
 
-### vmupro_blit_buffer_rotated_90(buffer, x, y, width, height, rotation_steps)
+### vmupro.graphics.blitBufferRotated90(buffer, x, y, width, height, rotation_steps)
 
 Blits a buffer rotated by 90-degree increments.
 
 ```lua
-vmupro_blit_buffer_rotated_90(sprite_buffer, 50, 50, 32, 32, 1) -- 90 degrees
+vmupro.graphics.blitBufferRotated90(sprite_buffer, 50, 50, 32, 32, 1) -- 90 degrees
 ```
 
 **Parameters:**
@@ -246,12 +246,12 @@ vmupro_blit_buffer_rotated_90(sprite_buffer, 50, 50, 32, 32, 1) -- 90 degrees
 
 ---
 
-### vmupro_blit_buffer_rotated_precise(buffer, x, y, width, height, angle)
+### vmupro.graphics.blitBufferRotatedPrecise(buffer, x, y, width, height, angle)
 
 Blits a buffer rotated by a precise angle.
 
 ```lua
-vmupro_blit_buffer_rotated_precise(sprite_buffer, 50, 50, 32, 32, 45) -- 45 degrees
+vmupro.graphics.blitBufferRotatedPrecise(sprite_buffer, 50, 50, 32, 32, 45) -- 45 degrees
 ```
 
 **Parameters:**
@@ -266,12 +266,12 @@ vmupro_blit_buffer_rotated_precise(sprite_buffer, 50, 50, 32, 32, 45) -- 45 degr
 
 ## Scrolling Background Functions
 
-### vmupro_blit_scrolling_background(buffer, scroll_x, scroll_y, buffer_width, buffer_height)
+### vmupro.graphics.blitScrollingBackground(buffer, scroll_x, scroll_y, buffer_width, buffer_height)
 
 Blits a scrolling background with wrapping.
 
 ```lua
-vmupro_blit_scrolling_background(bg_buffer, scroll_x, scroll_y, 240, 240)
+vmupro.graphics.blitScrollingBackground(bg_buffer, scroll_x, scroll_y, 240, 240)
 ```
 
 **Parameters:**
@@ -285,12 +285,12 @@ vmupro_blit_scrolling_background(bg_buffer, scroll_x, scroll_y, 240, 240)
 
 ---
 
-### vmupro_blit_infinite_scrolling_background(buffer, scroll_x, scroll_y, tile_width, tile_height)
+### vmupro.graphics.blitInfiniteScrollingBackground(buffer, scroll_x, scroll_y, tile_width, tile_height)
 
 Blits an infinitely scrolling tiled background.
 
 ```lua
-vmupro_blit_infinite_scrolling_background(tile_buffer, scroll_x, scroll_y, 32, 32)
+vmupro.graphics.blitInfiniteScrollingBackground(tile_buffer, scroll_x, scroll_y, 32, 32)
 ```
 
 **Parameters:**
@@ -304,12 +304,12 @@ vmupro_blit_infinite_scrolling_background(tile_buffer, scroll_x, scroll_y, 32, 3
 
 ---
 
-### vmupro_blit_parallax_background(buffer, scroll_x, scroll_y, parallax_factor, buffer_width, buffer_height)
+### vmupro.graphics.blitParallaxBackground(buffer, scroll_x, scroll_y, parallax_factor, buffer_width, buffer_height)
 
 Blits a parallax scrolling background.
 
 ```lua
-vmupro_blit_parallax_background(bg_buffer, scroll_x, scroll_y, 0.5, 480, 240)
+vmupro.graphics.blitParallaxBackground(bg_buffer, scroll_x, scroll_y, 0.5, 480, 240)
 ```
 
 **Parameters:**
@@ -324,13 +324,13 @@ vmupro_blit_parallax_background(bg_buffer, scroll_x, scroll_y, 0.5, 480, 240)
 
 ---
 
-### vmupro_blit_line_scroll_background(buffer, scroll_offsets, buffer_width, buffer_height)
+### vmupro.graphics.blitLineScrollBackground(buffer, scroll_offsets, buffer_width, buffer_height)
 
 Blits a background with per-line scrolling offsets.
 
 ```lua
 local line_offsets = {0, 1, 2, 3, 4, ...} -- One offset per line
-vmupro_blit_line_scroll_background(bg_buffer, line_offsets, 240, 240)
+vmupro.graphics.blitLineScrollBackground(bg_buffer, line_offsets, 240, 240)
 ```
 
 **Parameters:**
@@ -343,13 +343,13 @@ vmupro_blit_line_scroll_background(bg_buffer, line_offsets, 240, 240)
 
 ---
 
-### vmupro_blit_column_scroll_background(buffer, scroll_offsets, buffer_width, buffer_height)
+### vmupro.graphics.blitColumnScrollBackground(buffer, scroll_offsets, buffer_width, buffer_height)
 
 Blits a background with per-column scrolling offsets.
 
 ```lua
 local column_offsets = {0, 1, 2, 3, 4, ...} -- One offset per column
-vmupro_blit_column_scroll_background(bg_buffer, column_offsets, 240, 240)
+vmupro.graphics.blitColumnScrollBackground(bg_buffer, column_offsets, 240, 240)
 ```
 
 **Parameters:**
@@ -367,19 +367,19 @@ vmupro_blit_column_scroll_background(bg_buffer, column_offsets, 240, 240)
 local sprite_buffer = load_sprite("/sdcard/sprites/player.bmp")
 
 -- Basic blitting
-vmupro_blit_buffer_at(sprite_buffer, 100, 100, 32, 32)
+vmupro.graphics.blitBufferAt(sprite_buffer, 100, 100, 32, 32)
 
 -- Transparent blitting (magenta as transparent color)
-vmupro_blit_buffer_transparent(sprite_buffer, 50, 50, 32, 32, 0xF81F, 0)
+vmupro.graphics.blitBufferTransparent(sprite_buffer, 50, 50, 32, 32, vmupro.graphics.MAGENTA, 0)
 
 -- Alpha blended blitting
-vmupro_blit_buffer_blended(sprite_buffer, 150, 50, 32, 32, 128)
+vmupro.graphics.blitBufferBlended(sprite_buffer, 150, 50, 32, 32, 128)
 
 -- Scaled blitting (2x size)
-vmupro_blit_buffer_scaled(sprite_buffer, 200, 100, 32, 32, 64, 64)
+vmupro.graphics.blitBufferScaled(sprite_buffer, 200, 100, 32, 32, 64, 64)
 
 -- Rotated blitting (90 degrees)
-vmupro_blit_buffer_rotated_90(sprite_buffer, 50, 150, 32, 32, 1)
+vmupro.graphics.blitBufferRotated90(sprite_buffer, 50, 150, 32, 32, 1)
 
 -- Scrolling background
 local bg_scroll_x = 0
@@ -387,5 +387,5 @@ local bg_scroll_y = 0
 
 -- In game loop
 bg_scroll_x = bg_scroll_x + 1
-vmupro_blit_scrolling_background(background_buffer, bg_scroll_x, bg_scroll_y, 240, 240)
+vmupro.graphics.blitScrollingBackground(background_buffer, bg_scroll_x, bg_scroll_y, 240, 240)
 ```

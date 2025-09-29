@@ -8,13 +8,13 @@ The layer system allows you to create multiple independent rendering surfaces th
 
 ## Layer Management
 
-### vmupro_layer_create(width, height)
+### vmupro.graphics.layerCreate(width, height)
 
 Creates a new rendering layer.
 
 ```lua
-local background_layer = vmupro_layer_create(240, 240)
-local ui_layer = vmupro_layer_create(240, 240)
+local background_layer = vmupro.graphics.layerCreate(240, 240)
+local ui_layer = vmupro.graphics.layerCreate(240, 240)
 ```
 
 **Parameters:**
@@ -26,27 +26,27 @@ local ui_layer = vmupro_layer_create(240, 240)
 
 ---
 
-### vmupro_layer_destroy(layer_id)
+### vmupro.graphics.layerDestroy(layer_id)
 
 Destroys a layer and frees its memory.
 
 ```lua
-vmupro_layer_destroy(background_layer)
+vmupro.graphics.layerDestroy(background_layer)
 ```
 
 **Parameters:**
-- `layer_id` (number): Layer ID returned from vmupro_layer_create
+- `layer_id` (number): Layer ID returned from vmupro.graphics.layerCreate
 
 **Returns:** None
 
 ---
 
-### vmupro_layer_set_scroll(layer_id, scroll_x, scroll_y)
+### vmupro.graphics.layerSetScroll(layer_id, scroll_x, scroll_y)
 
 Sets the scroll position for a layer.
 
 ```lua
-vmupro_layer_set_scroll(background_layer, camera_x * 0.5, camera_y * 0.5) -- Parallax effect
+vmupro.graphics.layerSetScroll(background_layer, camera_x * 0.5, camera_y * 0.5) -- Parallax effect
 ```
 
 **Parameters:**
@@ -58,14 +58,14 @@ vmupro_layer_set_scroll(background_layer, camera_x * 0.5, camera_y * 0.5) -- Par
 
 ---
 
-### vmupro_layer_set_priority(layer_id, priority)
+### vmupro.graphics.layerSetPriority(layer_id, priority)
 
 Sets the rendering priority for a layer (higher values render on top).
 
 ```lua
-vmupro_layer_set_priority(background_layer, 0)
-vmupro_layer_set_priority(game_layer, 50)
-vmupro_layer_set_priority(ui_layer, 100)
+vmupro.graphics.layerSetPriority(background_layer, 0)
+vmupro.graphics.layerSetPriority(game_layer, 50)
+vmupro.graphics.layerSetPriority(ui_layer, 100)
 ```
 
 **Parameters:**
@@ -76,12 +76,12 @@ vmupro_layer_set_priority(ui_layer, 100)
 
 ---
 
-### vmupro_layer_set_alpha(layer_id, alpha)
+### vmupro.graphics.layerSetAlpha(layer_id, alpha)
 
 Sets the alpha transparency level for a layer.
 
 ```lua
-vmupro_layer_set_alpha(overlay_layer, 128) -- 50% transparent
+vmupro.graphics.layerSetAlpha(overlay_layer, 128) -- 50% transparent
 ```
 
 **Parameters:**
@@ -92,12 +92,12 @@ vmupro_layer_set_alpha(overlay_layer, 128) -- 50% transparent
 
 ---
 
-### vmupro_layer_blit_background(layer_id, buffer)
+### vmupro.graphics.layerBlitBackground(layer_id, buffer)
 
 Blits a background buffer to a layer.
 
 ```lua
-vmupro_layer_blit_background(background_layer, background_texture)
+vmupro.graphics.layerBlitBackground(background_layer, background_texture)
 ```
 
 **Parameters:**
@@ -183,16 +183,16 @@ vmupro_blend_layers_screen(base_layer, light_layer, bright_output, 240, 240)
 
 ```lua
 -- Create layers for a parallax scrolling game
-local far_background = vmupro_layer_create(480, 240)  -- Wider for scrolling
-local near_background = vmupro_layer_create(360, 240)
-local game_layer = vmupro_layer_create(240, 240)
-local ui_layer = vmupro_layer_create(240, 240)
+local far_background = vmupro.graphics.layerCreate(480, 240)  -- Wider for scrolling
+local near_background = vmupro.graphics.layerCreate(360, 240)
+local game_layer = vmupro.graphics.layerCreate(240, 240)
+local ui_layer = vmupro.graphics.layerCreate(240, 240)
 
 -- Set priorities (far to near)
-vmupro_layer_set_priority(far_background, 0)
-vmupro_layer_set_priority(near_background, 25)
-vmupro_layer_set_priority(game_layer, 50)
-vmupro_layer_set_priority(ui_layer, 100)
+vmupro.graphics.layerSetPriority(far_background, 0)
+vmupro.graphics.layerSetPriority(near_background, 25)
+vmupro.graphics.layerSetPriority(game_layer, 50)
+vmupro.graphics.layerSetPriority(ui_layer, 100)
 
 -- Game loop
 local camera_x = 0
@@ -201,16 +201,16 @@ while game_running do
     camera_x = camera_x + player_speed
 
     -- Set parallax scrolling (further layers move slower)
-    vmupro_layer_set_scroll(far_background, camera_x * 0.2, 0)
-    vmupro_layer_set_scroll(near_background, camera_x * 0.6, 0)
-    vmupro_layer_set_scroll(game_layer, camera_x, 0)
+    vmupro.graphics.layerSetScroll(far_background, camera_x * 0.2, 0)
+    vmupro.graphics.layerSetScroll(near_background, camera_x * 0.6, 0)
+    vmupro.graphics.layerSetScroll(game_layer, camera_x, 0)
     -- UI layer doesn't scroll
 
     -- Blit content to layers
-    vmupro_layer_blit_background(far_background, mountains_texture)
-    vmupro_layer_blit_background(near_background, trees_texture)
-    vmupro_layer_blit_background(game_layer, ground_texture)
-    vmupro_layer_blit_background(ui_layer, hud_texture)
+    vmupro.graphics.layerBlitBackground(far_background, mountains_texture)
+    vmupro.graphics.layerBlitBackground(near_background, trees_texture)
+    vmupro.graphics.layerBlitBackground(game_layer, ground_texture)
+    vmupro.graphics.layerBlitBackground(ui_layer, hud_texture)
 
     -- Render all layers
     vmupro_display_clear(0x0000)
@@ -221,10 +221,10 @@ while game_running do
 end
 
 -- Clean up
-vmupro_layer_destroy(far_background)
-vmupro_layer_destroy(near_background)
-vmupro_layer_destroy(game_layer)
-vmupro_layer_destroy(ui_layer)
+vmupro.graphics.layerDestroy(far_background)
+vmupro.graphics.layerDestroy(near_background)
+vmupro.graphics.layerDestroy(game_layer)
+vmupro.graphics.layerDestroy(ui_layer)
 ```
 
 ## Best Practices

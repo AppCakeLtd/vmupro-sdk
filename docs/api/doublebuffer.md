@@ -8,13 +8,13 @@ Double buffering eliminates screen flicker by rendering to an off-screen buffer 
 
 ## Double Buffer Management
 
-### vmupro_start_double_buffer_renderer()
+### vmupro.graphics.startDoubleBufferRenderer()
 
 Initializes and starts the double buffer rendering system.
 
 ```lua
 -- Initialize double buffering at the start of your application
-vmupro_start_double_buffer_renderer()
+vmupro.graphics.startDoubleBufferRenderer()
 ```
 
 **Parameters:** None
@@ -28,13 +28,13 @@ vmupro_start_double_buffer_renderer()
 
 ---
 
-### vmupro_stop_double_buffer_renderer()
+### vmupro.graphics.stopDoubleBufferRenderer()
 
 Stops the double buffer rendering system and frees resources.
 
 ```lua
 -- Clean up double buffering when your application exits
-vmupro_stop_double_buffer_renderer()
+vmupro.graphics.stopDoubleBufferRenderer()
 ```
 
 **Parameters:** None
@@ -44,19 +44,19 @@ vmupro_stop_double_buffer_renderer()
 **Usage Notes:**
 - Call this when your application exits
 - Frees memory allocated for double buffering
-- Should be paired with `vmupro_start_double_buffer_renderer()`
+- Should be paired with `vmupro.graphics.startDoubleBufferRenderer()`
 
 ---
 
-### vmupro_push_double_buffer_frame()
+### vmupro.graphics.pushDoubleBufferFrame()
 
 Pushes the current frame from the back buffer to the front buffer for display.
 
 ```lua
 -- In your main rendering loop
-vmupro_display_clear(0x0000)
+vmupro.graphics.clear(vmupro.graphics.BLACK)
 -- ... render your frame ...
-vmupro_push_double_buffer_frame()  -- Display the completed frame
+vmupro.graphics.pushDoubleBufferFrame()  -- Display the completed frame
 ```
 
 **Parameters:** None
@@ -115,7 +115,7 @@ vmupro_resume_double_buffer_renderer()
 ```lua
 -- Application initialization
 function init_application()
-    vmupro_start_double_buffer_renderer()
+    vmupro.graphics.startDoubleBufferRenderer()
     print("Double buffering initialized")
 end
 
@@ -125,7 +125,7 @@ function main_loop()
 
     while running do
         -- Clear the back buffer
-        vmupro_display_clear(0x0000)
+        vmupro.graphics.clear(vmupro.graphics.BLACK)
 
         -- Render your game objects
         render_background()
@@ -133,7 +133,7 @@ function main_loop()
         render_ui()
 
         -- Push the completed frame to display
-        vmupro_push_double_buffer_frame()
+        vmupro.graphics.pushDoubleBufferFrame()
 
         -- Handle input and update game state
         handle_input()
@@ -151,7 +151,7 @@ end
 
 -- Application cleanup
 function cleanup_application()
-    vmupro_stop_double_buffer_renderer()
+    vmupro.graphics.stopDoubleBufferRenderer()
     print("Double buffering stopped")
 end
 
@@ -173,17 +173,17 @@ local GameState = {
 local current_state = GameState.MENU
 
 function init_game()
-    vmupro_start_double_buffer_renderer()
+    vmupro.graphics.startDoubleBufferRenderer()
 end
 
 function update_menu()
     -- Menu doesn't need continuous rendering
     vmupro_pause_double_buffer_renderer()
 
-    vmupro_display_clear(0x0000)
-    vmupro_draw_text("MAIN MENU", 50, 50, 0xFFFF, 0x0000)
-    vmupro_draw_text("Press A to Start", 30, 100, 0xFFFF, 0x0000)
-    vmupro_display_refresh()
+    vmupro.graphics.clear(vmupro.graphics.BLACK)
+    vmupro.graphics.drawText("MAIN MENU", 50, 50, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
+    vmupro.graphics.drawText("Press A to Start", 30, 100, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
+    vmupro.graphics.refresh()
 
     if vmupro_btn_pressed(VMUPRO_BTN_A) then
         current_state = GameState.PLAYING
@@ -193,7 +193,7 @@ end
 
 function update_game()
     -- Game uses smooth double buffering
-    vmupro_display_clear(0x0000)
+    vmupro.graphics.clear(vmupro.graphics.BLACK)
 
     -- Render game content
     render_game_world()
@@ -201,7 +201,7 @@ function update_game()
     render_enemies()
 
     -- Push smooth frame
-    vmupro_push_double_buffer_frame()
+    vmupro.graphics.pushDoubleBufferFrame()
 
     -- Game logic
     update_player()
@@ -216,10 +216,10 @@ function update_paused()
     -- Pause rendering during pause screen
     vmupro_pause_double_buffer_renderer()
 
-    vmupro_display_clear(0x0000)
-    vmupro_draw_text("PAUSED", 80, 100, 0xFFFF, 0x0000)
+    vmupro.graphics.clear(vmupro.graphics.BLACK)
+    vmupro.graphics.drawText("PAUSED", 80, 100, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
     vmupro_draw_text("Press B to Resume", 20, 130, 0xFFFF, 0x0000)
-    vmupro_display_refresh()
+    vmupro.graphics.refresh()
 
     if vmupro_btn_pressed(VMUPRO_BTN_B) then
         current_state = GameState.PLAYING
@@ -248,7 +248,7 @@ function main_loop()
 end
 
 function cleanup_game()
-    vmupro_stop_double_buffer_renderer()
+    vmupro.graphics.stopDoubleBufferRenderer()
 end
 
 -- Main execution
@@ -264,7 +264,7 @@ local frame_count = 0
 local last_time = vmupro_get_time_us()
 
 function init_optimized_rendering()
-    vmupro_start_double_buffer_renderer()
+    vmupro.graphics.startDoubleBufferRenderer()
 end
 
 function render_frame()
@@ -273,7 +273,7 @@ function render_frame()
     last_time = current_time
 
     -- Clear back buffer
-    vmupro_display_clear(0x0000)
+    vmupro.graphics.clear(vmupro.graphics.BLACK)
 
     -- Render based on frame timing
     render_animated_background(delta_time)
@@ -282,7 +282,7 @@ function render_frame()
     render_hud()
 
     -- Display the frame
-    vmupro_push_double_buffer_frame()
+    vmupro.graphics.pushDoubleBufferFrame()
 
     frame_count = frame_count + 1
 
@@ -319,12 +319,12 @@ end
 ## Best Practices
 
 ### Initialization and Cleanup
-- Always call `vmupro_start_double_buffer_renderer()` before rendering
-- Always call `vmupro_stop_double_buffer_renderer()` when exiting
+- Always call `vmupro.graphics.startDoubleBufferRenderer()` before rendering
+- Always call `vmupro.graphics.stopDoubleBufferRenderer()` when exiting
 - Handle initialization failures gracefully
 
 ### Frame Management
-- Call `vmupro_push_double_buffer_frame()` once per rendered frame
+- Call `vmupro.graphics.pushDoubleBufferFrame()` once per rendered frame
 - Don't call it multiple times per frame
 - Complete all rendering before pushing the frame
 
@@ -352,7 +352,7 @@ while game_running do
     -- Render
     vmupro_display_clear(background_color)
     render_all_objects()
-    vmupro_push_double_buffer_frame()
+    vmupro.graphics.pushDoubleBufferFrame()
 
     -- Timing
     vmupro_sleep(frame_delay)
@@ -364,7 +364,7 @@ end
 if game_needs_rendering then
     vmupro_resume_double_buffer_renderer()
     render_game_frame()
-    vmupro_push_double_buffer_frame()
+    vmupro.graphics.pushDoubleBufferFrame()
 else
     vmupro_pause_double_buffer_renderer()
 end
