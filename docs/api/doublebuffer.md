@@ -70,13 +70,13 @@ vmupro.graphics.pushDoubleBufferFrame()  -- Display the completed frame
 
 ---
 
-### vmupro_pause_double_buffer_renderer()
+### vmupro.graphics.pauseDoubleBufferRenderer()
 
 Temporarily pauses the double buffer rendering system.
 
 ```lua
 -- Pause rendering during menu screens or loading
-vmupro_pause_double_buffer_renderer()
+vmupro.graphics.pauseDoubleBufferRenderer()
 ```
 
 **Parameters:** None
@@ -90,13 +90,13 @@ vmupro_pause_double_buffer_renderer()
 
 ---
 
-### vmupro_resume_double_buffer_renderer()
+### vmupro.graphics.resumeDoubleBufferRenderer()
 
 Resumes the double buffer rendering system after pausing.
 
 ```lua
 -- Resume rendering when returning to the game
-vmupro_resume_double_buffer_renderer()
+vmupro.graphics.resumeDoubleBufferRenderer()
 ```
 
 **Parameters:** None
@@ -104,7 +104,7 @@ vmupro_resume_double_buffer_renderer()
 **Returns:** None
 
 **Usage Notes:**
-- Use this to resume rendering after calling `vmupro_pause_double_buffer_renderer()`
+- Use this to resume rendering after calling `vmupro.graphics.pauseDoubleBufferRenderer()`
 - Must be paired with a previous pause call
 - Rendering will immediately continue with the next frame
 
@@ -140,10 +140,10 @@ function main_loop()
         update_game_logic()
 
         -- Control frame rate
-        vmupro_sleep(16)  -- ~60 FPS
+        vmupro.system.delayMs(16)  -- ~60 FPS
 
         -- Check for exit condition
-        if vmupro_btn_pressed(VMUPRO_BTN_MODE) then
+        if vmupro.input.pressed(vmupro.input.MODE) then
             running = false
         end
     end
@@ -178,16 +178,16 @@ end
 
 function update_menu()
     -- Menu doesn't need continuous rendering
-    vmupro_pause_double_buffer_renderer()
+    vmupro.graphics.pauseDoubleBufferRenderer()
 
     vmupro.graphics.clear(vmupro.graphics.BLACK)
     vmupro.graphics.drawText("MAIN MENU", 50, 50, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
     vmupro.graphics.drawText("Press A to Start", 30, 100, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
     vmupro.graphics.refresh()
 
-    if vmupro_btn_pressed(VMUPRO_BTN_A) then
+    if vmupro.input.pressed(vmupro.input.A) then
         current_state = GameState.PLAYING
-        vmupro_resume_double_buffer_renderer()
+        vmupro.graphics.resumeDoubleBufferRenderer()
     end
 end
 
@@ -207,23 +207,23 @@ function update_game()
     update_player()
     update_enemies()
 
-    if vmupro_btn_pressed(VMUPRO_BTN_B) then
+    if vmupro.input.pressed(vmupro.input.B) then
         current_state = GameState.PAUSED
     end
 end
 
 function update_paused()
     -- Pause rendering during pause screen
-    vmupro_pause_double_buffer_renderer()
+    vmupro.graphics.pauseDoubleBufferRenderer()
 
     vmupro.graphics.clear(vmupro.graphics.BLACK)
     vmupro.graphics.drawText("PAUSED", 80, 100, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
-    vmupro_draw_text("Press B to Resume", 20, 130, 0xFFFF, 0x0000)
+    vmupro.graphics.drawText("Press B to Resume", 20, 130, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
     vmupro.graphics.refresh()
 
-    if vmupro_btn_pressed(VMUPRO_BTN_B) then
+    if vmupro.input.pressed(vmupro.input.B) then
         current_state = GameState.PLAYING
-        vmupro_resume_double_buffer_renderer()
+        vmupro.graphics.resumeDoubleBufferRenderer()
     end
 end
 
@@ -239,9 +239,9 @@ function main_loop()
             update_paused()
         end
 
-        vmupro_sleep(16)
+        vmupro.system.delayMs(16)
 
-        if vmupro_btn_pressed(VMUPRO_BTN_MODE) then
+        if vmupro.input.pressed(vmupro.input.MODE) then
             running = false
         end
     end
@@ -261,14 +261,14 @@ cleanup_game()
 
 ```lua
 local frame_count = 0
-local last_time = vmupro_get_time_us()
+local last_time = vmupro.system.getTimeUs()
 
 function init_optimized_rendering()
     vmupro.graphics.startDoubleBufferRenderer()
 end
 
 function render_frame()
-    local current_time = vmupro_get_time_us()
+    local current_time = vmupro.system.getTimeUs()
     local delta_time = current_time - last_time
     last_time = current_time
 
@@ -302,14 +302,14 @@ function main_optimized_loop()
 
         -- Variable frame rate with target 60 FPS
         local target_frame_time = 16666  -- ~60 FPS in microseconds
-        local current_time = vmupro_get_time_us()
+        local current_time = vmupro.system.getTimeUs()
         local frame_time = current_time - last_time
 
         if frame_time < target_frame_time then
-            vmupro_delay_us(target_frame_time - frame_time)
+            vmupro.system.delayUs(target_frame_time - frame_time)
         end
 
-        if vmupro_btn_pressed(VMUPRO_BTN_MODE) then
+        if vmupro.input.pressed(vmupro.input.MODE) then
             running = false
         end
     end
@@ -350,22 +350,22 @@ while game_running do
     update_game_state()
 
     -- Render
-    vmupro_display_clear(background_color)
+    vmupro.graphics.clear(background_color)
     render_all_objects()
     vmupro.graphics.pushDoubleBufferFrame()
 
     -- Timing
-    vmupro_sleep(frame_delay)
+    vmupro.system.delayMs(frame_delay)
 end
 ```
 
 ### Conditional Rendering
 ```lua
 if game_needs_rendering then
-    vmupro_resume_double_buffer_renderer()
+    vmupro.graphics.resumeDoubleBufferRenderer()
     render_game_frame()
     vmupro.graphics.pushDoubleBufferFrame()
 else
-    vmupro_pause_double_buffer_renderer()
+    vmupro.graphics.pauseDoubleBufferRenderer()
 end
 ```

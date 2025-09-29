@@ -60,13 +60,13 @@ vmupro.graphics.blitBufferColorAdd(sprite_buffer, 50, 50, 32, 32, 0x4000) -- Red
 
 ## Color Window Effects
 
-### vmupro_set_color_window(x, y, width, height, color)
+### vmupro.graphics.setColorWindow(x, y, width, height, color)
 
 Sets a color window that affects rendering in a specific screen region.
 
 ```lua
 -- Create a blue tint in the top portion of the screen (water effect)
-vmupro_set_color_window(0, 0, 240, 60, 0x001F)
+vmupro.graphics.setColorWindow(0, 0, 240, 60, vmupro.graphics.BLUE)
 ```
 
 **Parameters:**
@@ -94,13 +94,13 @@ vmupro.graphics.clearColorWindow()
 
 ## Palette Operations
 
-### vmupro_blit_buffer_palette_swap(buffer, old_palette, new_palette, x, y, width, height)
+### vmupro.graphics.blitBufferPaletteSwap(buffer, old_palette, new_palette, x, y, width, height)
 
 Swaps color palettes in a buffer, useful for dynamic color schemes.
 
 ```lua
 -- Swap day palette for night palette
-vmupro_blit_buffer_palette_swap(landscape_buffer, day_palette, night_palette, 0, 0, 240, 240)
+vmupro.graphics.blitBufferPaletteSwap(landscape_buffer, day_palette, night_palette, 0, 0, 240, 240)
 ```
 
 **Parameters:**
@@ -121,13 +121,13 @@ vmupro_blit_buffer_palette_swap(landscape_buffer, day_palette, night_palette, 0,
 
 ---
 
-### vmupro_animate_palette_range(palette, start_index, end_index, shift_amount)
+### vmupro.graphics.animatePaletteRange(palette, start_index, end_index, shift_amount)
 
 Animates a range of colors in a palette by shifting them.
 
 ```lua
 -- Animate water colors by cycling through blue shades
-vmupro_animate_palette_range(water_palette, 8, 15, 1)
+vmupro.graphics.animatePaletteRange(water_palette, 8, 15, 1)
 ```
 
 **Parameters:**

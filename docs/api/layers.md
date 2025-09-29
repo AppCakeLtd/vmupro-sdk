@@ -108,14 +108,14 @@ vmupro.graphics.layerBlitBackground(background_layer, background_texture)
 
 ---
 
-### vmupro_render_all_layers()
+### vmupro.graphics.renderAllLayers()
 
 Renders all layers to the screen in priority order.
 
 ```lua
 -- After setting up all layers
-vmupro_render_all_layers()
-vmupro_display_refresh()
+vmupro.graphics.renderAllLayers()
+vmupro.graphics.refresh()
 ```
 
 **Parameters:** None
@@ -124,12 +124,12 @@ vmupro_display_refresh()
 
 ## Layer Blending
 
-### vmupro_blend_layers_additive(layer1, layer2, output, width, height)
+### vmupro.graphics.blendLayersAdditive(layer1, layer2, output, width, height)
 
 Blends two layers using additive blending (adds color values).
 
 ```lua
-vmupro_blend_layers_additive(fire_layer, smoke_layer, effect_output, 240, 240)
+vmupro.graphics.blendLayersAdditive(fire_layer, smoke_layer, effect_output, 240, 240)
 ```
 
 **Parameters:**
@@ -143,12 +143,12 @@ vmupro_blend_layers_additive(fire_layer, smoke_layer, effect_output, 240, 240)
 
 ---
 
-### vmupro_blend_layers_multiply(layer1, layer2, output, width, height)
+### vmupro.graphics.blendLayersMultiply(layer1, layer2, output, width, height)
 
 Blends two layers using multiply blending (multiplies color values).
 
 ```lua
-vmupro_blend_layers_multiply(base_layer, shadow_layer, result_output, 240, 240)
+vmupro.graphics.blendLayersMultiply(base_layer, shadow_layer, result_output, 240, 240)
 ```
 
 **Parameters:**
@@ -162,12 +162,12 @@ vmupro_blend_layers_multiply(base_layer, shadow_layer, result_output, 240, 240)
 
 ---
 
-### vmupro_blend_layers_screen(layer1, layer2, output, width, height)
+### vmupro.graphics.blendLayersScreen(layer1, layer2, output, width, height)
 
 Blends two layers using screen blending (inverse multiply for brightening).
 
 ```lua
-vmupro_blend_layers_screen(base_layer, light_layer, bright_output, 240, 240)
+vmupro.graphics.blendLayersScreen(base_layer, light_layer, bright_output, 240, 240)
 ```
 
 **Parameters:**
@@ -213,11 +213,11 @@ while game_running do
     vmupro.graphics.layerBlitBackground(ui_layer, hud_texture)
 
     -- Render all layers
-    vmupro_display_clear(0x0000)
-    vmupro_render_all_layers()
-    vmupro_display_refresh()
+    vmupro.graphics.clear(vmupro.graphics.BLACK)
+    vmupro.graphics.renderAllLayers()
+    vmupro.graphics.refresh()
 
-    vmupro_sleep(16)
+    vmupro.system.delayMs(16)
 end
 
 -- Clean up
