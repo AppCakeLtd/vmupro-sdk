@@ -39,11 +39,56 @@ The VMU Pro can monitor audio input and stream samples through its listen mode s
 -- Start monitoring audio input
 vmupro.audio.startListenMode()
 
+-- Clear the ring buffer before starting
+vmupro.audio.clearRingBuffer()
+
+-- Check ring buffer fill state
+local result, filled, total = vmupro.audio.getRingbufferFillState()
+print("Ring buffer: " .. filled .. "/" .. total .. " samples")
+
 -- Push int16_t audio samples to the stream
--- Note: samples is a userdata pointer to int16_t array
--- Note: Stream samples functionality shown conceptually
+-- samples: userdata pointer to int16_t array
+-- numSamples: number of samples in the array
+-- stereo_mode: vmupro.audio.MONO or vmupro.audio.STEREO
+-- applyGlobalVolume: whether to apply global volume
+vmupro.audio.addStreamSamples(sample_buffer, 1024, vmupro.audio.MONO, true)
 
 -- Stop monitoring
+vmupro.audio.exitListenMode()
+```
+
+#### Ring Buffer Management
+
+The audio system uses a ring buffer for managing captured audio samples:
+
+```lua
+-- Clear the ring buffer to start fresh
+vmupro.audio.clearRingBuffer()
+
+-- Check how much data is in the buffer
+local result, filled_samples, total_size = vmupro.audio.getRingbufferFillState()
+if result == 0 then  -- Success
+    local fill_percentage = (filled_samples / total_size) * 100
+    print("Buffer is " .. fill_percentage .. "% full")
+else
+    print("Failed to get ring buffer state")
+end
+```
+
+#### Streaming Audio Samples
+
+When in listen mode, you can stream int16_t audio samples:
+
+```lua
+-- Function to stream a buffer of samples
+function stream_audio_buffer(samples, count, is_stereo, apply_volume)
+    local stereo_mode = is_stereo and vmupro.audio.STEREO or vmupro.audio.MONO
+    vmupro.audio.addStreamSamples(samples, count, stereo_mode, apply_volume)
+end
+
+-- Example usage
+vmupro.audio.startListenMode()
+stream_audio_buffer(my_sample_buffer, 2048, false, true)  -- Mono with volume
 vmupro.audio.exitListenMode()
 ```
 
@@ -166,7 +211,7 @@ end
 
 ### Audio Status Monitor
 
-Create a simple audio status display:
+Create a comprehensive audio status display with ring buffer monitoring:
 
 ```lua
 function show_audio_status()
@@ -175,27 +220,62 @@ function show_audio_status()
     -- Display current volume
     local volume = vmupro.audio.getGlobalVolume()
     vmupro.graphics.drawText("Audio Status", 70, 20, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
-    vmupro.graphics.drawText("Volume: " .. volume .. "/255", 50, 50, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
+    vmupro.graphics.drawText("Volume: " .. volume .. "/10", 50, 40, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
 
     -- Volume bar
-    local bar_width = (volume * 100) / 255
-    vmupro.graphics.drawRect(50, 70, 100, 10, vmupro.graphics.WHITE)
+    local bar_width = (volume * 100) / 10
+    vmupro.graphics.drawRect(50, 60, 100, 10, vmupro.graphics.WHITE)
     if volume > 0 then
-        vmupro.graphics.drawFillRect(51, 71, bar_width - 2, 8, vmupro.graphics.GREEN)
+        vmupro.graphics.drawFillRect(51, 61, bar_width - 2, 8, vmupro.graphics.GREEN)
     end
 
-    -- Audio info
-    vmupro.graphics.drawText("Audio System:", 50, 100, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
-    vmupro.graphics.drawText("Ring Buffer Available", 50, 120, vmupro.graphics.GREY, vmupro.graphics.BLACK)
-    vmupro.graphics.drawText("Listen Mode Support", 50, 140, vmupro.graphics.GREY, vmupro.graphics.BLACK)
+    -- Ring buffer status
+    local result, filled, total = vmupro.audio.getRingbufferFillState()
+    vmupro.graphics.drawText("Ring Buffer:", 50, 80, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
+    if result == 0 then
+        local fill_percent = math.floor((filled / total) * 100)
+        vmupro.graphics.drawText(filled .. "/" .. total .. " (" .. fill_percent .. "%)", 50, 95, vmupro.graphics.GREY, vmupro.graphics.BLACK)
 
-    -- Volume info
-    vmupro.graphics.drawText("Volume Range:", 50, 170, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
-    vmupro.graphics.drawText("0-255 (8-bit)", 50, 190, vmupro.graphics.GREY, vmupro.graphics.BLACK)
+        -- Ring buffer fill bar
+        local ring_bar_width = (filled * 100) / total
+        vmupro.graphics.drawRect(50, 105, 100, 8, vmupro.graphics.WHITE)
+        if filled > 0 then
+            vmupro.graphics.drawFillRect(51, 106, ring_bar_width - 2, 6, vmupro.graphics.BLUE)
+        end
+    else
+        vmupro.graphics.drawText("Error reading buffer", 50, 95, vmupro.graphics.RED, vmupro.graphics.BLACK)
+    end
 
-    vmupro.graphics.drawText("Press MODE to exit", 50, 220, vmupro.graphics.GREY, vmupro.graphics.BLACK)
+    -- Audio capabilities
+    vmupro.graphics.drawText("Capabilities:", 50, 125, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
+    vmupro.graphics.drawText("• Stream Samples", 50, 140, vmupro.graphics.GREY, vmupro.graphics.BLACK)
+    vmupro.graphics.drawText("• Ring Buffer Control", 50, 155, vmupro.graphics.GREY, vmupro.graphics.BLACK)
+    vmupro.graphics.drawText("• Listen Mode", 50, 170, vmupro.graphics.GREY, vmupro.graphics.BLACK)
+
+    -- Controls
+    vmupro.graphics.drawText("A: Clear Buffer", 20, 195, vmupro.graphics.GREY, vmupro.graphics.BLACK)
+    vmupro.graphics.drawText("B: Listen Mode Test", 20, 210, vmupro.graphics.GREY, vmupro.graphics.BLACK)
+    vmupro.graphics.drawText("MODE: Exit", 20, 225, vmupro.graphics.GREY, vmupro.graphics.BLACK)
 
     vmupro.graphics.refresh()
+end
+
+function handle_audio_status_input()
+    vmupro.input.read()
+
+    if vmupro.input.pressed(vmupro.input.A) then
+        -- Clear ring buffer
+        vmupro.audio.clearRingBuffer()
+        vmupro.system.log(vmupro.system.LOG_INFO, "Audio", "Ring buffer cleared")
+    elseif vmupro.input.pressed(vmupro.input.B) then
+        -- Test listen mode
+        vmupro.audio.startListenMode()
+        vmupro.system.delayMs(1000)  -- Listen for 1 second
+        vmupro.audio.exitListenMode()
+        vmupro.system.log(vmupro.system.LOG_INFO, "Audio", "Listen mode test completed")
+    end
+
+    return not vmupro.input.pressed(vmupro.input.MODE)
 end
 
 -- Display audio status
@@ -248,32 +328,50 @@ end
 ### Audio Safety
 
 ```lua
--- Ensure proper audio session management
-function safe_audio_session(callback)
-    local success = vmupro.audio.startListenMode()
-    if not success then
-        vmupro.system.log(vmupro.system.LOG_ERROR, "Audio", "Failed to start listen mode")
+-- Ensure proper audio session management with ring buffer control
+function safe_audio_session(callback, clear_buffer)
+    -- Optionally clear the ring buffer before starting
+    if clear_buffer then
+        vmupro.audio.clearRingBuffer()
+    end
+
+    -- Start listen mode
+    vmupro.audio.startListenMode()
+
+    -- Check initial buffer state
+    local result, filled, total = vmupro.audio.getRingbufferFillState()
+    if result ~= 0 then
+        vmupro.system.log(vmupro.system.LOG_ERROR, "Audio", "Failed to read ring buffer state")
+        vmupro.audio.exitListenMode()
         return false
     end
 
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Audio", "Ring buffer: " .. filled .. "/" .. total)
+
     -- Execute audio operations
-    local result = pcall(callback)
+    local success, error_msg = pcall(callback)
 
     -- Always clean up
     vmupro.audio.exitListenMode()
 
-    if not result then
-        vmupro.system.log(vmupro.system.LOG_ERROR, "Audio", "Audio callback failed")
+    if not success then
+        vmupro.system.log(vmupro.system.LOG_ERROR, "Audio", "Audio callback failed: " .. tostring(error_msg))
     end
 
-    return result
+    return success
 end
 
--- Usage
+-- Enhanced usage with ring buffer management
 safe_audio_session(function()
-    -- Your audio streaming code here
-    -- Note: Stream samples functionality shown conceptually
-end)
+    -- Example: Stream samples to audio
+    local sample_count = 1024
+    -- Assuming you have a sample buffer ready
+    vmupro.audio.addStreamSamples(my_samples, sample_count, vmupro.audio.MONO, true)
+
+    -- Check buffer fill after streaming
+    local result, filled, total = vmupro.audio.getRingbufferFillState()
+    vmupro.system.log(vmupro.system.LOG_INFO, "Audio", "After streaming: " .. filled .. "/" .. total)
+end, true)  -- true = clear buffer before starting
 ```
 
 ### Sample Format Conversion

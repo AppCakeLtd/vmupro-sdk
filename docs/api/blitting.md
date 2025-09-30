@@ -360,6 +360,86 @@ vmupro.graphics.blitColumnScrollBackground(bg_buffer, column_offsets, 240, 240)
 
 **Returns:** None
 
+---
+
+## Visual Effects Functions
+
+### vmupro.graphics.blitBufferMosaic(buffer, x, y, width, height, mosaic_size)
+
+Blits a buffer with a mosaic (pixelated) effect.
+
+```lua
+vmupro.graphics.blitBufferMosaic(sprite_buffer, 50, 50, 32, 32, 4) -- 4x4 pixel blocks
+```
+
+**Parameters:**
+- `buffer` (userdata): Source buffer
+- `x` (number): Destination X coordinate
+- `y` (number): Destination Y coordinate
+- `width` (number): Width to blit
+- `height` (number): Height to blit
+- `mosaic_size` (number): Size of mosaic blocks (larger = more pixelated)
+
+**Returns:** None
+
+---
+
+### vmupro.graphics.blitBufferBlurred(buffer, x, y, width, height, blur_radius)
+
+Blits a buffer with a blur effect.
+
+```lua
+vmupro.graphics.blitBufferBlurred(sprite_buffer, 50, 50, 32, 32, 2) -- 2-pixel blur radius
+```
+
+**Parameters:**
+- `buffer` (userdata): Source buffer
+- `x` (number): Destination X coordinate
+- `y` (number): Destination Y coordinate
+- `width` (number): Width to blit
+- `height` (number): Height to blit
+- `blur_radius` (number): Blur radius in pixels
+
+**Returns:** None
+
+---
+
+### vmupro.graphics.blitBufferShadowHighlight(buffer, x, y, width, height, shadow_color, highlight_color)
+
+Blits a buffer with shadow and highlight effects.
+
+```lua
+vmupro.graphics.blitBufferShadowHighlight(sprite_buffer, 50, 50, 32, 32, 0x0000, 0xFFFF) -- Black shadow, white highlight
+```
+
+**Parameters:**
+- `buffer` (userdata): Source buffer
+- `x` (number): Destination X coordinate
+- `y` (number): Destination Y coordinate
+- `width` (number): Width to blit
+- `height` (number): Height to blit
+- `shadow_color` (number): Shadow color (RGB565)
+- `highlight_color` (number): Highlight color (RGB565)
+
+**Returns:** None
+
+---
+
+### vmupro.graphics.applyMosaicToScreen(mosaic_size)
+
+Applies a mosaic effect to the entire screen.
+
+```lua
+vmupro.graphics.applyMosaicToScreen(8) -- Apply 8x8 mosaic to entire screen
+```
+
+**Parameters:**
+- `mosaic_size` (number): Size of mosaic blocks
+
+**Returns:** None
+
+**Note:** This function affects the entire screen buffer, useful for screen-wide effects.
+
 ## Example Usage
 
 ```lua

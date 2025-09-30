@@ -1,24 +1,51 @@
-# Utility API
+# System API
 
-The Utility API provides various helper functions for timing, system information, and other common operations.
+The System API provides essential system functions for logging, timing, brightness control, and system utilities.
 
 ## Overview
 
-These utility functions provide essential functionality for LUA applications running on the VMU Pro, including timing operations, system queries, and basic utility functions.
+These system functions provide core functionality for LUA applications running on the VMU Pro, including logging, precise timing operations, display brightness control, and framebuffer management.
 
-## Functions
+## Logging Functions
 
-### vmupro.system.sleepMs(milliseconds)
+### vmupro.system.log(level, tag, message)
 
-Pauses execution for the specified number of milliseconds.
+Logs a message with the specified level and tag.
 
 ```lua
-vmupro.system.sleepMs(1000) -- Sleep for 1 second
-vmupro.system.sleepMs(16)   -- Sleep for ~60 FPS frame time
+vmupro.system.log(vmupro.system.LOG_INFO, "Game", "Player scored 100 points")
+vmupro.system.log(vmupro.system.LOG_ERROR, "Audio", "Failed to load sound")
+vmupro.system.log(vmupro.system.LOG_DEBUG, "Debug", "Variable x = " .. x)
 ```
 
 **Parameters:**
-- `milliseconds` (number): Time to sleep in milliseconds
+- `level` (number): Log level constant (vmupro.system.LOG_ERROR, LOG_WARN, LOG_INFO, LOG_DEBUG)
+- `tag` (string): Tag/category for the log message
+- `message` (string): Message to log
+
+**Returns:** None
+
+**Log Levels:**
+- `vmupro.system.LOG_ERROR` (0): Error messages
+- `vmupro.system.LOG_WARN` (1): Warning messages
+- `vmupro.system.LOG_INFO` (2): Informational messages
+- `vmupro.system.LOG_DEBUG` (3): Debug messages
+
+---
+
+## Timing Functions
+
+### vmupro.system.sleep(ms)
+
+Sleeps/pauses execution for the specified number of milliseconds.
+
+```lua
+vmupro.system.sleep(1000) -- Sleep for 1 second
+vmupro.system.sleep(16)   -- Sleep for ~60 FPS frame time
+```
+
+**Parameters:**
+- `ms` (number): Milliseconds to sleep
 
 **Returns:** None
 
@@ -30,12 +57,13 @@ Gets the current system time in microseconds since boot.
 
 ```lua
 local time = vmupro.system.getTimeUs()
-vmupro.system.log(vmupro.system.LOG_INFO, "Util", "Current time: " .. time .. "us")
+vmupro.system.log(vmupro.system.LOG_INFO, "System", "Current time: " .. time .. "us")
 
 -- Measure elapsed time
 local start_time = vmupro.system.getTimeUs()
 -- ... do something ...
 local elapsed = vmupro.system.getTimeUs() - start_time
+vmupro.system.log(vmupro.system.LOG_INFO, "Performance", "Operation took " .. elapsed .. "us")
 ```
 
 **Parameters:** None
@@ -45,123 +73,171 @@ local elapsed = vmupro.system.getTimeUs() - start_time
 
 ---
 
-### vmupro.system.getMemoryUsage()
-
-Gets the current LUA memory usage statistics.
-
-```lua
-local current, max = vmupro.system.getMemoryUsage()
-vmupro.system.log(vmupro.system.LOG_INFO, "Util", "Memory: " .. current .. "/" .. max .. " bytes")
-```
-
-**Parameters:** None
-
-**Returns:**
-- `current_memory` (number): Current memory usage in bytes
-- `max_memory` (number): Maximum allowed memory in bytes
-
----
-
-### vmupro.system.delayUs(microseconds)
+### vmupro.system.delayUs(us)
 
 Delays execution for the specified number of microseconds.
 
 ```lua
 vmupro.system.delayUs(1000) -- Delay for 1 millisecond (1000 microseconds)
+vmupro.system.delayUs(500)  -- Delay for 0.5 milliseconds
 ```
 
 **Parameters:**
-- `microseconds` (number): Time to delay in microseconds
+- `us` (number): Microseconds to delay
 
 **Returns:** None
 
 ---
 
-### vmupro.system.delayMs(milliseconds)
+### vmupro.system.delayMs(ms)
 
 Delays execution for the specified number of milliseconds.
 
 ```lua
 vmupro.system.delayMs(500) -- Delay for 0.5 seconds
+vmupro.system.delayMs(16)  -- Delay for ~60 FPS frame time
 ```
 
 **Parameters:**
-- `milliseconds` (number): Time to delay in milliseconds
+- `ms` (number): Milliseconds to delay
 
 **Returns:** None
 
 ---
 
-### vmupro.system.setLogLevel(level)
+## Display Functions
 
-Sets the global logging level for debug output.
+### vmupro.system.getGlobalBrightness()
+
+Gets the current global display brightness level.
 
 ```lua
-vmupro.system.setLogLevel(vmupro.system.LOG_DEBUG) -- Enable all logging
-vmupro.system.setLogLevel(vmupro.system.LOG_ERROR) -- Only show errors
+local brightness = vmupro.system.getGlobalBrightness()
+vmupro.system.log(vmupro.system.LOG_INFO, "Display", "Current brightness: " .. brightness)
+```
+
+**Parameters:** None
+
+**Returns:**
+- `brightness` (number): Current brightness level (0-255)
+
+---
+
+### vmupro.system.setGlobalBrightness(brightness)
+
+Sets the global display brightness level.
+
+```lua
+vmupro.system.setGlobalBrightness(255) -- Maximum brightness
+vmupro.system.setGlobalBrightness(128) -- 50% brightness
+vmupro.system.setGlobalBrightness(64)  -- 25% brightness
 ```
 
 **Parameters:**
-- `level` (number): Log level constant (VMUPRO_LOG_ERROR, VMUPRO_LOG_WARN, VMUPRO_LOG_INFO, VMUPRO_LOG_DEBUG)
+- `brightness` (number): Brightness level (0-255, where 0 is darkest and 255 is brightest)
 
 **Returns:** None
 
+---
+
+## System Information Functions
+
+### vmupro.system.getLastBlittedFBSide()
+
+Gets the identifier of the last blitted framebuffer side (useful for double buffering).
+
+```lua
+local fb_side = vmupro.system.getLastBlittedFBSide()
+vmupro.system.log(vmupro.system.LOG_DEBUG, "Graphics", "Last framebuffer side: " .. fb_side)
+```
+
+**Parameters:** None
+
+**Returns:**
+- `fb_side` (number): Framebuffer side identifier
+
 ## Example Usage
 
-### Timing Operations
+### 60 FPS Game Loop with Timing
 
 ```lua
 import "api/system"
 
--- 60 FPS game loop timing
-local frame_start = vmupro.system.getTimeUs()
+function game_loop()
+    local frame_start = vmupro.system.getTimeUs()
 
--- ... game logic and rendering ...
+    -- Game logic and rendering
+    update_game()
+    render_frame()
 
-local frame_time = vmupro.system.getTimeUs() - frame_start
-local target_frame_time = 16667 -- 16.667ms in microseconds for 60 FPS
+    -- Calculate frame time and maintain 60 FPS
+    local frame_time = vmupro.system.getTimeUs() - frame_start
+    local target_frame_time = 16667 -- 16.667ms in microseconds for 60 FPS
 
-if frame_time < target_frame_time then
-    vmupro.system.delayUs(target_frame_time - frame_time)
-end
-```
-
-### Memory Monitoring
-
-```lua
-function check_memory_usage()
-    local current, max = vmupro.system.getMemoryUsage()
-    local percentage = (current / max) * 100
-
-    if percentage > 80 then
-        vmupro.system.log(vmupro.system.LOG_WARN, "Memory", "High memory usage: " .. percentage .. "%")
-    end
-
-    return current, max
-end
-```
-
-### Simple Timing
-
-```lua
-function delay_with_feedback(ms)
-    vmupro.system.log(vmupro.system.LOG_INFO, "Util", "Waiting " .. ms .. "ms...")
-    vmupro.system.sleepMs(ms)
-    vmupro.system.log(vmupro.system.LOG_INFO, "Util", "Done waiting!")
-end
-
-delay_with_feedback(1000) -- Wait 1 second
-```
-
-### High-Precision Timing
-
-```lua
-function precise_delay(us)
-    local start = vmupro.system.getTimeUs()
-    while vmupro.system.getTimeUs() - start < us do
-        -- Busy wait for precise timing
+    if frame_time < target_frame_time then
+        vmupro.system.delayUs(target_frame_time - frame_time)
+    else
+        vmupro.system.log(vmupro.system.LOG_WARN, "Performance", "Frame took " .. frame_time .. "us (target: " .. target_frame_time .. "us)")
     end
 end
+```
 
-precise_delay(500) -- Wait exactly 500 microseconds
+### Brightness Control
+
+```lua
+function adjust_brightness_for_time_of_day()
+    local current_time = vmupro.system.getTimeUs()
+    local hour = math.floor((current_time / 3600000000) % 24) -- Convert to hours
+
+    if hour >= 6 and hour < 18 then
+        -- Daytime: full brightness
+        vmupro.system.setGlobalBrightness(255)
+        vmupro.system.log(vmupro.system.LOG_INFO, "Display", "Set daytime brightness")
+    else
+        -- Nighttime: reduced brightness
+        vmupro.system.setGlobalBrightness(128)
+        vmupro.system.log(vmupro.system.LOG_INFO, "Display", "Set nighttime brightness")
+    end
+end
+```
+
+### Performance Monitoring
+
+```lua
+function benchmark_operation(operation_name, func)
+    vmupro.system.log(vmupro.system.LOG_INFO, "Benchmark", "Starting " .. operation_name)
+
+    local start_time = vmupro.system.getTimeUs()
+    func() -- Execute the operation
+    local end_time = vmupro.system.getTimeUs()
+
+    local duration = end_time - start_time
+    vmupro.system.log(vmupro.system.LOG_INFO, "Benchmark", operation_name .. " completed in " .. duration .. "us")
+
+    return duration
+end
+
+-- Usage
+benchmark_operation("sprite rendering", function()
+    -- Your rendering code here
+    render_all_sprites()
+end)
+```
+
+### Framebuffer Management
+
+```lua
+function check_double_buffer_state()
+    local fb_side = vmupro.system.getLastBlittedFBSide()
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Graphics", "Current framebuffer side: " .. fb_side)
+
+    -- Use this information for double buffering logic
+    if fb_side == 0 then
+        -- Work on buffer 1
+        prepare_next_frame_buffer1()
+    else
+        -- Work on buffer 0
+        prepare_next_frame_buffer0()
+    end
+end
 ```

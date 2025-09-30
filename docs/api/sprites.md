@@ -73,6 +73,46 @@ end
 - Fine-tuned gameplay mechanics
 - Quality collision detection where accuracy matters
 
+---
+
+## Rendering Functions
+
+### vmupro.sprites.batchRender(sprites)
+
+Renders multiple sprites in a single batch operation for improved performance.
+
+```lua
+-- Create sprite batch data
+local sprite_batch = {
+    {sprite = player_sprite, x = player_x, y = player_y, width = 16, height = 16},
+    {sprite = enemy1_sprite, x = enemy1_x, y = enemy1_y, width = 16, height = 16},
+    {sprite = enemy2_sprite, x = enemy2_x, y = enemy2_y, width = 16, height = 16},
+    {sprite = coin_sprite, x = coin_x, y = coin_y, width = 8, height = 8}
+}
+
+-- Render all sprites in one call
+vmupro.sprites.batchRender(sprite_batch)
+```
+
+**Parameters:**
+- `sprites` (table): Array of sprite data for batch rendering
+
+**Sprite Data Format:**
+Each sprite in the array should contain:
+- `sprite` (userdata): Sprite buffer
+- `x` (number): X position
+- `y` (number): Y position
+- `width` (number): Sprite width
+- `height` (number): Sprite height
+
+**Returns:** None
+
+**Performance Benefits:**
+- Reduced function call overhead
+- Optimized rendering pipeline
+- Better GPU/hardware utilization
+- Ideal for rendering many small sprites
+
 ## Example Usage
 
 ### Basic Game Object Collision System
