@@ -84,7 +84,7 @@ def main():
         description="Pack a VMUPro binary with optional icon")
     parser.add_argument("--projectdir", required=True,
                         help="Root folder, one beneath build")
-    parser.add_argument("--elfname", required=True,
+    parser.add_argument("--appname", required=True,
                         help="In projectdir/build, e.g. 'vmupro_minimal' for 'build/vmupro_minimal.app.elf'")
     parser.add_argument("--meta", required=True,
                         help="Relative path .JSON metadata for your package: metadata.json from projectdir")
@@ -121,7 +121,7 @@ def main():
 
     # e.g. "my_lovely_game" as part of "<projectDir>/build/my_lovely_game.app.elf"
     # which will become "<projectDir>/my_lovely_game.vmupack"
-    relElfNameNoExt = args.elfname
+    relElfNameNoExt = args.appname
 
     try:
         # "vmupro_minimal" -> "build/vmupro_minimal.app.elf"
