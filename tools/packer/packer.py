@@ -17,9 +17,6 @@ from pathlib import Path
 # - load and encode the icon
 # - package everything into .vmupack format
 
-headerVersion = 1
-encryptionVersion = 0
-
 # save the raw binary for each section to a file
 # (set via args)
 debugOutput = False
@@ -573,7 +570,11 @@ def ScanFolderRecursive(baseDir, folderPath):
 
     return files
 
-
+# Placeholder for now
+# 00-04: reserved0
+# 04-08: reserved1
+# 08-0C: reserved2
+# 0C-0F: reserved3
 def AddBinding():
     # type: () -> bool
 
@@ -623,14 +624,18 @@ def PrintSectionSizes(printVal):
     print("  LUA Resources : {} / {}".format(len(sect_allResources), hex(len(sect_allResources))))
 
     # 00-08: uint8_t magic[8] = "VMUPACK\0"
-    # 08-0C: uint32_t version = 1
-    # 0C-10: uint32_t encryptionVersion = 0 (not encrypted)
+    # 08-0C: uint8_t vmuPackVersion = 1
+    #        uint8_t targetDevice = 0
+    #        uint8_t productBindingVersion
+    #        uint8_t deviceBindingVersion
+    # 0C-10: uint32_t reserved
     #
     # 10-30: uint8_t appName[32] = "My awesome app\0"
     #
-    # 30-34: uint32_t appMode     # 1= applet, 2= fullscreen
-    # 34-38: uint32_t appEnv      # 0 = native, 1 = LUA
-    # 38-40: uint32_t reserved[2]
+    # 30-34: uint32_t appMode        # 1= applet, 2= fullscreen
+    # 34-38: uint32_t appEnv         # 0 = native, 1 = LUA
+    # 38-38: uint32_t reserved
+    # 3C-40: uint32_t fileSizeBytesMinusSignature    # aka SignaturePos
     #
     # 40-44: uint32_t iconOffset
     # 44-48: uint32_t iconLength
@@ -640,8 +645,6 @@ def PrintSectionSizes(printVal):
     #
     # 50-54: uint32_t resourceOffset
     # 54-58: uint32_t resourceLength
-    #
-    # V---- Encrypted section ----V
     #
     # 58-5C: uint32_t bindingOffset
     # 5C-60: uint32_t bindingLength
@@ -668,9 +671,6 @@ def AddToArray(targ, pos, val):
 
 def CreateHeader(absProjectDir, appName):
     # type: (str, str) -> bool
-
-    global headerVersion
-    global encryptionVersion
     #
     global sect_header
     global sect_icon
@@ -686,11 +686,19 @@ def CreateHeader(absProjectDir, appName):
 
     # Add the values we know immediately
 
-    # 8-C: version
-    sect_header.extend(headerVersion.to_bytes(4, 'little'))
+    # 8-C: version, targ device, 
+    vmuPackVersion = 1        
+    sect_header.extend(vmuPackVersion.to_bytes(1, 'little'))
+    targDevice = 0
+    sect_header.extend(targDevice.to_bytes(1,'little'))
+    prodBindingVersion = 0
+    sect_header.extend(prodBindingVersion.to_bytes(1,'little'))
+    devBindingversion = 0
+    sect_header.extend(devBindingversion.to_bytes(1,'little'))
 
-    # C-10: encryption
-    sect_header.extend(encryptionVersion.to_bytes(4, 'little'))
+    # C-10: reserved
+    reserved0 = 0    
+    sect_header.extend(reserved0.to_bytes(4, 'little'))
 
     # 10-30 - mini header identifier
     appNameHeader = outMetaJSON["app_name"]
