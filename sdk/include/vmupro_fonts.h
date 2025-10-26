@@ -23,32 +23,29 @@ extern "C" {
 
 /**
  * @brief Font index enumeration for VMUPro SDK
- * 
+ *
  * Defines all available fonts in the system. Fonts are organized by size
  * from smallest to largest. Use these enum values to select fonts.
  */
 typedef enum {
   VMUPRO_FONT_TINY_6x8 = 0,          ///< Smallest font (6×8px)
   VMUPRO_FONT_MONO_7x13,             ///< Tiny monospace (7×13px)
-  VMUPRO_FONT_MONO_9x15,             ///< Small liberation mono (9×15px)
-  VMUPRO_FONT_SANS_11x13,            ///< Small sans-serif (11×13px)
-  VMUPRO_FONT_MONO_13x21,            ///< Medium liberation mono (13×21px)
-  VMUPRO_FONT_MONO_13x24,            ///< Medium monospace (13×24px)
-  VMUPRO_FONT_SANS_15x17,            ///< Medium sans-serif (15×17px)
-  VMUPRO_FONT_OPEN_SANS_15x18,       ///< Open Sans medium (15×18px)
-  VMUPRO_FONT_MONO_16x31,            ///< Large monospace (16×31px)
-  VMUPRO_FONT_MONO_17x30,            ///< Large liberation mono (17×30px)
+  VMUPRO_FONT_QUANTICO_15x16,        ///< UI font small (15×16px)
+  VMUPRO_FONT_QUANTICO_18x20,        ///< UI font medium (18×20px)
   VMUPRO_FONT_QUANTICO_19x21,        ///< UI font medium (19×21px)
-  VMUPRO_FONT_SANS_24x28,            ///< Large sans-serif (24×28px)
   VMUPRO_FONT_QUANTICO_25x29,        ///< UI font large (25×29px)
   VMUPRO_FONT_QUANTICO_29x33,        ///< UI font extra large (29×33px)
   VMUPRO_FONT_QUANTICO_32x37,        ///< UI font largest (32×37px)
+  VMUPRO_FONT_GABARITO_18x18,        ///< Gabarito medium (18×18px)
+  VMUPRO_FONT_GABARITO_22x24,        ///< Gabarito large (22×24px)
+  VMUPRO_FONT_OPEN_SANS_15x18,       ///< Open Sans medium (15×18px)
+  VMUPRO_FONT_OPEN_SANS_21x24,       ///< Open Sans large (21×24px)
   VMUPRO_FONT_COUNT                  ///< Total number of fonts (internal use)
 } vmupro_font_id_t;
 
 // Font convenience aliases for common use cases
-#define VMUPRO_FONT_SMALL    VMUPRO_FONT_SANS_11x13     ///< Alias for small readable font
-#define VMUPRO_FONT_MEDIUM   VMUPRO_FONT_SANS_15x17     ///< Alias for medium readable font
+#define VMUPRO_FONT_SMALL    VMUPRO_FONT_MONO_7x13      ///< Alias for small readable font
+#define VMUPRO_FONT_MEDIUM   VMUPRO_FONT_OPEN_SANS_15x18 ///< Alias for medium readable font
 #define VMUPRO_FONT_LARGE    VMUPRO_FONT_QUANTICO_25x29 ///< Alias for large readable font
 #define VMUPRO_FONT_DEFAULT  VMUPRO_FONT_MEDIUM         ///< Default font for applications
 
