@@ -46,7 +46,7 @@ sect_header = bytearray()
 finalBinary = bytearray()
 
 crypto = None
-doSign = False
+doSign = True
 doProductKey = False
 doDeviceKey = False
 
