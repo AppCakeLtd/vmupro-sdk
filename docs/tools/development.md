@@ -45,7 +45,7 @@ git init
 Add the VMU Pro SDK as a Git submodule to your project:
 
 ```bash
-git submodule add https://github.com/8BitMods/vmupro-sdk.git vmupro-sdk
+git submodule add https://github.com/AppCakeLtd/vmupro-sdk.git vmupro-sdk
 git submodule update --init --recursive
 ```
 
@@ -504,7 +504,7 @@ cd my_vmupro_calculator
 git init
 
 # Add SDK submodule
-git submodule add https://github.com/8BitMods/vmupro-sdk.git vmupro-sdk
+git submodule add https://github.com/AppCakeLtd/vmupro-sdk.git vmupro-sdk
 
 # Create project structure
 mkdir -p src/libs src/assets

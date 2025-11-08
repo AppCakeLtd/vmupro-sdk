@@ -16,7 +16,7 @@ Before you begin, ensure you have the following installed:
 ### 1. Clone the SDK Repository
 
 ```bash
-git clone https://github.com/8BitMods/vmupro-sdk.git
+git clone https://github.com/AppCakeLtd/vmupro-sdk.git
 cd vmupro-sdk
 ```
 
