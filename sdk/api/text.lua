@@ -35,22 +35,22 @@ function vmupro.text.calcLength(text) end
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
 function vmupro.text.getFontInfo() end
 
--- Font ID constants (matching firmware vmupro_fonts.h)
+-- Font ID constants (matching firmware LuaSdkBindings.cpp)
 vmupro.text.FONT_TINY_6x8 = 0           --- Smallest font (6×8px)
 vmupro.text.FONT_MONO_7x13 = 1          --- Tiny monospace (7×13px)
 
-vmupro.text.FONT_QUANTICO_15x18 = 2     --- UI font medium (15x18px)
-vmupro.text.FONT_QUANTICO_18x20 = 3     --- UI font medium (18x20px)
+vmupro.text.FONT_QUANTICO_15x16 = 2     --- UI font medium (15×16px)
+vmupro.text.FONT_QUANTICO_18x20 = 3     --- UI font medium (18×20px)
 vmupro.text.FONT_QUANTICO_19x21 = 4     --- UI font medium (19×21px)
 vmupro.text.FONT_QUANTICO_25x29 = 5     --- UI font large (25×29px)
 vmupro.text.FONT_QUANTICO_29x33 = 6     --- UI font extra large (29×33px)
 vmupro.text.FONT_QUANTICO_32x37 = 7     --- UI font largest (32×37px)
 
-vmupro.text.FONT_GABARITO_15x18 = 8     --- Gabarito medium (15×18px)
-vmupro.text.FONT_GABARITO_22x24 = 9     --- Gabarito large (21x24px)
+vmupro.text.FONT_GABARITO_18x18 = 8     --- Gabarito medium (18×18px)
+vmupro.text.FONT_GABARITO_22x24 = 9     --- Gabarito large (22×24px)
 
 vmupro.text.FONT_OPEN_SANS_15x18 = 10   --- Open Sans medium (15×18px)
-vmupro.text.FONT_OPEN_SANS_21x24 = 11   --- Open Sans large (21x24px)
+vmupro.text.FONT_OPEN_SANS_21x24 = 11   --- Open Sans large (21×24px)
 
 -- Font convenience aliases
 vmupro.text.FONT_SMALL = 1              --- Small font alias (MONO_7x13)
