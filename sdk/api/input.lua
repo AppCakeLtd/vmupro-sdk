@@ -81,11 +81,12 @@ function vmupro.input.dismissPressed() end
 function vmupro.input.dismissReleased() end
 
 -- Button constants (provided by firmware)
-vmupro.input.UP = DPad_Up or 0      --- D-Pad Up
-vmupro.input.DOWN = DPad_Down or 1  --- D-Pad Down
-vmupro.input.LEFT = DPad_Left or 2  --- D-Pad Left
-vmupro.input.RIGHT = DPad_Right or 3 --- D-Pad Right
-vmupro.input.A = Btn_A or 4         --- A button
-vmupro.input.B = Btn_B or 5         --- B button
-vmupro.input.POWER = Btn_Power or 6 --- Power button
-vmupro.input.MODE = Btn_Mode or 7   --- Mode button
+vmupro.input.UP = DPad_Up or 0          --- D-Pad Up
+vmupro.input.DOWN = DPad_Down or 1      --- D-Pad Down
+vmupro.input.LEFT = DPad_Left or 2      --- D-Pad Left
+vmupro.input.RIGHT = DPad_Right or 3    --- D-Pad Right
+vmupro.input.A = Btn_A or 4             --- A button
+vmupro.input.B = Btn_B or 5             --- B button
+vmupro.input.POWER = Btn_Power or 6     --- Power button
+vmupro.input.MODE = Btn_Mode or 7       --- Mode button
+vmupro.input.FUNCTION = Btn_Bottom or 8 --- Bottom button (F-Left)
