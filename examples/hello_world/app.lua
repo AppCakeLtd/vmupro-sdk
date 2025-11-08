@@ -29,7 +29,7 @@ local function init_app()
     start_time = vmupro.system.getTimeUs()
 
     -- Initialize graphics and set smaller font
-    vmupro.text.setFont(vmupro.text.FONT_SMALL)  -- Use small font for better spacing
+    vmupro.text.setFont(vmupro.text.FONT_SMALL) -- Use small font for better spacing
     vmupro.graphics.clear(vmupro.graphics.BLACK)
     vmupro.graphics.refresh()
 
@@ -56,28 +56,30 @@ local function render()
     vmupro.graphics.clear(vmupro.graphics.VMUGREEN)
 
     -- Draw title
-    vmupro.graphics.drawText("VMU Pro SDK Demo", 10, 10, vmupro.graphics.WHITE, vmupro.graphics.VMUGREEN)
+    vmupro.text.setFont(vmupro.text.FONT_GABARITO_22x24)
+    vmupro.graphics.drawText("VMUPro SDK Demo", 10, 10, vmupro.graphics.WHITE, vmupro.graphics.VMUGREEN)
 
     -- Draw hello world message
-    vmupro.graphics.drawText("Hello World!", 10, 25, vmupro.graphics.WHITE, vmupro.graphics.VMUGREEN)
+    vmupro.text.setFont(vmupro.text.FONT_GABARITO_18x18)
+    vmupro.graphics.drawText("Hello World!", 10, 35, vmupro.graphics.WHITE, vmupro.graphics.VMUGREEN)
 
     -- Draw frame counter
     local frame_text = "Frame: " .. frame_count
-    vmupro.graphics.drawText(frame_text, 10, 40, vmupro.graphics.YELLOW, vmupro.graphics.VMUGREEN)
+    vmupro.graphics.drawText(frame_text, 10, 55, vmupro.graphics.YELLOW, vmupro.graphics.VMUGREEN)
 
     -- Draw uptime
     local current_time = vmupro.system.getTimeUs()
     local uptime_ms = math.floor((current_time - start_time) / 1000)
     local uptime_text = "Uptime: " .. uptime_ms .. "ms"
-    vmupro.graphics.drawText(uptime_text, 10, 55, vmupro.graphics.BLUE, vmupro.graphics.VMUGREEN)
+    vmupro.graphics.drawText(uptime_text, 10, 75, vmupro.graphics.BLUE, vmupro.graphics.VMUGREEN)
 
     -- Draw available namespaces info
-    vmupro.graphics.drawText("Namespaces:", 10, 80, vmupro.graphics.WHITE, vmupro.graphics.VMUGREEN)
-    vmupro.graphics.drawText("graphics, sprites, audio", 10, 95, vmupro.graphics.GREY, vmupro.graphics.VMUGREEN)
-    vmupro.graphics.drawText("input, file, system, text", 10, 110, vmupro.graphics.GREY, vmupro.graphics.VMUGREEN)
+    vmupro.graphics.drawText("Namespaces:", 10, 105, vmupro.graphics.WHITE, vmupro.graphics.VMUGREEN)
+    vmupro.graphics.drawText("graphics, sprites, audio", 10, 125, vmupro.graphics.GREY, vmupro.graphics.VMUGREEN)
+    vmupro.graphics.drawText("input, file, system, text", 10, 145, vmupro.graphics.GREY, vmupro.graphics.VMUGREEN)
 
     -- Draw controls
-    vmupro.graphics.drawText("Press B to exit", 10, 135, vmupro.graphics.WHITE, vmupro.graphics.VMUGREEN)
+    vmupro.graphics.drawText("Press B to exit", 10, 175, vmupro.graphics.WHITE, vmupro.graphics.VMUGREEN)
 
     -- Draw a simple rectangle as decoration
     vmupro.graphics.drawRect(5, 5, 230, 230, vmupro.graphics.WHITE)
