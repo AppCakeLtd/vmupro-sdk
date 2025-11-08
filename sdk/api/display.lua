@@ -29,26 +29,26 @@ function vmupro.graphics.clear(color) end
 function vmupro.graphics.refresh() end
 
 --- @brief Draw a rectangle outline
---- @param x number X coordinate of top-left corner
---- @param y number Y coordinate of top-left corner
---- @param width number Width of rectangle
---- @param height number Height of rectangle
+--- @param x1 number X coordinate of first corner
+--- @param y1 number Y coordinate of first corner
+--- @param x2 number X coordinate of opposite corner
+--- @param y2 number Y coordinate of opposite corner
 --- @param color number RGB565 color value
---- @usage vmupro.graphics.drawRect(10, 10, 50, 30, 0xFFFF) -- White rectangle outline
+--- @usage vmupro.graphics.drawRect(10, 10, 60, 40, 0xFFFF) -- White rectangle from (10,10) to (60,40)
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
-function vmupro.graphics.drawRect(x, y, width, height, color) end
+function vmupro.graphics.drawRect(x1, y1, x2, y2, color) end
 
 --- @brief Draw a filled rectangle
---- @param x number X coordinate of top-left corner
---- @param y number Y coordinate of top-left corner
---- @param width number Width of rectangle
---- @param height number Height of rectangle
+--- @param x1 number X coordinate of first corner
+--- @param y1 number Y coordinate of first corner
+--- @param x2 number X coordinate of opposite corner
+--- @param y2 number Y coordinate of opposite corner
 --- @param color number RGB565 color value
---- @usage vmupro.graphics.drawFillRect(10, 10, 50, 30, 0xF800) -- Red filled rectangle
+--- @usage vmupro.graphics.drawFillRect(10, 10, 60, 40, 0xF800) -- Red filled rectangle from (10,10) to (60,40)
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
-function vmupro.graphics.drawFillRect(x, y, width, height, color) end
+function vmupro.graphics.drawFillRect(x1, y1, x2, y2, color) end
 
 --- @brief Draw text on the display
 --- @param text string Text to display
