@@ -51,6 +51,50 @@ class PathException(Exception):
     pass
 
 
+def ReadSDKVersion():
+    # type: () -> Tuple[int, int, int]
+    """
+    Read the SDK version from the VERSION file in the SDK root directory.
+    Returns a tuple of (major, minor, patch) as integers.
+    """
+    # Get the path to the SDK root (two levels up from packer.py location)
+    scriptDir = Path(__file__).resolve().parent
+    sdkRoot = scriptDir.parent.parent
+    versionFile = sdkRoot / "VERSION"
+
+    print("Reading SDK version from: {}".format(versionFile))
+
+    if not os.path.isfile(versionFile):
+        print("ERROR: VERSION file not found at {}".format(versionFile))
+        sys.exit(1)
+
+    try:
+        with open(versionFile, "r") as f:
+            versionStr = f.read().strip()
+            print("  SDK Version: {}".format(versionStr))
+
+            # Parse version string (e.g., "1.0.5" -> (1, 0, 5))
+            parts = versionStr.split(".")
+            if len(parts) != 3:
+                print("ERROR: Invalid version format in VERSION file. Expected x.x.x format")
+                sys.exit(1)
+
+            major = int(parts[0])
+            minor = int(parts[1])
+            patch = int(parts[2])
+
+            # Validate ranges (each component should fit in a byte)
+            if major < 0 or major > 255 or minor < 0 or minor > 255 or patch < 0 or patch > 255:
+                print("ERROR: Version components must be in range 0-255")
+                sys.exit(1)
+
+            return (major, minor, patch)
+
+    except Exception as e:
+        print("ERROR: Failed to read VERSION file: {}".format(e))
+        sys.exit(1)
+
+
 def main():
 
     global debugOutput
@@ -65,6 +109,12 @@ def main():
     print("\n")
 
     #
+    # Read SDK version from VERSION file
+    #
+    sdkVersion = ReadSDKVersion()
+    print("SDK version loaded: {}.{}.{}\n".format(sdkVersion[0], sdkVersion[1], sdkVersion[2]))
+
+    #
     # Parse arguments
     #
 
@@ -76,8 +126,6 @@ def main():
                         help="Application name for output file, e.g. 'hello_world' for 'hello_world.vmupack'")
     parser.add_argument("--meta", required=True,
                         help="Relative path .JSON metadata for your package: metadata.json from projectdir")
-    parser.add_argument("--sdkversion", required=True,
-                        help="In the format format: x.x.x")
     parser.add_argument("--icon", required=True,
                         help="Relative path to a 76x76 BMP icon from projectdir")
     parser.add_argument("--debug", required=False,
@@ -150,7 +198,7 @@ def main():
         print("Failed to add device bindings, see previous errors")
         sys.exit(1)
 
-    res = CreateHeader(absProjectDir, appName)
+    res = CreateHeader(absProjectDir, appName, sdkVersion)
     if not res:
         print("Failed to create header, see previous errors")
         sys.exit(1)
@@ -628,7 +676,10 @@ def PrintSectionSizes(printVal):
     #        uint8_t targetDevice = 0
     #        uint8_t productBindingVersion
     #        uint8_t deviceBindingVersion
-    # 0C-10: uint32_t reserved
+    # 0C-10: uint8_t sdkVersionMajor
+    #        uint8_t sdkVersionMinor
+    #        uint8_t sdkVersionPatch
+    #        uint8_t reserved
     #
     # 10-30: uint8_t appName[32] = "My awesome app\0"
     #
@@ -669,8 +720,8 @@ def AddToArray(targ, pos, val):
     return 4
 
 
-def CreateHeader(absProjectDir, appName):
-    # type: (str, str) -> bool
+def CreateHeader(absProjectDir, appName, sdkVersion):
+    # type: (str, str, Tuple[int, int, int]) -> bool
     #
     global sect_header
     global sect_icon
@@ -686,8 +737,8 @@ def CreateHeader(absProjectDir, appName):
 
     # Add the values we know immediately
 
-    # 8-C: version, targ device, 
-    vmuPackVersion = 1        
+    # 8-C: version, targ device,
+    vmuPackVersion = 1
     sect_header.extend(vmuPackVersion.to_bytes(1, 'little'))
     targDevice = 0
     sect_header.extend(targDevice.to_bytes(1,'little'))
@@ -696,9 +747,13 @@ def CreateHeader(absProjectDir, appName):
     devBindingversion = 0
     sect_header.extend(devBindingversion.to_bytes(1,'little'))
 
-    # C-10: reserved
-    reserved0 = 0    
-    sect_header.extend(reserved0.to_bytes(4, 'little'))
+    # C-10: SDK version (major.minor.patch) + 1 reserved byte
+    print("  Writing SDK version {}.{}.{} to header".format(
+        sdkVersion[0], sdkVersion[1], sdkVersion[2]))
+    sect_header.extend(sdkVersion[0].to_bytes(1, 'little'))  # Major
+    sect_header.extend(sdkVersion[1].to_bytes(1, 'little'))  # Minor
+    sect_header.extend(sdkVersion[2].to_bytes(1, 'little'))  # Patch
+    sect_header.extend((0).to_bytes(1, 'little'))            # Reserved
 
     # 10-30 - mini header identifier
     appNameHeader = outMetaJSON["app_name"]
