@@ -1,18 +1,16 @@
 -- libraries/maths.lua
 -- Example math utilities module
 
-local maths = {}
+Maths = {}
 
-function maths.add(a, b)
+function Maths.add(a, b)
     return a + b
 end
 
-function maths.multiply(a, b)
+function Maths.multiply(a, b)
     return a * b
 end
 
-function maths.square(x)
+function Maths.square(x)
     return x * x
 end
-
-return maths
