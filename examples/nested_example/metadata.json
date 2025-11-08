@@ -9,6 +9,7 @@
   "icon_transparency": false,
   "resources": [
     "app.lua",
-    "libraries"
+    "libraries",
+    "pages"
   ]
 }

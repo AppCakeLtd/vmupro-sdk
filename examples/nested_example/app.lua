@@ -1,32 +1,88 @@
 -- app.lua
--- Main application using nested modules
+-- VMU Pro LUA SDK Comprehensive Test Suite
 
 import "api/system"
+import "api/display"
+import "api/input"
 
--- Load our custom modules (guaranteed to be present in the package)
-local maths = require("libraries.maths")
-local utils = require("libraries.utils")
+-- Import test pages
+import "pages/page1"
 
+-- Application state
+local app_running = true
+local current_page = 1
+local total_pages = 1  -- Will increment as we add more test pages
+
+--- @brief Initialize the application
+local function init_app()
+    vmupro.system.log(vmupro.system.LOG_INFO, "SDKTest", "Starting VMU Pro SDK Test Suite")
+
+    -- Set small font for better readability
+    vmupro.text.setFont(vmupro.text.FONT_SMALL)
+
+    vmupro.system.log(vmupro.system.LOG_INFO, "SDKTest", string.format("Total test pages: %d", total_pages))
+end
+
+--- @brief Draw page counter in top-right corner
+local function drawPageCounter()
+    local text = string.format("Page %d/%d", current_page, total_pages)
+    local text_width = vmupro.text.calcLength(text)
+    local x = 240 - text_width - 5
+    vmupro.graphics.drawText(text, x, 5, vmupro.graphics.YELLOW, vmupro.graphics.BLACK)
+end
+
+--- @brief Update application logic
+local function update()
+    -- Read input
+    vmupro.input.read()
+
+    -- Navigate to previous page (LEFT)
+    if vmupro.input.pressed(vmupro.input.LEFT) then
+        if current_page > 1 then
+            current_page = current_page - 1
+            vmupro.system.log(vmupro.system.LOG_INFO, "SDKTest", string.format("Navigate to page %d", current_page))
+        end
+    end
+
+    -- Navigate to next page (RIGHT)
+    if vmupro.input.pressed(vmupro.input.RIGHT) then
+        if current_page < total_pages then
+            current_page = current_page + 1
+            vmupro.system.log(vmupro.system.LOG_INFO, "SDKTest", string.format("Navigate to page %d", current_page))
+        end
+    end
+
+    -- Exit on B button
+    if vmupro.input.pressed(vmupro.input.B) then
+        vmupro.system.log(vmupro.system.LOG_INFO, "SDKTest", "Exit requested")
+        app_running = false
+    end
+end
+
+--- @brief Main render function - calls appropriate page renderer
+local function render()
+    if current_page == 1 then
+        Page1.render(drawPageCounter)
+    end
+    -- More pages will be added here
+end
+
+--- @brief Main application entry point
 function AppMain()
-    vmupro.system.log(vmupro.system.LOG_INFO, "NestedApp", "Starting nested folder example...")
+    -- Initialize
+    init_app()
 
-    -- Test math functions
-    local sum = maths.add(5, 3)
-    local product = maths.multiply(4, 7)
-    local squared = maths.square(6)
+    -- Main loop
+    vmupro.system.log(vmupro.system.LOG_INFO, "SDKTest", "Entering main loop")
 
-    vmupro.system.log(vmupro.system.LOG_INFO, "Math", string.format("5 + 3 = %d", sum))
-    vmupro.system.log(vmupro.system.LOG_INFO, "Math", string.format("4 * 7 = %d", product))
-    vmupro.system.log(vmupro.system.LOG_INFO, "Math", string.format("6^2 = %d", squared))
+    while app_running do
+        update()
+        render()
+        vmupro.system.delayMs(16)  -- ~60 FPS
+    end
 
-    -- Test utility functions
-    local clamped = utils.clamp(15, 0, 10)
-    local lerped = utils.lerp(0, 100, 0.5)
-
-    vmupro.system.log(vmupro.system.LOG_INFO, "Utils", string.format("clamp(15, 0, 10) = %d", clamped))
-    vmupro.system.log(vmupro.system.LOG_INFO, "Utils", string.format("lerp(0, 100, 0.5) = %g", lerped))
-
-    vmupro.system.log(vmupro.system.LOG_INFO, "NestedApp", "Nested folder example completed successfully!")
+    -- Cleanup
+    vmupro.system.log(vmupro.system.LOG_INFO, "SDKTest", "Test suite completed")
 
     return 0
 end
