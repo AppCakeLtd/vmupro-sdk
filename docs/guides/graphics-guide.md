@@ -274,14 +274,19 @@ end
 -- Use namespace colors (preferred)
 local COLORS = {
     RED = vmupro.graphics.RED,
+    ORANGE = vmupro.graphics.ORANGE,
+    YELLOW = vmupro.graphics.YELLOW,
+    YELLOWGREEN = vmupro.graphics.YELLOWGREEN,
     GREEN = vmupro.graphics.GREEN,
     BLUE = vmupro.graphics.BLUE,
-    YELLOW = vmupro.graphics.YELLOW,
+    NAVY = vmupro.graphics.NAVY,
+    VIOLET = vmupro.graphics.VIOLET,
     MAGENTA = vmupro.graphics.MAGENTA,
-    CYAN = vmupro.graphics.CYAN,
     WHITE = vmupro.graphics.WHITE,
     BLACK = vmupro.graphics.BLACK,
-    GRAY = vmupro.graphics.GREY
+    GREY = vmupro.graphics.GREY,
+    VMUGREEN = vmupro.graphics.VMUGREEN,
+    VMUINK = vmupro.graphics.VMUINK
 }
 
 -- Or calculate custom colors

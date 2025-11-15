@@ -7,13 +7,11 @@
 ## API Reference
 
 * [Display API](api/display.md)
-* [Buffer Blitting API](api/blitting.md)
 * [Audio API](api/audio.md)
 * [Input API](api/input.md)
 * [File System API](api/file.md)
 * [System API](api/system.md)
 * [Layer System API](api/layers.md)
-* [Visual Effects API](api/effects.md)
 * [Sprites API](api/sprites.md)
 * [Double Buffer API](api/doublebuffer.md)
 

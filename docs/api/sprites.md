@@ -1,10 +1,113 @@
 # Sprites API
 
-The Sprites API provides functions for sprite collision detection and batch operations, supporting both simple bounding box collision and precise pixel-perfect collision detection.
+The Sprites API provides handle-based sprite management and collision detection functions. Sprites are loaded into C memory and accessed via integer handles from LUA, providing efficient memory management and fast rendering.
 
 ## Overview
 
-Collision detection is essential for games and interactive applications. The VMU Pro provides both fast bounding box collision for broad-phase detection and pixel-perfect collision for precise interaction detection.
+The VMU Pro sprite system uses a handle-based approach where:
+- Sprites are loaded from PNG files into C memory
+- An integer handle is returned to LUA for reference
+- Sprites are drawn and manipulated using their handles
+- Sprites must be freed when no longer needed
+
+This approach keeps sprite data in C memory space while allowing LUA scripts to easily manipulate and render them.
+
+## Sprite Management Functions
+
+### vmupro.sprite.new(path)
+
+Loads a sprite from a BMP file and returns a handle for future operations.
+
+```lua
+-- Load sprites from vmupack (embedded)
+local player_sprite = vmupro.sprite.new("sprites/player")
+local enemy_sprite = vmupro.sprite.new("sprites/enemy")
+
+if not player_sprite then
+    vmupro.system.log(vmupro.system.LOG_ERROR, "Sprites", "Failed to load player sprite")
+end
+```
+
+**Parameters:**
+- `path` (string): Path to BMP sprite file WITHOUT extension
+
+**Returns:**
+- `sprite` (table): Sprite object table with the following fields, or `nil` on failure:
+  - `id` (number): Integer handle for internal reference
+  - `width` (number): Sprite width in pixels
+  - `height` (number): Sprite height in pixels
+  - `transparentColor` (number): RGB565 transparent color value (0xFFFF for white)
+
+**Path Format:**
+- **Embedded sprites only**: Use relative path (e.g., `"sprites/player"`)
+- **Extension**: Do NOT include `.bmp` extension - it is added automatically
+- Works the same way as Lua file imports (`import "pages/page1"`)
+- Sprites are loaded from embedded vmupack files only (not from SD card)
+
+**Notes:**
+- Only BMP format is supported
+- Sprite width, height, and transparent color are automatically detected from the BMP file
+- Sprites are stored in C memory and referenced by the table object
+- Always check for `nil` return value to handle load failures
+- Use `sprite.width` and `sprite.height` for positioning and collision detection
+
+---
+
+### vmupro.sprite.draw(handle, x, y, flags)
+
+Draws a sprite using its handle at the specified position.
+
+```lua
+-- Draw sprite normally
+vmupro.sprite.draw(player_sprite, 100, 50, 0)
+
+-- Draw sprite flipped horizontally
+vmupro.sprite.draw(enemy_sprite, 200, 50, 1)
+
+-- Draw sprite flipped vertically
+vmupro.sprite.draw(item_sprite, 150, 100, 2)
+
+-- Draw sprite flipped both ways
+vmupro.sprite.draw(obstacle_sprite, 120, 120, 3)
+```
+
+**Parameters:**
+- `handle` (number): Sprite handle from `vmupro.sprite.new()`
+- `x` (number): X coordinate to draw sprite
+- `y` (number): Y coordinate to draw sprite
+- `flags` (number): Draw flags - 0=normal, 1=flip horizontal, 2=flip vertical, 3=flip both
+
+**Returns:** None
+
+**Flip Flags:**
+- `0` - Normal rendering (no flipping)
+- `1` - Flip horizontally (mirror left-right)
+- `2` - Flip vertically (mirror top-bottom)
+- `3` - Flip both horizontally and vertically
+
+---
+
+### vmupro.sprite.free(handle)
+
+Frees a sprite and releases its memory.
+
+```lua
+-- Free sprite when done
+vmupro.sprite.free(player_sprite)
+vmupro.sprite.free(enemy_sprite)
+```
+
+**Parameters:**
+- `handle` (number): Sprite handle to free
+
+**Returns:** None
+
+**Important:**
+- Always free sprites when done to avoid memory leaks
+- Freed handles become invalid and should not be used again
+- Consider freeing sprites when changing levels or scenes
+
+---
 
 ## Collision Detection Functions
 
@@ -40,99 +143,93 @@ end
 
 ---
 
-### vmupro.sprites.pixelCollision(sprite1, sprite1_x, sprite1_y, sprite1_width, sprite1_height, sprite2, sprite2_x, sprite2_y, sprite2_width, sprite2_height)
+## Example Usage
 
-Performs precise pixel-perfect collision detection between two sprites.
+### Basic Sprite Loading and Rendering
 
 ```lua
--- Precise collision between complex sprite shapes
-if vmupro.sprites.pixelCollision(player_sprite, player_x, player_y, 16, 16,
-                                 rock_sprite, rock_x, rock_y, 24, 24) then
-    handle_precise_collision()
+import "api/sprites"
+import "api/display"
+import "api/system"
+
+-- Load sprites during initialization (from vmupack)
+local player_sprite = vmupro.sprite.new("sprites/player")
+local enemy_sprite = vmupro.sprite.new("sprites/enemy")
+
+if player_sprite then
+    -- Access sprite properties
+    print("Player size: " .. player_sprite.width .. "x" .. player_sprite.height)
+    print("Player handle ID: " .. player_sprite.id)
+    print("Transparent color: " .. string.format("0x%04X", player_sprite.transparentColor))
+end
+
+-- Game state
+local player_x = 100
+local player_y = 100
+local enemy_x = 200
+local enemy_y = 150
+local player_facing_right = true
+
+function update()
+    -- Update player position based on input
+    if vmupro.input.held(vmupro.input.LEFT) then
+        player_x = player_x - 2
+        player_facing_right = false
+    end
+    if vmupro.input.held(vmupro.input.RIGHT) then
+        player_x = player_x + 2
+        player_facing_right = true
+    end
+end
+
+function render()
+    vmupro.graphics.clear(vmupro.graphics.BLACK)
+
+    -- Draw player with appropriate flip based on direction
+    local flip_flag = player_facing_right and 0 or 1
+    vmupro.sprite.draw(player_sprite, player_x, player_y, flip_flag)
+
+    -- Draw enemy
+    vmupro.sprite.draw(enemy_sprite, enemy_x, enemy_y, 0)
+
+    vmupro.graphics.refresh()
+end
+
+-- Cleanup when done
+function cleanup()
+    vmupro.sprite.free(player_sprite)
+    vmupro.sprite.free(enemy_sprite)
 end
 ```
 
-**Parameters:**
-- `sprite1` (userdata): First sprite buffer
-- `sprite1_x` (number): First sprite X position
-- `sprite1_y` (number): First sprite Y position
-- `sprite1_width` (number): First sprite width
-- `sprite1_height` (number): First sprite height
-- `sprite2` (userdata): Second sprite buffer
-- `sprite2_x` (number): Second sprite X position
-- `sprite2_y` (number): Second sprite Y position
-- `sprite2_width` (number): Second sprite width
-- `sprite2_height` (number): Second sprite height
-
-**Returns:**
-- `collision` (boolean): True if non-transparent pixels overlap, false otherwise
-
-**Use Cases:**
-- Precise collision for irregular sprite shapes
-- Detailed interaction detection
-- Fine-tuned gameplay mechanics
-- Quality collision detection where accuracy matters
-
----
-
-## Rendering Functions
-
-### vmupro.sprites.batchRender(sprites)
-
-Renders multiple sprites in a single batch operation for improved performance.
+### Sprite-Based Game Object System
 
 ```lua
--- Create sprite batch data
-local sprite_batch = {
-    {sprite = player_sprite, x = player_x, y = player_y, width = 16, height = 16},
-    {sprite = enemy1_sprite, x = enemy1_x, y = enemy1_y, width = 16, height = 16},
-    {sprite = enemy2_sprite, x = enemy2_x, y = enemy2_y, width = 16, height = 16},
-    {sprite = coin_sprite, x = coin_x, y = coin_y, width = 8, height = 8}
-}
-
--- Render all sprites in one call
-vmupro.sprites.batchRender(sprite_batch)
-```
-
-**Parameters:**
-- `sprites` (table): Array of sprite data for batch rendering
-
-**Sprite Data Format:**
-Each sprite in the array should contain:
-- `sprite` (userdata): Sprite buffer
-- `x` (number): X position
-- `y` (number): Y position
-- `width` (number): Sprite width
-- `height` (number): Sprite height
-
-**Returns:** None
-
-**Performance Benefits:**
-- Reduced function call overhead
-- Optimized rendering pipeline
-- Better GPU/hardware utilization
-- Ideal for rendering many small sprites
-
-## Example Usage
-
-### Basic Game Object Collision System
-
-```lua
--- Game object structure
+-- Game object class
 local GameObject = {}
 GameObject.__index = GameObject
 
-function GameObject.new(x, y, width, height, sprite)
+function GameObject.new(sprite_path, x, y)
+    local sprite = vmupro.sprite.new(sprite_path)
+    if not sprite then
+        return nil
+    end
+
+    -- Use sprite dimensions from the loaded sprite table
     return setmetatable({
-        x = x, y = y,
-        width = width, height = height,
         sprite = sprite,
-        active = true
+        x = x, y = y,
+        width = sprite.width,    -- Auto-detected from BMP
+        height = sprite.height,  -- Auto-detected from BMP
+        active = true,
+        flip = 0
     }, GameObject)
 end
 
-function GameObject:get_bounds()
-    return self.x, self.y, self.width, self.height
+function GameObject:draw()
+    if self.active then
+        vmupro.sprite.draw(self.sprite, self.x, self.y, self.flip)
+    end
 end
 
 function GameObject:check_collision(other)
@@ -146,85 +243,42 @@ function GameObject:check_collision(other)
     )
 end
 
-function GameObject:check_pixel_collision(other)
-    if not self.active or not other.active then
-        return false
-    end
-
-    -- First do bounding box check for performance
-    if not self:check_collision(other) then
-        return false
-    end
-
-    -- Then do pixel-perfect check
-    return vmupro.sprites.pixelCollision(
-        self.sprite, self.x, self.y, self.width, self.height,
-        other.sprite, other.x, other.y, other.width, other.height
-    )
+function GameObject:free()
+    vmupro.sprite.free(self.sprite)
+    self.active = false
 end
+
+-- Usage - no need to specify dimensions, they're auto-detected
+local player = GameObject.new("sprites/player", 100, 100)
+local enemy = GameObject.new("sprites/enemy", 200, 150)
+
+-- Check collision
+if player:check_collision(enemy) then
+    handle_collision()
+end
+
+-- Cleanup
+player:free()
+enemy:free()
 ```
 
-### Collision Detection with Spatial Partitioning
+### Platform Game Example
 
 ```lua
-local CollisionSystem = {}
-
-function CollisionSystem.new()
-    return {
-        objects = {},
-        collision_pairs = {}
-    }
-end
-
-function CollisionSystem:add_object(obj)
-    table.insert(self.objects, obj)
-end
-
-function CollisionSystem:update()
-    self.collision_pairs = {}
-
-    -- Broad phase: check all object pairs with bounding boxes
-    for i = 1, #self.objects do
-        for j = i + 1, #self.objects do
-            local obj1 = self.objects[i]
-            local obj2 = self.objects[j]
-
-            if obj1:check_collision(obj2) then
-                table.insert(self.collision_pairs, {obj1, obj2})
-            end
-        end
-    end
-
-    -- Narrow phase: pixel-perfect collision for confirmed pairs
-    for _, pair in ipairs(self.collision_pairs) do
-        local obj1, obj2 = pair[1], pair[2]
-
-        if obj1:check_pixel_collision(obj2) then
-            self:handle_collision(obj1, obj2)
-        end
-    end
-end
-
-function CollisionSystem:handle_collision(obj1, obj2)
-    -- Handle collision response
-    vmupro.system.log(vmupro.system.LOG_INFO, "Collision", "Collision between " .. obj1.type .. " and " .. obj2.type)
-end
-```
-
-### Platform Game Collision
-
-```lua
-local player = GameObject.new(100, 100, 16, 16, player_sprite)
+local player = GameObject.new("sprites/player", 100, 100)
 local platforms = {}
 
--- Add platforms
-table.insert(platforms, GameObject.new(50, 150, 64, 16, platform_sprite))
-table.insert(platforms, GameObject.new(150, 120, 64, 16, platform_sprite))
+-- Create platforms
+table.insert(platforms, {x = 50, y = 150, width = 64, height = 16})
+table.insert(platforms, {x = 150, y = 120, width = 64, height = 16})
 
 function update_player_collision()
     -- Check collision with platforms
     for _, platform in ipairs(platforms) do
-        if player:check_collision(platform) then
+        if vmupro.sprites.collisionCheck(
+            player.x, player.y, player.width, player.height,
+            platform.x, platform.y, platform.width, platform.height) then
+
             -- Player is colliding with platform
             if player.velocity_y > 0 then -- Falling
                 -- Land on platform
@@ -237,7 +291,7 @@ function update_player_collision()
 end
 ```
 
-### Bullet vs Enemy Collision
+### Bullet Collision System
 
 ```lua
 local bullets = {}
@@ -246,7 +300,6 @@ local enemies = {}
 function update_bullet_collisions()
     for i = #bullets, 1, -1 do
         local bullet = bullets[i]
-        local hit = false
 
         for j = #enemies, 1, -1 do
             local enemy = enemies[j]
@@ -257,10 +310,9 @@ function update_bullet_collisions()
                 enemy.x, enemy.y, enemy.width, enemy.height) then
 
                 -- Hit! Remove bullet and damage enemy
+                bullet:free()
                 table.remove(bullets, i)
                 enemy:take_damage(bullet.damage)
-
-                hit = true
                 break
             end
         end
@@ -268,88 +320,28 @@ function update_bullet_collisions()
 end
 ```
 
-### Collectible Item Collision
-
-```lua
-local collectibles = {}
-
-function update_collectible_collision()
-    for i = #collectibles, 1, -1 do
-        local item = collectibles[i]
-
-        -- Use pixel-perfect collision for precise pickup detection
-        if vmupro.sprites.pixelCollision(
-            player.sprite, player.x, player.y, player.width, player.height,
-            item.sprite, item.x, item.y, item.width, item.height) then
-
-            -- Collect the item
-            collect_item(item)
-            table.remove(collectibles, i)
-        end
-    end
-end
-```
-
-## Performance Optimization
-
-### Two-Phase Collision Detection
-
-```lua
-function optimized_collision_check(obj1, obj2)
-    -- Phase 1: Fast bounding box check
-    if not vmupro.sprites.collisionCheck(
-        obj1.x, obj1.y, obj1.width, obj1.height,
-        obj2.x, obj2.y, obj2.width, obj2.height) then
-        return false
-    end
-
-    -- Phase 2: Pixel-perfect check only if bounding boxes overlap
-    return vmupro.sprites.pixelCollision(
-        obj1.sprite, obj1.x, obj1.y, obj1.width, obj1.height,
-        obj2.sprite, obj2.x, obj2.y, obj2.width, obj2.height
-    )
-end
-```
-
-### Collision Layers
-
-```lua
-local COLLISION_LAYERS = {
-    PLAYER = 1,
-    ENEMY = 2,
-    PROJECTILE = 4,
-    COLLECTIBLE = 8,
-    ENVIRONMENT = 16
-}
-
--- Only check collisions between relevant layers
-local collision_matrix = {
-    [COLLISION_LAYERS.PLAYER] = COLLISION_LAYERS.ENEMY + COLLISION_LAYERS.COLLECTIBLE + COLLISION_LAYERS.ENVIRONMENT,
-    [COLLISION_LAYERS.PROJECTILE] = COLLISION_LAYERS.ENEMY + COLLISION_LAYERS.ENVIRONMENT,
-    [COLLISION_LAYERS.ENEMY] = COLLISION_LAYERS.PLAYER + COLLISION_LAYERS.PROJECTILE
-}
-
-function should_check_collision(obj1, obj2)
-    return (collision_matrix[obj1.layer] or 0) & obj2.layer ~= 0
-end
-```
-
 ## Best Practices
 
+### Memory Management
+- Always free sprites when no longer needed to prevent memory leaks
+- Free sprites when switching scenes or levels
+- Check return value of `new()` for load failures
+- Consider sprite pooling for frequently created/destroyed sprites
+
 ### Performance Tips
-- Use bounding box collision for broad-phase detection
-- Only use pixel-perfect collision when necessary
-- Implement spatial partitioning for many objects
-- Cache collision results when objects don't move
+- Load sprites during initialization, not during gameplay
+- Use collision detection only for active game objects
+- Cache sprite dimensions instead of recalculating
+- Use bounding box collision for fast broad-phase detection
 
-### Collision Response
-- Separate collision detection from collision response
-- Handle different collision types appropriately
-- Consider collision layers to avoid unnecessary checks
-- Implement collision callbacks for flexibility
+### File Organization
+- Keep sprites organized in subdirectories within your vmupack: `sprites/player/`, `sprites/enemies/`
+- Use consistent naming conventions
+- Consider sprite atlases for related sprites
+- Optimize BMP files for size (use 16-bit RGB565 format)
 
-### Sprite Considerations
-- Use consistent sprite sizes when possible
-- Consider collision boxes smaller than sprite size for better gameplay
-- Use transparent pixels effectively for pixel-perfect collision
-- Optimize sprite data for collision performance
+### Error Handling
+- Always check if sprite loading succeeds
+- Provide fallback behavior for missing sprites
+- Log errors for debugging
+- Validate sprite paths before loading

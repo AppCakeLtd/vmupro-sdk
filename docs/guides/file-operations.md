@@ -18,7 +18,7 @@ Check if files exist before attempting to read them:
 
 ```lua
 -- Check if a file exists
-if vmupro.file.fileExists("/sdcard/save.txt") then
+if vmupro.file.exists("/sdcard/save.txt") then
     print("Save file found!")
 else
     print("No save file exists")
@@ -29,7 +29,7 @@ Read entire files with a single function call:
 
 ```lua
 -- Read complete file contents
-local data = vmupro.file.readFileComplete("/sdcard/config.txt")
+local data = vmupro.file.read("/sdcard/config.txt")
 if data then
     print("File contents: " .. data)
 else
@@ -37,15 +37,52 @@ else
 end
 ```
 
+Create empty files (required before writing):
+
+```lua
+-- Create an empty file
+local success = vmupro.file.createFile("/sdcard/data.txt")
+if success then
+    print("File created successfully")
+else
+    print("Failed to create file")
+end
+```
+
 Write data to files, replacing existing content:
 
 ```lua
--- Write data to file
-local success = vmupro.file.writeFileComplete("/sdcard/save.txt", "Player Score: 1250\nLevel: 5")
+-- Create file first, then write data
+vmupro.file.createFile("/sdcard/save.txt")
+local success = vmupro.file.write("/sdcard/save.txt", "Player Score: 1250\nLevel: 5")
 if success then
     print("Save data written successfully")
 else
     print("Failed to write save data")
+end
+```
+
+Delete files when no longer needed:
+
+```lua
+-- Delete a file
+local success = vmupro.file.deleteFile("/sdcard/temp.txt")
+if success then
+    print("Temporary file deleted")
+else
+    print("Failed to delete file")
+end
+```
+
+Delete empty folders:
+
+```lua
+-- Delete an empty folder
+local success = vmupro.file.deleteFolder("/sdcard/temp")
+if success then
+    print("Folder deleted")
+else
+    print("Failed to delete folder (must be empty)")
 end
 ```
 
@@ -74,15 +111,15 @@ Get file size information:
 
 ```lua
 -- Get file size
-local size = vmupro.file.getFileSize("/sdcard/data.txt")
-if size then
+local size = vmupro.file.getSize("/sdcard/data.txt")
+if size and size > 0 then
     print("File size: " .. size .. " bytes")
 
     if size > 1024 then
         print("Large file detected")
     end
 else
-    print("File doesn't exist or error reading size")
+    print("File doesn't exist")
 end
 ```
 
@@ -132,7 +169,10 @@ function save_game()
         vmupro.system.getTimeUs()
     )
 
-    local success = vmupro.file.writeFileComplete(SAVE_FILE, save_data)
+    -- Create file if it doesn't exist
+    vmupro.file.createFile(SAVE_FILE)
+
+    local success = vmupro.file.write(SAVE_FILE, save_data)
     if success then
         vmupro.system.log(vmupro.system.LOG_INFO, "Save", "Game saved successfully")
     else
@@ -143,12 +183,12 @@ function save_game()
 end
 
 function load_game()
-    if not vmupro.file.fileExists(SAVE_FILE) then
+    if not vmupro.file.exists(SAVE_FILE) then
         vmupro.system.log(vmupro.system.LOG_INFO, "Save", "No save file found")
         return false
     end
 
-    local data = vmupro.file.readFileComplete(SAVE_FILE)
+    local data = vmupro.file.read(SAVE_FILE)
     if not data then
         vmupro.system.log(vmupro.system.LOG_ERROR, "Save", "Failed to read save file")
         return false
@@ -209,8 +249,8 @@ local default_config = {
 }
 
 function load_config()
-    if vmupro.file.fileExists(CONFIG_FILE) then
-        local data = vmupro.file.readFileComplete(CONFIG_FILE)
+    if vmupro.file.exists(CONFIG_FILE) then
+        local data = vmupro.file.read(CONFIG_FILE)
         if data then
             -- Parse configuration
             for line in data:gmatch("[^\n]+") do
@@ -251,7 +291,11 @@ function save_config()
     end
 
     local config_data = table.concat(config_lines, "\n")
-    local success = vmupro.file.writeFileComplete(CONFIG_FILE, config_data)
+
+    -- Create file if it doesn't exist
+    vmupro.file.createFile(CONFIG_FILE)
+
+    local success = vmupro.file.write(CONFIG_FILE, config_data)
 
     if success then
         vmupro.system.log(vmupro.system.LOG_INFO, "Config", "Configuration saved")
@@ -298,34 +342,37 @@ function write_log(level, message)
     local log_entry = string.format("[%d] %s: %s\n", timestamp, level, message)
 
     -- Check if log file exists and get size
-    local current_size = vmupro.file.getFileSize(LOG_FILE) or 0
+    local current_size = vmupro.file.getSize(LOG_FILE) or 0
 
     -- If log is too large, start fresh
     if current_size > MAX_LOG_SIZE then
-        vmupro.file.writeFileComplete(LOG_FILE, log_entry)
+        vmupro.file.createFile(LOG_FILE)
+        vmupro.file.write(LOG_FILE, log_entry)
         vmupro.system.log(vmupro.system.LOG_INFO, "Logger", "Log file rotated")
     else
         -- Append to existing log
         local existing_data = ""
-        if vmupro.file.fileExists(LOG_FILE) then
-            existing_data = vmupro.file.readFileComplete(LOG_FILE) or ""
+        if vmupro.file.exists(LOG_FILE) then
+            existing_data = vmupro.file.read(LOG_FILE) or ""
+        else
+            vmupro.file.createFile(LOG_FILE)
         end
 
         local new_data = existing_data .. log_entry
-        vmupro.file.writeFileComplete(LOG_FILE, new_data)
+        vmupro.file.write(LOG_FILE, new_data)
     end
 end
 
 function read_log()
-    if vmupro.file.fileExists(LOG_FILE) then
-        return vmupro.file.readFileComplete(LOG_FILE)
+    if vmupro.file.exists(LOG_FILE) then
+        return vmupro.file.read(LOG_FILE)
     else
         return "No log file found"
     end
 end
 
 function clear_log()
-    local success = vmupro.file.writeFileComplete(LOG_FILE, "")
+    local success = vmupro.file.write(LOG_FILE, "")
     if success then
         vmupro.system.log(vmupro.system.LOG_INFO, "Logger", "Log file cleared")
     end
@@ -369,8 +416,8 @@ function load_asset(filename)
     end
 
     local full_path = ASSETS_DIR .. "/" .. filename
-    if vmupro.file.fileExists(full_path) then
-        local data = vmupro.file.readFileComplete(full_path)
+    if vmupro.file.exists(full_path) then
+        local data = vmupro.file.read(full_path)
         if data then
             asset_cache[filename] = data
             vmupro.system.log(vmupro.system.LOG_INFO, "Assets", "Loaded asset: " .. filename)
@@ -391,7 +438,11 @@ function save_asset(filename, data)
     end
 
     local full_path = ASSETS_DIR .. "/" .. filename
-    local success = vmupro.file.writeFileComplete(full_path, data)
+
+    -- Create file before writing
+    vmupro.file.createFile(full_path)
+
+    local success = vmupro.file.write(full_path, data)
 
     if success then
         asset_cache[filename] = data
@@ -404,11 +455,11 @@ function save_asset(filename, data)
 end
 
 function asset_exists(filename)
-    return vmupro.file.fileExists(ASSETS_DIR .. "/" .. filename)
+    return vmupro.file.exists(ASSETS_DIR .. "/" .. filename)
 end
 
 function get_asset_size(filename)
-    return vmupro.file.getFileSize(ASSETS_DIR .. "/" .. filename)
+    return vmupro.file.getSize(ASSETS_DIR .. "/" .. filename)
 end
 
 -- Example usage
@@ -449,7 +500,7 @@ end
 
 -- Usage
 local data = safe_file_operation(function()
-    return vmupro.file.readFileComplete("/sdcard/important.txt")
+    return vmupro.file.read("/sdcard/important.txt")
 end)
 ```
 
@@ -499,7 +550,7 @@ function validate_save_data(data)
 end
 
 function safe_load_save()
-    local data = vmupro.file.readFileComplete("/sdcard/save.txt")
+    local data = vmupro.file.read("/sdcard/save.txt")
     if data then
         local valid, error_msg = validate_save_data(data)
         if valid then

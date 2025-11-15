@@ -229,7 +229,7 @@ vmupro.graphics.drawCircleFilled(120, 120, 50, vmupro.graphics.MAGENTA) -- Magen
 Draws an ellipse outline.
 
 ```lua
-vmupro.graphics.drawEllipse(120, 120, 60, 40, vmupro.graphics.CYAN) -- Cyan ellipse outline
+vmupro.graphics.drawEllipse(120, 120, 60, 40, vmupro.graphics.BLUE) -- Blue ellipse outline
 ```
 
 **Parameters:**
@@ -248,7 +248,7 @@ vmupro.graphics.drawEllipse(120, 120, 60, 40, vmupro.graphics.CYAN) -- Cyan elli
 Draws a filled ellipse.
 
 ```lua
-vmupro.graphics.drawEllipseFilled(120, 120, 60, 40, vmupro.graphics.CYAN) -- Cyan filled ellipse
+vmupro.graphics.drawEllipseFilled(120, 120, 60, 40, vmupro.graphics.BLUE) -- Blue filled ellipse
 ```
 
 **Parameters:**
@@ -339,14 +339,20 @@ The VMU Pro uses RGB565 format for colors:
 
 ### Common Colors
 ```lua
-vmupro.graphics.RED = 0xF800      -- Full red
-vmupro.graphics.GREEN = 0x07E0    -- Full green
-vmupro.graphics.BLUE = 0x001F     -- Full blue
-vmupro.graphics.WHITE = 0xFFFF    -- White
-vmupro.graphics.BLACK = 0x0000    -- Black
-vmupro.graphics.YELLOW = 0xFFE0   -- Red + Green
-vmupro.graphics.MAGENTA = 0xF81F  -- Red + Blue
-vmupro.graphics.CYAN = 0x07FF     -- Green + Blue
+vmupro.graphics.RED = 0x00F8          -- Red color
+vmupro.graphics.ORANGE = 0xA0FB       -- Orange color
+vmupro.graphics.YELLOW = 0x80FF       -- Yellow color
+vmupro.graphics.YELLOWGREEN = 0x807F  -- Yellow-green color
+vmupro.graphics.GREEN = 0x0005        -- Green color
+vmupro.graphics.BLUE = 0x5F04         -- Blue color
+vmupro.graphics.NAVY = 0x0C00         -- Navy blue color
+vmupro.graphics.VIOLET = 0x1F78       -- Violet color
+vmupro.graphics.MAGENTA = 0x0D78      -- Magenta color
+vmupro.graphics.GREY = 0xB6B5         -- Grey color
+vmupro.graphics.BLACK = 0x0000        -- Black color
+vmupro.graphics.WHITE = 0xFFFF        -- White color
+vmupro.graphics.VMUGREEN = 0xD26C     -- VMU Pro green color
+vmupro.graphics.VMUINK = 0x8A28       -- VMU Pro ink color
 ```
 
 ### Color Conversion Helper
