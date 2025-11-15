@@ -51,6 +51,16 @@ function vmupro.file.folderExists(path) end
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
 function vmupro.file.createFolder(path) end
 
+--- @brief Create an empty file
+--- @param path string File path to create (must start with "/sdcard/")
+--- @return boolean true if file was created successfully (or already exists), false otherwise
+--- @usage local success = vmupro.file.createFile("/sdcard/data.txt")
+--- @note File access is restricted to /sdcard only for security
+--- @note If file already exists, returns true without error
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.file.createFile(path) end
+
 --- @brief Get the size of a file in bytes
 --- @param path string File path (must start with "/sdcard/")
 --- @return number Size of file in bytes, or 0 if file doesn't exist
@@ -69,3 +79,22 @@ function vmupro.file.getSize(path) end
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
 function vmupro.file.write(path, data) end
+
+--- @brief Delete a file
+--- @param path string File path (must start with "/sdcard/")
+--- @return boolean true if file was deleted successfully, false otherwise
+--- @usage local success = vmupro.file.deleteFile("/sdcard/temp.dat")
+--- @note File access is restricted to /sdcard only for security
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.file.deleteFile(path) end
+
+--- @brief Delete a folder
+--- @param path string Folder path (must start with "/sdcard/")
+--- @return boolean true if folder was deleted successfully, false otherwise
+--- @usage local success = vmupro.file.deleteFolder("/sdcard/temp")
+--- @note File access is restricted to /sdcard only for security
+--- @note Folder must be empty before it can be deleted
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.file.deleteFolder(path) end
