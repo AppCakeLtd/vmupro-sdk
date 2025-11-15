@@ -50,25 +50,26 @@ function vmupro.audio.clearRingBuffer() end
 function vmupro.audio.exitListenMode() end
 
 --- @brief Get the current fill state of the audio ring buffer
---- @return number Result code
---- @return number Filled samples count
---- @return number Total buffer size
---- @usage local result, filled, total = vmupro.audio.getRingbufferFillState()
+--- @return number Number of samples currently in the ring buffer
+--- @usage local fill_state = vmupro.audio.getRingbufferFillState()
+--- @note Returns the number of samples queued in the audio buffer
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
 function vmupro.audio.getRingbufferFillState() end
 
 --- @brief Add audio samples to the stream while in listen mode
---- @param samples userdata Pointer to int16_t array of audio sample values
---- @param numSamples number Number of samples in the array
+--- @param samples table Array of int16_t audio sample values
 --- @param stereo_mode number vmupro.audio.MONO or vmupro.audio.STEREO
 --- @param applyGlobalVolume boolean Whether to apply global volume to samples
---- @usage vmupro.audio.addStreamSamples(sample_buffer, 1024, vmupro.audio.MONO, true)
+--- @usage local samples = {0, 100, 200, 100, 0, -100, -200, -100}
+--- @usage vmupro.audio.addStreamSamples(samples, vmupro.audio.MONO, true)
 --- @note Must be called while in listen mode to push samples to the audio stream
 --- @note Samples should be int16_t values (range -32768 to 32767)
+--- @note For stereo mode, samples should be interleaved: {L, R, L, R, ...}
+--- @note Number of samples is automatically determined from table length
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
-function vmupro.audio.addStreamSamples(samples, numSamples, stereo_mode, applyGlobalVolume) end
+function vmupro.audio.addStreamSamples(samples, stereo_mode, applyGlobalVolume) end
 
 -- Audio mode constants (provided by firmware)
 vmupro.audio.MONO = VMUPRO_AUDIO_MONO or 0     --- Mono audio mode
