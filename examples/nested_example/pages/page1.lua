@@ -47,11 +47,7 @@ function Page1.render(drawPageCounter)
 
     -- Navigation hint
     vmupro.graphics.drawText("< Prev | Next >", 75, 215, vmupro.graphics.GREY, vmupro.graphics.BLACK)
-    vmupro.graphics.drawText("B: Exit", 85, 228, vmupro.graphics.GREY, vmupro.graphics.BLACK)
 
     -- Page counter
     drawPageCounter()
-
-    -- Refresh display
-    vmupro.graphics.refresh()
 end
