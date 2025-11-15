@@ -22,6 +22,14 @@ vmupro.system = vmupro.system or {}
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
 function vmupro.system.log(level, tag, message) end
 
+--- @brief Set the logging level filter
+--- @param level number Log level (vmupro.system.LOG_ERROR, vmupro.system.LOG_INFO, etc.)
+--- @usage vmupro.system.setLogLevel(vmupro.system.LOG_DEBUG) -- Show all logs
+--- @usage vmupro.system.setLogLevel(vmupro.system.LOG_ERROR) -- Show only errors
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.system.setLogLevel(level) end
+
 --- @brief Sleep/delay for specified milliseconds
 --- @param ms number Milliseconds to sleep
 --- @usage vmupro.system.sleep(100) -- Sleep for 100ms
@@ -51,15 +59,15 @@ function vmupro.system.delayUs(us) end
 function vmupro.system.delayMs(ms) end
 
 --- @brief Get the current global brightness level
---- @return number Current brightness level (0-255)
+--- @return number Current brightness level (1-10)
 --- @usage local brightness = vmupro.system.getGlobalBrightness()
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
 function vmupro.system.getGlobalBrightness() end
 
 --- @brief Set the global brightness level
---- @param brightness number Brightness level (0-255)
---- @usage vmupro.system.setGlobalBrightness(128) -- 50% brightness
+--- @param brightness number Brightness level (1-10)
+--- @usage vmupro.system.setGlobalBrightness(5) -- 50% brightness
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
 function vmupro.system.setGlobalBrightness(brightness) end
@@ -70,6 +78,20 @@ function vmupro.system.setGlobalBrightness(brightness) end
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
 function vmupro.system.getLastBlittedFBSide() end
+
+--- @brief Get current memory usage in bytes
+--- @return number Current memory usage in bytes
+--- @usage local usage = vmupro.system.getMemoryUsage()
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.system.getMemoryUsage() end
+
+--- @brief Get maximum memory limit in bytes
+--- @return number Maximum memory limit in bytes
+--- @usage local limit = vmupro.system.getMemoryLimit()
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.system.getMemoryLimit() end
 
 -- Log level constants (provided by firmware)
 vmupro.system.LOG_ERROR = VMUPRO_LOG_ERROR or 0   --- Error log level
