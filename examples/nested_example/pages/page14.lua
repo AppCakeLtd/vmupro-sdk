@@ -11,6 +11,23 @@ local sprite_handle = nil
 local sprite_loaded = false
 local load_error = false
 
+-- Flip flag rotation
+local current_flip_index = 1
+local last_flip_change_time = 0
+local FLIP_CHANGE_INTERVAL = 2000000  -- 2 seconds in microseconds
+local flip_flags = {
+    vmupro.sprite.kImageUnflipped,
+    vmupro.sprite.kImageFlippedX,
+    vmupro.sprite.kImageFlippedY,
+    vmupro.sprite.kImageFlippedXY
+}
+local flip_names = {
+    "kImageUnflipped",
+    "kImageFlippedX",
+    "kImageFlippedY",
+    "kImageFlippedXY"
+}
+
 --- @brief Initialize/load sprite
 local function loadSprite()
     if sprite_loaded or load_error then
@@ -84,16 +101,30 @@ function Page14.render(drawPageCounter)
     else
         -- Sprite loaded successfully
         if sprite_handle then
+            -- Update flip flag every 2 seconds
+            local current_time = vmupro.system.getTimeUs()
+            if last_flip_change_time == 0 then
+                last_flip_change_time = current_time
+            end
+
+            if (current_time - last_flip_change_time) >= FLIP_CHANGE_INTERVAL then
+                current_flip_index = current_flip_index + 1
+                if current_flip_index > #flip_flags then
+                    current_flip_index = 1
+                end
+                last_flip_change_time = current_time
+            end
+
             -- Draw the sprite centered on screen using actual dimensions
             local sprite_x = (240 - sprite_handle.width) / 2
             local sprite_y = (240 - sprite_handle.height) / 2
-            vmupro.sprite.draw(sprite_handle, sprite_x, sprite_y, 0)
+            vmupro.sprite.draw(sprite_handle, sprite_x, sprite_y, flip_flags[current_flip_index])
 
             -- Display sprite info from the returned table
-            vmupro.graphics.drawText("Sprite loaded OK!", 10, 150, vmupro.graphics.GREEN, vmupro.graphics.BLACK)
-            vmupro.graphics.drawText(string.format("ID: %d", sprite_handle.id), 10, 165, vmupro.graphics.BLUE, vmupro.graphics.BLACK)
-            vmupro.graphics.drawText(string.format("Size: %dx%d", sprite_handle.width, sprite_handle.height), 10, 180, vmupro.graphics.BLUE, vmupro.graphics.BLACK)
-            vmupro.graphics.drawText(string.format("TransColor: 0x%04X", sprite_handle.transparentColor), 10, 195, vmupro.graphics.BLUE, vmupro.graphics.BLACK)
+            vmupro.graphics.drawText("Sprite loaded OK!", 10, 140, vmupro.graphics.GREEN, vmupro.graphics.BLACK)
+            vmupro.graphics.drawText(string.format("ID: %d", sprite_handle.id), 10, 155, vmupro.graphics.BLUE, vmupro.graphics.BLACK)
+            vmupro.graphics.drawText(string.format("Size: %dx%d", sprite_handle.width, sprite_handle.height), 10, 170, vmupro.graphics.BLUE, vmupro.graphics.BLACK)
+            vmupro.graphics.drawText(string.format("Flip: %s", flip_names[current_flip_index]), 10, 185, vmupro.graphics.YELLOW, vmupro.graphics.BLACK)
         end
     end
 

@@ -21,12 +21,24 @@ import "pages/page11"
 import "pages/page12"
 import "pages/page13"
 import "pages/page14"
+import "pages/page15"
+import "pages/page16"
+import "pages/page17"
+import "pages/page18"
+import "pages/page19"
+import "pages/page20"
+import "pages/page21"
+import "pages/page22"
+import "pages/page23"
+import "pages/page24"
+import "pages/page25"
+import "pages/page26"
 
 -- Application state
 local app_running = true
 local current_page = 1
 local previous_page = 1
-local total_pages = 14 -- Will increment as we add more test pages
+local total_pages = 26 -- Will increment as we add more test pages
 
 -- Frame timing control
 local target_frame_time_us = 16666 -- Target 60 FPS (16.666ms in microseconds)
@@ -98,6 +110,30 @@ local function update()
         Page12.update()
     elseif current_page == 14 then
         Page14.update()
+    elseif current_page == 15 then
+        Page15.update()
+    elseif current_page == 16 then
+        Page16.update()
+    elseif current_page == 17 then
+        Page17.update()
+    elseif current_page == 18 then
+        Page18.update()
+    elseif current_page == 19 then
+        Page19.update()
+    elseif current_page == 20 then
+        Page20.update()
+    elseif current_page == 21 then
+        Page21.update()
+    elseif current_page == 22 then
+        Page22.update()
+    elseif current_page == 23 then
+        Page23.update()
+    elseif current_page == 24 then
+        Page24.update()
+    elseif current_page == 25 then
+        Page25.update()
+    elseif current_page == 26 then
+        Page26.update()
     end
 
     -- Special handling for page 6 (button test page) - require MODE button
@@ -115,6 +151,30 @@ local function update()
                     Page13.exit()
                 elseif current_page == 14 then
                     Page14.exit()
+                elseif current_page == 15 then
+                    Page15.exit()
+                elseif current_page == 16 then
+                    Page16.exit()
+                elseif current_page == 17 then
+                    Page17.exit()
+                elseif current_page == 18 then
+                    Page18.exit()
+                elseif current_page == 19 then
+                    Page19.exit()
+                elseif current_page == 20 then
+                    Page20.exit()
+                elseif current_page == 21 then
+                    Page21.exit()
+                elseif current_page == 22 then
+                    Page22.exit()
+                elseif current_page == 23 then
+                    Page23.exit()
+                elseif current_page == 24 then
+                    Page24.exit()
+                elseif current_page == 25 then
+                    Page25.exit()
+                elseif current_page == 26 then
+                    Page26.exit()
                 end
                 previous_page = current_page
                 current_page = current_page - 1
@@ -134,6 +194,30 @@ local function update()
                     Page13.exit()
                 elseif current_page == 14 then
                     Page14.exit()
+                elseif current_page == 15 then
+                    Page15.exit()
+                elseif current_page == 16 then
+                    Page16.exit()
+                elseif current_page == 17 then
+                    Page17.exit()
+                elseif current_page == 18 then
+                    Page18.exit()
+                elseif current_page == 19 then
+                    Page19.exit()
+                elseif current_page == 20 then
+                    Page20.exit()
+                elseif current_page == 21 then
+                    Page21.exit()
+                elseif current_page == 22 then
+                    Page22.exit()
+                elseif current_page == 23 then
+                    Page23.exit()
+                elseif current_page == 24 then
+                    Page24.exit()
+                elseif current_page == 25 then
+                    Page25.exit()
+                elseif current_page == 26 then
+                    Page26.exit()
                 end
                 previous_page = current_page
                 current_page = current_page + 1
@@ -152,6 +236,30 @@ local function update()
                 Page13.exit()
             elseif current_page == 14 then
                 Page14.exit()
+            elseif current_page == 15 then
+                Page15.exit()
+            elseif current_page == 16 then
+                Page16.exit()
+            elseif current_page == 17 then
+                Page17.exit()
+            elseif current_page == 18 then
+                Page18.exit()
+            elseif current_page == 19 then
+                Page19.exit()
+            elseif current_page == 20 then
+                Page20.exit()
+            elseif current_page == 21 then
+                Page21.exit()
+            elseif current_page == 22 then
+                Page22.exit()
+            elseif current_page == 23 then
+                Page23.exit()
+            elseif current_page == 24 then
+                Page24.exit()
+            elseif current_page == 25 then
+                Page25.exit()
+            elseif current_page == 26 then
+                Page26.exit()
             end
             vmupro.system.log(vmupro.system.LOG_INFO, "SDKTest", "Exit requested")
             app_running = false
@@ -189,6 +297,30 @@ local function render()
         Page13.render(drawPageCounter)
     elseif current_page == 14 then
         Page14.render(drawPageCounter)
+    elseif current_page == 15 then
+        Page15.render(drawPageCounter)
+    elseif current_page == 16 then
+        Page16.render(drawPageCounter)
+    elseif current_page == 17 then
+        Page17.render(drawPageCounter)
+    elseif current_page == 18 then
+        Page18.render(drawPageCounter)
+    elseif current_page == 19 then
+        Page19.render(drawPageCounter)
+    elseif current_page == 20 then
+        Page20.render(drawPageCounter)
+    elseif current_page == 21 then
+        Page21.render(drawPageCounter)
+    elseif current_page == 22 then
+        Page22.render(drawPageCounter)
+    elseif current_page == 23 then
+        Page23.render(drawPageCounter)
+    elseif current_page == 24 then
+        Page24.render(drawPageCounter)
+    elseif current_page == 25 then
+        Page25.render(drawPageCounter)
+    elseif current_page == 26 then
+        Page26.render(drawPageCounter)
     end
     -- More pages will be added here
 
@@ -196,8 +328,8 @@ local function render()
     updateAndDrawFPS()
 
     -- Refresh display once after all drawing is complete
-    -- Note: Pages 13 and 14 use double buffer renderer which calls pushDoubleBufferFrame() instead
-    if current_page == 13 or current_page == 14 then
+    -- Note: Pages 13-26 use double buffer renderer which calls pushDoubleBufferFrame() instead
+    if current_page >= 13 and current_page <= 26 then
         vmupro.graphics.pushDoubleBufferFrame()
     else
         vmupro.graphics.refresh()

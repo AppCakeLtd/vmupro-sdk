@@ -172,6 +172,23 @@ function vmupro.graphics.getFrontFramebuffer() end
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
 function vmupro.graphics.getBackBuffer() end
 
+--- @brief Apply mosaic/pixelation effect to a region of the screen
+--- @param x number X coordinate of the top-left corner of the region
+--- @param y number Y coordinate of the top-left corner of the region
+--- @param width number Width of the region in pixels
+--- @param height number Height of the region in pixels
+--- @param mosaic_size number Size of mosaic blocks in pixels (e.g., 2 = 2x2 blocks, 4 = 4x4 blocks)
+--- @usage vmupro.graphics.applyMosaicToScreen(0, 0, 240, 240, 8) -- Pixelate entire screen
+--- @usage vmupro.graphics.applyMosaicToScreen(50, 50, 100, 100, 4) -- Pixelate a region
+--- @usage vmupro.graphics.applyMosaicToScreen(10, 10, 64, 64, 16) -- Heavy pixelation on small area
+--- @note Mosaic size of 1 = no effect
+--- @note Larger mosaic_size values create stronger pixelation effect
+--- @note Operates directly on the screen buffer
+--- @note Useful for transitions, censoring effects, or retro visual effects
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.graphics.applyMosaicToScreen(x, y, width, height, mosaic_size) end
+
 -- Color constants (RGB565 format - since firmware doesn't export them)
 -- These values match the firmware's Colors enum in config.h
 vmupro.graphics.RED = 0xF800           --- Red color (RGB565)
