@@ -1092,6 +1092,852 @@ print("Animation duration:", duration, "seconds at", fps, "FPS")
 
 ---
 
+## Animation Control API
+
+The Animation Control API provides automatic animation playback for spritesheets. Instead of manually tracking frame timing and advancing frames, you can start an animation with specified parameters and let the system handle frame updates automatically.
+
+### vmupro.sprite.playAnimation(sprite, startFrame, endFrame, fps, loop)
+
+Starts playing an animation on a spritesheet sprite with automatic frame advancement.
+
+```lua
+-- Load spritesheet
+local player = vmupro.sprite.newSheet("sprites/player-table-32-32")
+
+-- Sprite position (stored as local variables)
+local player_x = 100
+local player_y = 100
+
+-- Play full animation (frames 0-3) at 10 FPS, looping
+vmupro.sprite.playAnimation(player, 0, 3, 10, true)
+
+-- Play partial animation (frames 1-2) at 15 FPS, looping
+vmupro.sprite.playAnimation(player, 1, 2, 15, true)
+
+-- Play one-shot animation (no loop)
+vmupro.sprite.playAnimation(player, 0, 3, 5, false)
+
+-- In your update loop, call updateAnimations()
+function update()
+    vmupro.sprite.updateAnimations()  -- Advances all playing animations
+end
+
+-- In your render loop, manually draw the sprite with current frame
+function render()
+    -- Get current frame (0-based) and draw it (drawFrame expects 1-based)
+    local current_frame = vmupro.sprite.getCurrentFrame(player)
+    vmupro.sprite.drawFrame(player, current_frame + 1, player_x, player_y, vmupro.sprite.kImageUnflipped)
+end
+```
+
+**Parameters:**
+- `sprite` (table): Sprite or spritesheet object from `vmupro.sprite.newSheet()`
+- `startFrame` (number): First frame of animation (**0-based**)
+- `endFrame` (number): Last frame of animation (**0-based**, inclusive)
+- `fps` (number): Frames per second (animation speed)
+- `loop` (boolean): `true` to loop animation, `false` for one-shot playback
+
+**Returns:** None
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.playAnimation(sprite, ...)`
+- Frame indices are **0-based** (0 = first frame)
+- Animation automatically loops if `loop` is `true`, otherwise stops at `endFrame`
+- Calling `playAnimation()` again restarts the animation from `startFrame`
+- Requires `vmupro.sprite.updateAnimations()` to be called once per frame to advance animations
+- Only works with spritesheet sprites (created with `vmupro.sprite.newSheet()`)
+- **Important:** Animated sprites must be drawn manually using `drawFrame()` with `getCurrentFrame() + 1` (not via scene system)
+
+---
+
+### vmupro.sprite.stopAnimation(sprite)
+
+Stops the currently playing animation and resets it.
+
+```lua
+-- Stop animation
+vmupro.sprite.stopAnimation(player)
+
+-- Animation will no longer advance
+-- Sprite remains at its current frame
+```
+
+**Parameters:**
+- `sprite` (table): Sprite or spritesheet object from `vmupro.sprite.newSheet()`
+
+**Returns:** None
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.stopAnimation(sprite)`
+- Stops animation playback completely
+- Current frame is preserved (not reset)
+- Can be restarted with `playAnimation()`
+- Useful for cleanup when removing sprites from scene
+
+---
+
+### vmupro.sprite.pauseAnimation(sprite)
+
+Pauses the currently playing animation without resetting its state.
+
+```lua
+-- Pause animation
+vmupro.sprite.pauseAnimation(player)
+
+-- Animation state is preserved
+-- Can be resumed later with resumeAnimation()
+```
+
+**Parameters:**
+- `sprite` (table): Sprite or spritesheet object from `vmupro.sprite.newSheet()`
+
+**Returns:** None
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.pauseAnimation(sprite)`
+- Pauses animation at current frame
+- Animation state is preserved (frame index, timing)
+- Does not reset animation progress
+- Use `resumeAnimation()` to continue from current position
+- Useful for pause menus, cutscenes, or conditional animation
+
+---
+
+### vmupro.sprite.resumeAnimation(sprite)
+
+Resumes a paused animation from its current state.
+
+```lua
+-- Resume previously paused animation
+vmupro.sprite.resumeAnimation(player)
+
+-- Animation continues from where it was paused
+```
+
+**Parameters:**
+- `sprite` (table): Sprite or spritesheet object from `vmupro.sprite.newSheet()`
+
+**Returns:** None
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.resumeAnimation(sprite)`
+- Continues animation from paused state
+- No effect if animation was not paused
+- Preserves frame index and animation progress
+- Use with `pauseAnimation()` for pause/resume functionality
+
+---
+
+### vmupro.sprite.isAnimating(sprite)
+
+Checks if the sprite is currently playing an animation (and not paused).
+
+```lua
+-- Check if animation is playing
+if vmupro.sprite.isAnimating(player) then
+    print("Player is animating")
+else
+    print("Player animation stopped or paused")
+end
+
+-- Conditional logic based on animation state
+if not vmupro.sprite.isAnimating(enemy) then
+    -- One-shot animation completed
+    vmupro.sprite.playAnimation(enemy, 0, 3, 10, true)  -- Start looping idle
+end
+```
+
+**Parameters:**
+- `sprite` (table): Sprite or spritesheet object from `vmupro.sprite.newSheet()`
+
+**Returns:**
+- `animating` (boolean): `true` if animation is playing, `false` if stopped or paused
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.isAnimating(sprite)`
+- Returns `false` if animation is paused (use `pauseAnimation()`)
+- Returns `false` if animation is stopped
+- Returns `false` for one-shot animations that have completed
+- Returns `true` for actively playing animations
+- Useful for detecting animation completion or state changes
+
+---
+
+### vmupro.sprite.updateAnimations()
+
+Updates all active sprite animations. Must be called once per frame to advance animation timing.
+
+```lua
+-- In your main update loop
+function update()
+    -- Update all sprite animations
+    vmupro.sprite.updateAnimations()
+
+    -- Other game logic...
+end
+
+-- Multiple sprites animate automatically
+local sprite1 = vmupro.sprite.newSheet("sprites/player-table-32-32")
+local sprite2 = vmupro.sprite.newSheet("sprites/enemy-table-32-32")
+local sprite3 = vmupro.sprite.newSheet("sprites/coin-table-16-16")
+
+vmupro.sprite.playAnimation(sprite1, 0, 3, 10, true)
+vmupro.sprite.playAnimation(sprite2, 0, 3, 5, false)
+vmupro.sprite.playAnimation(sprite3, 1, 2, 15, true)
+
+-- All animations advance automatically when updateAnimations() is called
+
+-- In render loop, manually draw each sprite with its current frame
+function render()
+    local s1_frame = vmupro.sprite.getCurrentFrame(sprite1)
+    local s2_frame = vmupro.sprite.getCurrentFrame(sprite2)
+    local s3_frame = vmupro.sprite.getCurrentFrame(sprite3)
+
+    vmupro.sprite.drawFrame(sprite1, s1_frame + 1, 100, 100, vmupro.sprite.kImageUnflipped)
+    vmupro.sprite.drawFrame(sprite2, s2_frame + 1, 150, 100, vmupro.sprite.kImageUnflipped)
+    vmupro.sprite.drawFrame(sprite3, s3_frame + 1, 200, 100, vmupro.sprite.kImageUnflipped)
+end
+```
+
+**Parameters:** None
+
+**Returns:** None
+
+**Notes:**
+- Must be called once per frame in your update loop
+- Advances all active animations for all sprites
+- Handles frame timing and looping automatically
+- No effect on sprites that are not animating
+- Must be called using module notation: `vmupro.sprite.updateAnimations()`
+- This is a global update function that affects all animating sprites
+- **Important:** After calling `updateAnimations()`, sprites must be drawn manually using `drawFrame()` with `getCurrentFrame() + 1`
+
+---
+
+## Collision Detection API
+
+The Collision Detection API provides functions for setting up collision rectangles on sprites and detecting when sprites overlap. Collision rectangles are defined relative to the sprite's position and can be smaller or larger than the sprite's visual bounds.
+
+### vmupro.sprite.setCollisionRect(sprite, x, y, width, height)
+
+Sets a collision rectangle for a sprite. The rectangle is defined relative to the sprite's position.
+
+```lua
+-- Load sprite
+local player = vmupro.sprite.new("sprites/player")
+
+-- Set collision rect smaller than sprite
+-- For a 32x32 sprite with 20x28 collision area
+vmupro.sprite.setCollisionRect(player, 6, 2, 20, 28)
+
+-- Position sprite
+vmupro.sprite.setPosition(player, 100, 50)
+
+-- The collision rect is now at world position (106, 52) with size 20x28
+```
+
+**Parameters:**
+- `sprite` (table): Sprite object from `vmupro.sprite.new()` or `vmupro.sprite.newSheet()`
+- `x` (number): X offset from sprite position (can be negative)
+- `y` (number): Y offset from sprite position (can be negative)
+- `width` (number): Width of collision rectangle
+- `height` (number): Height of collision rectangle
+
+**Returns:** None
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.setCollisionRect(sprite, ...)`
+- Collision rect is relative to sprite position (not world space)
+- If sprite moves, collision rect moves with it automatically
+- Can be smaller than sprite for tighter collision detection
+- Can be larger than sprite for extended hit areas
+- Negative offsets are allowed (collision rect can extend beyond sprite bounds)
+
+---
+
+### vmupro.sprite.getCollisionRect(sprite)
+
+Gets the collision rectangle relative to the sprite's position.
+
+```lua
+-- Get collision rect (relative coordinates)
+local cx, cy, cw, ch = vmupro.sprite.getCollisionRect(player)
+
+if cx then
+    print("Collision rect:", cx, cy, cw, ch)  -- e.g., "Collision rect: 6 2 20 28"
+else
+    print("No collision rect set")
+end
+```
+
+**Parameters:**
+- `sprite` (table): Sprite object from `vmupro.sprite.new()` or `vmupro.sprite.newSheet()`
+
+**Returns:**
+- `x` (number): X offset from sprite position, or `nil` if no collision rect is set
+- `y` (number): Y offset from sprite position, or `nil` if no collision rect is set
+- `width` (number): Width of collision rectangle, or `nil` if no collision rect is set
+- `height` (number): Height of collision rectangle, or `nil` if no collision rect is set
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.getCollisionRect(sprite)`
+- Returns `nil` if no collision rect has been set
+- Returns relative coordinates (offsets from sprite position)
+- For world-space collision bounds, use `getCollideBounds()` instead
+
+---
+
+### vmupro.sprite.clearCollisionRect(sprite)
+
+Removes the collision rectangle from a sprite.
+
+```lua
+-- Remove collision rect
+vmupro.sprite.clearCollisionRect(player)
+
+-- Collision detection will now use sprite's full bounds (if needed)
+```
+
+**Parameters:**
+- `sprite` (table): Sprite object from `vmupro.sprite.new()` or `vmupro.sprite.newSheet()`
+
+**Returns:** None
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.clearCollisionRect(sprite)`
+- After clearing, `getCollisionRect()` will return `nil`
+- Safe to call even if no collision rect is set
+
+---
+
+### vmupro.sprite.getCollideBounds(sprite)
+
+Gets the world-space collision bounds for collision detection. This combines the sprite's position with the collision rectangle offset.
+
+```lua
+-- Set position and collision rect
+vmupro.sprite.setPosition(player, 100, 50)
+vmupro.sprite.setCollisionRect(player, 6, 2, 20, 28)
+
+-- Get world-space collision bounds
+local bx, by, bw, bh = vmupro.sprite.getCollideBounds(player)
+print("Collision at:", bx, by)  -- "Collision at: 106 52"
+print("Size:", bw, bh)           -- "Size: 20 28"
+
+-- Check collision with another sprite
+local ex, ey, ew, eh = vmupro.sprite.getCollideBounds(enemy)
+
+if ex and bx < ex + ew and bx + bw > ex and
+   by < ey + eh and by + bh > ey then
+    print("Collision detected!")
+end
+```
+
+**Parameters:**
+- `sprite` (table): Sprite object from `vmupro.sprite.new()` or `vmupro.sprite.newSheet()`
+
+**Returns:**
+- `x` (number): World-space X coordinate of collision rect, or `nil` if no collision rect is set
+- `y` (number): World-space Y coordinate of collision rect, or `nil` if no collision rect is set
+- `width` (number): Width of collision rectangle, or `nil` if no collision rect is set
+- `height` (number): Height of collision rectangle, or `nil` if no collision rect is set
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.getCollideBounds(sprite)`
+- Returns `nil` if no collision rect has been set
+- Returns world-space coordinates (sprite position + collision rect offset)
+- Use for AABB (Axis-Aligned Bounding Box) collision detection
+- More efficient than calculating sprite position + offset manually
+
+---
+
+## Collision Groups and Filtering
+
+The Collision Groups API provides a powerful filtering system for managing which sprites should collide with each other. Groups are numbered 1-32 and stored internally as 32-bit bitmasks for efficient filtering. A sprite can belong to multiple groups and can specify which groups it should collide with.
+
+**How It Works:**
+- Each sprite can belong to one or more groups (1-32)
+- Each sprite specifies which groups it collides with
+- Two sprites only collide if sprite A's groups overlap with sprite B's collides-with groups
+- Internally uses bitmasks for efficient group membership checking
+
+### vmupro.sprite.setGroups(sprite, groups)
+
+Sets which collision groups a sprite belongs to.
+
+```lua
+-- Define group constants
+local GROUP_PLAYER = 1
+local GROUP_ENEMY = 2
+local GROUP_PLAYER_BULLET = 3
+local GROUP_ENEMY_BULLET = 4
+
+-- Setup player (belongs to player group)
+local player = vmupro.sprite.new("sprites/player")
+vmupro.sprite.setGroups(player, {GROUP_PLAYER})
+
+-- Setup enemy (belongs to enemy group)
+local enemy = vmupro.sprite.new("sprites/enemy")
+vmupro.sprite.setGroups(enemy, {GROUP_ENEMY})
+
+-- Sprite can belong to multiple groups
+vmupro.sprite.setGroups(boss, {GROUP_ENEMY, 5, 6})  -- Enemy, boss-specific groups
+```
+
+**Parameters:**
+- `sprite` (table): Sprite object from `vmupro.sprite.new()` or `vmupro.sprite.newSheet()`
+- `groups` (table): Array of group numbers (1-32)
+
+**Returns:** None
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.setGroups(sprite, groups)`
+- Groups are numbered 1-32
+- Pass an array/table of group numbers: `{1, 2, 3}`
+- Overwrites previous group membership
+- Internally stored as a 32-bit bitmask for efficiency
+- Empty array `{}` removes sprite from all groups
+
+---
+
+### vmupro.sprite.getGroups(sprite)
+
+Gets which collision groups a sprite belongs to.
+
+```lua
+-- Get player's groups
+local playerGroups = vmupro.sprite.getGroups(player)
+
+-- Returns array like {1} or {2, 5, 6}
+for _, group in ipairs(playerGroups) do
+    print("Player belongs to group:", group)
+end
+```
+
+**Parameters:**
+- `sprite` (table): Sprite object from `vmupro.sprite.new()` or `vmupro.sprite.newSheet()`
+
+**Returns:**
+- `groups` (table): Array of group numbers that this sprite belongs to
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.getGroups(sprite)`
+- Returns an array of group numbers (1-32)
+- Returns empty array `{}` if sprite belongs to no groups
+
+---
+
+### vmupro.sprite.setCollidesWithGroups(sprite, groups)
+
+Sets which collision groups this sprite should collide with.
+
+```lua
+-- Define group constants
+local GROUP_PLAYER = 1
+local GROUP_ENEMY = 2
+local GROUP_PLAYER_BULLET = 3
+local GROUP_ENEMY_BULLET = 4
+
+-- Player collides with enemies and enemy bullets
+local player = vmupro.sprite.new("sprites/player")
+vmupro.sprite.setGroups(player, {GROUP_PLAYER})
+vmupro.sprite.setCollidesWithGroups(player, {GROUP_ENEMY, GROUP_ENEMY_BULLET})
+
+-- Enemy collides with player and player bullets
+local enemy = vmupro.sprite.new("sprites/enemy")
+vmupro.sprite.setGroups(enemy, {GROUP_ENEMY})
+vmupro.sprite.setCollidesWithGroups(enemy, {GROUP_PLAYER, GROUP_PLAYER_BULLET})
+
+-- Player bullet only collides with enemies
+local bullet = vmupro.sprite.new("sprites/bullet")
+vmupro.sprite.setGroups(bullet, {GROUP_PLAYER_BULLET})
+vmupro.sprite.setCollidesWithGroups(bullet, {GROUP_ENEMY})
+
+-- Enemy bullet only collides with player
+local enemyBullet = vmupro.sprite.new("sprites/bullet")
+vmupro.sprite.setGroups(enemyBullet, {GROUP_ENEMY_BULLET})
+vmupro.sprite.setCollidesWithGroups(enemyBullet, {GROUP_PLAYER})
+```
+
+**Parameters:**
+- `sprite` (table): Sprite object from `vmupro.sprite.new()` or `vmupro.sprite.newSheet()`
+- `groups` (table): Array of group numbers (1-32) to collide with
+
+**Returns:** None
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.setCollidesWithGroups(sprite, groups)`
+- Groups are numbered 1-32
+- Pass an array/table of group numbers: `{1, 2, 3}`
+- Overwrites previous collides-with settings
+- Internally stored as a 32-bit bitmask for efficiency
+- Empty array `{}` means sprite doesn't collide with any groups
+
+---
+
+### vmupro.sprite.getCollidesWithGroups(sprite)
+
+Gets which collision groups this sprite collides with.
+
+```lua
+-- Get which groups the player collides with
+local playerCollides = vmupro.sprite.getCollidesWithGroups(player)
+
+-- Returns array like {2, 4} (enemy and enemy bullet groups)
+for _, group in ipairs(playerCollides) do
+    print("Player collides with group:", group)
+end
+```
+
+**Parameters:**
+- `sprite` (table): Sprite object from `vmupro.sprite.new()` or `vmupro.sprite.newSheet()`
+
+**Returns:**
+- `groups` (table): Array of group numbers that this sprite collides with
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.getCollidesWithGroups(sprite)`
+- Returns an array of group numbers (1-32)
+- Returns empty array `{}` if sprite doesn't collide with any groups
+
+---
+
+### Collision Filtering Logic
+
+When checking if two sprites should collide, use this logic:
+
+```lua
+-- Check if sprite A should collide with sprite B
+function shouldCollide(spriteA, spriteB)
+    local groupsA = vmupro.sprite.getGroups(spriteA)
+    local collidesB = vmupro.sprite.getCollidesWithGroups(spriteB)
+
+    -- Check if any of A's groups match B's collides-with groups
+    for _, groupA in ipairs(groupsA) do
+        for _, groupB in ipairs(collidesB) do
+            if groupA == groupB then
+                return true
+            end
+        end
+    end
+
+    return false
+end
+
+-- Two-way collision check (A collides with B OR B collides with A)
+function mutualCollision(spriteA, spriteB)
+    return shouldCollide(spriteA, spriteB) or shouldCollide(spriteB, spriteA)
+end
+```
+
+**Common Use Cases:**
+- **Player vs Enemies**: Player belongs to group 1, enemies belong to group 2. Player collides with group 2, enemies collide with group 1.
+- **Friendly Fire Prevention**: Player bullets (group 3) only collide with enemies (group 2), not with player (group 1).
+- **Layered Gameplay**: Ground enemies (group 2), flying enemies (group 5). Player weapon 1 hits both groups, weapon 2 only hits flying enemies.
+- **Powerup Collection**: Powerups (group 10) collide with player (group 1) but not with enemies or bullets.
+
+---
+
+### Bitmask API (Advanced)
+
+The bitmask API provides direct access to the underlying 32-bit bitmasks for collision groups. This is more efficient than the array-based API when you need to perform bitwise operations or when working with groups programmatically.
+
+**Bitmask Format:**
+- Groups 1-32 are stored as bits 0-31
+- Group 1 = bit 0 = 0x00000001
+- Group 2 = bit 1 = 0x00000002
+- Group 3 = bit 2 = 0x00000004
+- Group 32 = bit 31 = 0x80000000
+
+**Examples:**
+- Groups {1, 3, 5} = 0x00000015 (bits 0, 2, 4 set)
+- Groups {2, 4} = 0x0000000A (bits 1, 3 set)
+
+### vmupro.sprite.setGroupMask(sprite, mask)
+
+Sets collision groups using a 32-bit bitmask.
+
+```lua
+-- Set groups using bitmask
+vmupro.sprite.setGroupMask(player, 0x00000001)  -- Group 1
+vmupro.sprite.setGroupMask(enemy, 0x00000002)   -- Group 2
+vmupro.sprite.setGroupMask(boss, 0x00000012)    -- Groups 2 and 5 (bits 1 and 4)
+
+-- Multiple groups with bitwise OR
+local GROUP_ENEMY = 0x00000002  -- Group 2
+local GROUP_BOSS = 0x00000010   -- Group 5
+vmupro.sprite.setGroupMask(boss, GROUP_ENEMY | GROUP_BOSS)
+```
+
+**Parameters:**
+- `sprite` (table): Sprite object from `vmupro.sprite.new()` or `vmupro.sprite.newSheet()`
+- `mask` (number): 32-bit bitmask where each bit represents a group (bits 0-31 = groups 1-32)
+
+**Returns:** None
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.setGroupMask(sprite, mask)`
+- More efficient than array-based API for programmatic group manipulation
+- Groups 1-32 map to bits 0-31
+- Mask value 0x00000000 removes sprite from all groups
+
+---
+
+### vmupro.sprite.getGroupMask(sprite)
+
+Gets collision groups as a 32-bit bitmask.
+
+```lua
+-- Get group mask
+local mask = vmupro.sprite.getGroupMask(player)
+
+-- Check if sprite belongs to specific group (bitwise AND)
+local GROUP_PLAYER = 0x00000001  -- Group 1
+if (mask & GROUP_PLAYER) ~= 0 then
+    print("Player belongs to player group")
+end
+
+-- Check multiple groups
+if (mask & 0x0000000F) ~= 0 then  -- Groups 1-4
+    print("Belongs to at least one of groups 1-4")
+end
+```
+
+**Parameters:**
+- `sprite` (table): Sprite object from `vmupro.sprite.new()` or `vmupro.sprite.newSheet()`
+
+**Returns:**
+- `mask` (number): 32-bit bitmask representing group membership
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.getGroupMask(sprite)`
+- Returns 0x00000000 if sprite belongs to no groups
+- Use bitwise operations (&, |, ~) to check or combine groups
+
+---
+
+### vmupro.sprite.setCollidesWithGroupsMask(sprite, mask)
+
+Sets which collision groups this sprite collides with using a 32-bit bitmask.
+
+```lua
+-- Define group constants
+local GROUP_PLAYER = 0x00000001  -- Group 1
+local GROUP_ENEMY = 0x00000002   -- Group 2
+local GROUP_PLAYER_BULLET = 0x00000004  -- Group 3
+local GROUP_ENEMY_BULLET = 0x00000008   -- Group 4
+
+-- Player collides with enemies and enemy bullets
+vmupro.sprite.setCollidesWithGroupsMask(player, GROUP_ENEMY | GROUP_ENEMY_BULLET)
+
+-- Enemy collides with player and player bullets
+vmupro.sprite.setCollidesWithGroupsMask(enemy, GROUP_PLAYER | GROUP_PLAYER_BULLET)
+
+-- Player bullet only collides with enemies
+vmupro.sprite.setCollidesWithGroupsMask(bullet, GROUP_ENEMY)
+
+-- Collides with all groups
+vmupro.sprite.setCollidesWithGroupsMask(sprite, 0xFFFFFFFF)
+```
+
+**Parameters:**
+- `sprite` (table): Sprite object from `vmupro.sprite.new()` or `vmupro.sprite.newSheet()`
+- `mask` (number): 32-bit bitmask where each bit represents a group to collide with
+
+**Returns:** None
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.setCollidesWithGroupsMask(sprite, mask)`
+- More efficient for programmatic collision filtering
+- Mask value 0x00000000 means sprite doesn't collide with any groups
+- Mask value 0xFFFFFFFF means sprite collides with all groups
+
+---
+
+### vmupro.sprite.getCollidesWithGroupsMask(sprite)
+
+Gets which collision groups this sprite collides with as a 32-bit bitmask.
+
+```lua
+-- Get collides-with mask
+local mask = vmupro.sprite.getCollidesWithGroupsMask(player)
+
+-- Check if sprite collides with specific group
+local GROUP_ENEMY = 0x00000002  -- Group 2
+if (mask & GROUP_ENEMY) ~= 0 then
+    print("Player collides with enemies")
+end
+
+-- Check collision filtering between two sprites (efficient bitmask version)
+function shouldCollide(spriteA, spriteB)
+    local groupsA = vmupro.sprite.getGroupMask(spriteA)
+    local collidesB = vmupro.sprite.getCollidesWithGroupsMask(spriteB)
+    return (groupsA & collidesB) ~= 0
+end
+```
+
+**Parameters:**
+- `sprite` (table): Sprite object from `vmupro.sprite.new()` or `vmupro.sprite.newSheet()`
+
+**Returns:**
+- `mask` (number): 32-bit bitmask representing which groups this sprite collides with
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.getCollidesWithGroupsMask(sprite)`
+- Returns 0x00000000 if sprite doesn't collide with any groups
+- Efficient collision filtering: `(groupsA & collidesWithB) != 0`
+
+---
+
+## Collision Query Functions
+
+The collision query API provides functions to find sprites based on spatial queries and collision detection.
+
+### vmupro.sprite.overlappingSprites(sprite)
+
+Returns an array of all sprites that are currently overlapping with the given sprite.
+
+```lua
+-- Check what player is colliding with
+local collisions = vmupro.sprite.overlappingSprites(player)
+for i, collision in ipairs(collisions) do
+    local other_sprite = collision.id
+    -- Handle collision with other_sprite
+    if other_sprite == enemy then
+        -- Player hit enemy
+        takeDamage()
+    elseif other_sprite == coin then
+        -- Player collected coin
+        collectCoin(coin)
+    end
+end
+
+-- Find all enemies touching a bullet
+local hits = vmupro.sprite.overlappingSprites(bullet)
+if #hits > 0 then
+    -- Bullet hit something, destroy it
+    vmupro.sprite.free(bullet)
+    for i, hit in ipairs(hits) do
+        damageEnemy(hit.id)
+    end
+end
+```
+
+**Parameters:**
+- `sprite` (table): Sprite object from `vmupro.sprite.new()` or `vmupro.sprite.newSheet()`
+
+**Returns:**
+- `collisions` (table): Array of collision results, each containing `{id = sprite_handle}`
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.overlappingSprites(sprite)`
+- Respects collision groups/masks (only returns sprites that should collide based on group filtering)
+- Only checks sprites that are in the scene and visible
+- Uses collision rectangles if set via `setCollisionRect()`, otherwise uses sprite bounds
+- Returns an empty table `{}` if no overlapping sprites found
+- Each result contains `id` field with the sprite handle for use with other sprite functions
+
+---
+
+### vmupro.sprite.querySpritesAtPoint(x, y)
+
+Returns an array of all sprites at a specific point in world space.
+
+```lua
+-- Check what's under the mouse cursor
+local mouse_x, mouse_y = getMousePosition()
+local sprites_at_cursor = vmupro.sprite.querySpritesAtPoint(mouse_x, mouse_y)
+if #sprites_at_cursor > 0 then
+    -- Found sprite(s) under cursor
+    local top_sprite = sprites_at_cursor[1].id
+    highlightSprite(top_sprite)
+end
+
+-- Check for ground at player's feet
+local ground_sprites = vmupro.sprite.querySpritesAtPoint(player_x + 16, player_y + 32)
+local is_grounded = #ground_sprites > 0
+
+-- Find all interactive objects at a specific location
+local interact_x, interact_y = 120, 80
+local objects = vmupro.sprite.querySpritesAtPoint(interact_x, interact_y)
+for i, obj in ipairs(objects) do
+    if obj.id == door then
+        -- Can interact with door
+        showInteractPrompt()
+    end
+end
+```
+
+**Parameters:**
+- `x` (number): X coordinate in world space
+- `y` (number): Y coordinate in world space
+
+**Returns:**
+- `sprites` (table): Array of sprites at the point, each containing `{id = sprite_handle}`
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.querySpritesAtPoint(x, y)`
+- Does NOT respect collision groups (returns all sprites at that point regardless of groups)
+- Uses collision rectangles if set, otherwise uses sprite bounds
+- Returns an empty table `{}` if no sprites found at the point
+- Useful for raycasting, mouse picking, or point-based collision checks
+
+---
+
+### vmupro.sprite.querySpritesInRect(x, y, width, height)
+
+Returns an array of all sprites intersecting a rectangular region.
+
+```lua
+-- Find all sprites in an explosion radius
+local explosion_x, explosion_y = 100, 100
+local explosion_size = 64
+local affected = vmupro.sprite.querySpritesInRect(
+    explosion_x - explosion_size/2,
+    explosion_y - explosion_size/2,
+    explosion_size,
+    explosion_size
+)
+for i, sprite_data in ipairs(affected) do
+    applyExplosionDamage(sprite_data.id, explosion_x, explosion_y)
+end
+
+-- Find all enemies in a room
+local room_x, room_y = 0, 0
+local room_width, room_height = 240, 160
+local enemies_in_room = vmupro.sprite.querySpritesInRect(room_x, room_y, room_width, room_height)
+print("Enemies in room: " .. #enemies_in_room)
+
+-- Area-of-effect attack
+local aoe_sprites = vmupro.sprite.querySpritesInRect(attack_x, attack_y, attack_w, attack_h)
+for i, sprite_data in ipairs(aoe_sprites) do
+    if isEnemy(sprite_data.id) then
+        damageEnemy(sprite_data.id, aoe_damage)
+    end
+end
+```
+
+**Parameters:**
+- `x` (number): X coordinate of top-left corner
+- `y` (number): Y coordinate of top-left corner
+- `width` (number): Width of query rectangle
+- `height` (number): Height of query rectangle
+
+**Returns:**
+- `sprites` (table): Array of sprites intersecting the rectangle, each containing `{id = sprite_handle}`
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.querySpritesInRect(x, y, width, height)`
+- Does NOT respect collision groups (returns all sprites in that region regardless of groups)
+- Uses collision rectangles if set, otherwise uses sprite bounds
+- Returns an empty table `{}` if no sprites found in the rectangle
+- Useful for area-of-effect attacks, spatial queries, or region-based game logic
+- A sprite is included if any part of it intersects the query rectangle
+
+---
+
+## Visual Effects Functions
+
 ### vmupro.sprite.drawMosaic(sprite, x, y, mosaic_size, flags)
 
 Draws a sprite with mosaic/pixelation effect applied.

@@ -498,3 +498,280 @@ function vmupro.sprite.getCenter(sprite) end
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
 function vmupro.sprite.getBounds(sprite) end
+
+--- @brief Start playing an animation on a spritesheet with automatic frame advancement
+--- @param sprite SpritesheetHandle Spritesheet object from vmupro.sprite.newSheet()
+--- @param startFrame number First frame of animation (0-based)
+--- @param endFrame number Last frame of animation (0-based, inclusive)
+--- @param fps number Frames per second (animation speed)
+--- @param loop boolean True to loop animation, false for one-shot playback
+--- @usage vmupro.sprite.playAnimation(player, 0, 3, 10, true) -- Play frames 0-3 at 10 FPS, looping
+--- @usage vmupro.sprite.playAnimation(explosion, 0, 7, 15, false) -- One-shot animation
+--- @note Frame indices are 0-based (0 = first frame)
+--- @note Animation automatically loops if loop is true, otherwise stops at endFrame
+--- @note Calling playAnimation() again restarts the animation from startFrame
+--- @note Requires vmupro.sprite.updateAnimations() to be called once per frame
+--- @note Only works with spritesheet sprites (created with vmupro.sprite.newSheet())
+--- @note IMPORTANT: Animated sprites must be drawn manually using drawFrame() with getCurrentFrame() + 1
+--- @note Do NOT use scene system (add/drawAll) with animated sprites - manual drawing required
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.playAnimation(sprite, startFrame, endFrame, fps, loop) end
+
+--- @brief Stop the currently playing animation
+--- @param sprite SpritesheetHandle Spritesheet object from vmupro.sprite.newSheet()
+--- @usage vmupro.sprite.stopAnimation(player)
+--- @note Stops animation playback completely
+--- @note Current frame is preserved (not reset)
+--- @note Can be restarted with playAnimation()
+--- @note Useful for cleanup when removing sprites from scene
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.stopAnimation(sprite) end
+
+--- @brief Pause the currently playing animation without resetting state
+--- @param sprite SpritesheetHandle Spritesheet object from vmupro.sprite.newSheet()
+--- @usage vmupro.sprite.pauseAnimation(player)
+--- @note Pauses animation at current frame
+--- @note Animation state is preserved (frame index, timing)
+--- @note Does not reset animation progress
+--- @note Use resumeAnimation() to continue from current position
+--- @note Useful for pause menus, cutscenes, or conditional animation
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.pauseAnimation(sprite) end
+
+--- @brief Resume a paused animation from its current state
+--- @param sprite SpritesheetHandle Spritesheet object from vmupro.sprite.newSheet()
+--- @usage vmupro.sprite.resumeAnimation(player)
+--- @note Continues animation from paused state
+--- @note No effect if animation was not paused
+--- @note Preserves frame index and animation progress
+--- @note Use with pauseAnimation() for pause/resume functionality
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.resumeAnimation(sprite) end
+
+--- @brief Check if sprite is currently playing an animation (and not paused)
+--- @param sprite SpritesheetHandle Spritesheet object from vmupro.sprite.newSheet()
+--- @return boolean True if animation is playing, false if stopped or paused
+--- @usage if vmupro.sprite.isAnimating(player) then print("Animating") end
+--- @usage if not vmupro.sprite.isAnimating(enemy) then vmupro.sprite.playAnimation(enemy, 0, 3, 10, true) end
+--- @note Returns false if animation is paused
+--- @note Returns false if animation is stopped
+--- @note Returns false for one-shot animations that have completed
+--- @note Returns true for actively playing animations
+--- @note Useful for detecting animation completion or state changes
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.isAnimating(sprite) end
+
+--- @brief Update all active sprite animations (must be called once per frame)
+--- @usage vmupro.sprite.updateAnimations()
+--- @note Must be called once per frame in your update loop
+--- @note Advances all active animations for all sprites
+--- @note Handles frame timing and looping automatically
+--- @note No effect on sprites that are not animating
+--- @note This is a global update function that affects all animating sprites
+--- @note IMPORTANT: After calling updateAnimations(), draw sprites manually using drawFrame() with getCurrentFrame() + 1
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.updateAnimations() end
+
+--- @brief Set collision rectangle for a sprite (relative to sprite position)
+--- @param sprite SpriteHandle|SpritesheetHandle Sprite or spritesheet object
+--- @param x number X offset from sprite position (can be negative)
+--- @param y number Y offset from sprite position (can be negative)
+--- @param width number Width of collision rectangle
+--- @param height number Height of collision rectangle
+--- @usage vmupro.sprite.setCollisionRect(player, 6, 2, 20, 28) -- 20x28 collision rect, offset by (6, 2)
+--- @usage vmupro.sprite.setCollisionRect(enemy, 0, 0, 32, 32) -- Full sprite collision
+--- @note Collision rect is relative to sprite position (not world space)
+--- @note If sprite moves, collision rect moves with it automatically
+--- @note Can be smaller than sprite for tighter collision detection
+--- @note Can be larger than sprite for extended hit areas
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.setCollisionRect(sprite, x, y, width, height) end
+
+--- @brief Get collision rectangle relative to sprite position
+--- @param sprite SpriteHandle|SpritesheetHandle Sprite or spritesheet object
+--- @return number|nil, number|nil, number|nil, number|nil X offset, Y offset, width, height (or nil if no collision rect set)
+--- @usage local cx, cy, cw, ch = vmupro.sprite.getCollisionRect(player)
+--- @usage if cx then print("Collision rect: " .. cx .. "," .. cy .. " " .. cw .. "x" .. ch) end
+--- @note Returns nil if no collision rect has been set
+--- @note Returns relative coordinates (offsets from sprite position)
+--- @note For world-space collision bounds, use getCollideBounds() instead
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.getCollisionRect(sprite) end
+
+--- @brief Remove collision rectangle from sprite
+--- @param sprite SpriteHandle|SpritesheetHandle Sprite or spritesheet object
+--- @usage vmupro.sprite.clearCollisionRect(player)
+--- @note After clearing, getCollisionRect() will return nil
+--- @note Safe to call even if no collision rect is set
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.clearCollisionRect(sprite) end
+
+--- @brief Get world-space collision bounds for collision detection
+--- @param sprite SpriteHandle|SpritesheetHandle Sprite or spritesheet object
+--- @return number|nil, number|nil, number|nil, number|nil World X, world Y, width, height (or nil if no collision rect set)
+--- @usage local bx, by, bw, bh = vmupro.sprite.getCollideBounds(player)
+--- @usage if bx then print("Collision at: " .. bx .. "," .. by) end
+--- @note Returns nil if no collision rect has been set
+--- @note Returns world-space coordinates (sprite position + collision rect offset)
+--- @note Use for AABB (Axis-Aligned Bounding Box) collision detection
+--- @note More efficient than calculating sprite position + offset manually
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.getCollideBounds(sprite) end
+
+--- @brief Set which collision groups a sprite belongs to
+--- @param sprite SpriteHandle|SpritesheetHandle Sprite or spritesheet object
+--- @param groups table Array of group numbers (1-32)
+--- @usage vmupro.sprite.setGroups(player, {1}) -- Player belongs to group 1
+--- @usage vmupro.sprite.setGroups(enemy, {2, 5}) -- Enemy belongs to groups 2 and 5
+--- @note Groups are numbered 1-32
+--- @note Pass an array/table of group numbers: {1, 2, 3}
+--- @note Overwrites previous group membership
+--- @note Internally stored as a 32-bit bitmask for efficiency
+--- @note Empty array {} removes sprite from all groups
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.setGroups(sprite, groups) end
+
+--- @brief Get which collision groups a sprite belongs to
+--- @param sprite SpriteHandle|SpritesheetHandle Sprite or spritesheet object
+--- @return table Array of group numbers that this sprite belongs to
+--- @usage local groups = vmupro.sprite.getGroups(player)
+--- @usage for _, group in ipairs(groups) do print("Group: " .. group) end
+--- @note Returns an array of group numbers (1-32)
+--- @note Returns empty array {} if sprite belongs to no groups
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.getGroups(sprite) end
+
+--- @brief Set which collision groups this sprite collides with
+--- @param sprite SpriteHandle|SpritesheetHandle Sprite or spritesheet object
+--- @param groups table Array of group numbers (1-32) to collide with
+--- @usage vmupro.sprite.setCollidesWithGroups(player, {2, 4}) -- Player collides with groups 2 and 4
+--- @usage vmupro.sprite.setCollidesWithGroups(bullet, {2}) -- Bullet only collides with group 2
+--- @note Groups are numbered 1-32
+--- @note Pass an array/table of group numbers: {1, 2, 3}
+--- @note Overwrites previous collides-with settings
+--- @note Internally stored as a 32-bit bitmask for efficiency
+--- @note Empty array {} means sprite doesn't collide with any groups
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.setCollidesWithGroups(sprite, groups) end
+
+--- @brief Get which collision groups this sprite collides with
+--- @param sprite SpriteHandle|SpritesheetHandle Sprite or spritesheet object
+--- @return table Array of group numbers that this sprite collides with
+--- @usage local collides = vmupro.sprite.getCollidesWithGroups(player)
+--- @usage for _, group in ipairs(collides) do print("Collides with: " .. group) end
+--- @note Returns an array of group numbers (1-32)
+--- @note Returns empty array {} if sprite doesn't collide with any groups
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.getCollidesWithGroups(sprite) end
+
+--- @brief Set collision groups using a 32-bit bitmask
+--- @param sprite SpriteHandle|SpritesheetHandle Sprite or spritesheet object
+--- @param mask number 32-bit bitmask where each bit represents a group (bits 0-31 = groups 1-32)
+--- @usage vmupro.sprite.setGroupMask(player, 0x00000001) -- Group 1
+--- @usage vmupro.sprite.setGroupMask(enemy, 0x00000002) -- Group 2
+--- @usage vmupro.sprite.setGroupMask(boss, 0x00000012) -- Groups 2 and 5
+--- @note Groups 1-32 map to bits 0-31
+--- @note More efficient than array-based API for programmatic group manipulation
+--- @note Mask value 0x00000000 removes sprite from all groups
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.setGroupMask(sprite, mask) end
+
+--- @brief Get collision groups as a 32-bit bitmask
+--- @param sprite SpriteHandle|SpritesheetHandle Sprite or spritesheet object
+--- @return number 32-bit bitmask representing group membership
+--- @usage local mask = vmupro.sprite.getGroupMask(player)
+--- @usage if (mask & 0x00000001) ~= 0 then print("Belongs to group 1") end
+--- @note Returns 0x00000000 if sprite belongs to no groups
+--- @note Use bitwise operations (&, |, ~) to check or combine groups
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.getGroupMask(sprite) end
+
+--- @brief Set which collision groups this sprite collides with using a bitmask
+--- @param sprite SpriteHandle|SpritesheetHandle Sprite or spritesheet object
+--- @param mask number 32-bit bitmask where each bit represents a group to collide with
+--- @usage vmupro.sprite.setCollidesWithGroupsMask(player, 0x0000000A) -- Groups 2 and 4
+--- @usage vmupro.sprite.setCollidesWithGroupsMask(bullet, 0x00000002) -- Only group 2
+--- @note More efficient for programmatic collision filtering
+--- @note Mask value 0x00000000 means sprite doesn't collide with any groups
+--- @note Mask value 0xFFFFFFFF means sprite collides with all groups
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.setCollidesWithGroupsMask(sprite, mask) end
+
+--- @brief Get which collision groups this sprite collides with as a bitmask
+--- @param sprite SpriteHandle|SpritesheetHandle Sprite or spritesheet object
+--- @return number 32-bit bitmask representing which groups this sprite collides with
+--- @usage local mask = vmupro.sprite.getCollidesWithGroupsMask(player)
+--- @usage if (mask & 0x00000002) ~= 0 then print("Collides with group 2") end
+--- @note Returns 0x00000000 if sprite doesn't collide with any groups
+--- @note Efficient collision filtering: (groupsA & collidesWithB) != 0
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.getCollidesWithGroupsMask(sprite) end
+
+--- Returns an array of all sprites that are currently overlapping with the given sprite.
+--- @param sprite SpriteHandle|SpritesheetHandle Sprite object from vmupro.sprite.new() or vmupro.sprite.newSheet()
+--- @return table Array of collision results, each containing {id = sprite_handle}
+--- @usage local collisions = vmupro.sprite.overlappingSprites(player)
+--- @usage for i, collision in ipairs(collisions) do
+--- @usage     local other = collision.id
+--- @usage     if other == enemy then takeDamage() end
+--- @usage end
+--- @note Respects collision groups/masks (only returns sprites that should collide)
+--- @note Only checks sprites that are in the scene and visible
+--- @note Uses collision rectangles if set, otherwise uses sprite bounds
+--- @note Returns empty table {} if no overlapping sprites found
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.overlappingSprites(sprite) end
+
+--- Returns an array of all sprites at a specific point in world space.
+--- @param x number X coordinate in world space
+--- @param y number Y coordinate in world space
+--- @return table Array of sprites at the point, each containing {id = sprite_handle}
+--- @usage local sprites = vmupro.sprite.querySpritesAtPoint(120, 80)
+--- @usage if #sprites > 0 then
+--- @usage     local top_sprite = sprites[1].id
+--- @usage     highlightSprite(top_sprite)
+--- @usage end
+--- @note Does NOT respect collision groups (returns all sprites at that point)
+--- @note Uses collision rectangles if set, otherwise uses sprite bounds
+--- @note Returns empty table {} if no sprites found at the point
+--- @note Useful for raycasting, mouse picking, or point-based collision checks
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.querySpritesAtPoint(x, y) end
+
+--- Returns an array of all sprites intersecting a rectangular region.
+--- @param x number X coordinate of top-left corner
+--- @param y number Y coordinate of top-left corner
+--- @param width number Width of query rectangle
+--- @param height number Height of query rectangle
+--- @return table Array of sprites intersecting the rectangle, each containing {id = sprite_handle}
+--- @usage local sprites = vmupro.sprite.querySpritesInRect(100, 100, 64, 64)
+--- @usage for i, sprite_data in ipairs(sprites) do
+--- @usage     applyExplosionDamage(sprite_data.id)
+--- @usage end
+--- @note Does NOT respect collision groups (returns all sprites in that region)
+--- @note Uses collision rectangles if set, otherwise uses sprite bounds
+--- @note Returns empty table {} if no sprites found in the rectangle
+--- @note A sprite is included if any part of it intersects the query rectangle
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.querySpritesInRect(x, y, width, height) end

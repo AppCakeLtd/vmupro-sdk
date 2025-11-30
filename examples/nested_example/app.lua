@@ -33,12 +33,17 @@ import "pages/page23"
 import "pages/page24"
 import "pages/page25"
 import "pages/page26"
+import "pages/page27"
+import "pages/page28"
+import "pages/page29"
+import "pages/page30"
+import "pages/page31"
 
 -- Application state
 local app_running = true
 local current_page = 1
 local previous_page = 1
-local total_pages = 26 -- Will increment as we add more test pages
+local total_pages = 31 -- Will increment as we add more test pages
 
 -- Frame timing control
 local target_frame_time_us = 16666 -- Target 60 FPS (16.666ms in microseconds)
@@ -134,6 +139,16 @@ local function update()
         Page25.update()
     elseif current_page == 26 then
         Page26.update()
+    elseif current_page == 27 then
+        Page27.update()
+    elseif current_page == 28 then
+        Page28.update()
+    elseif current_page == 29 then
+        Page29.update()
+    elseif current_page == 30 then
+        Page30.update()
+    elseif current_page == 31 then
+        Page31.update()
     end
 
     -- Special handling for page 6 (button test page) - require MODE button
@@ -175,6 +190,16 @@ local function update()
                     Page25.exit()
                 elseif current_page == 26 then
                     Page26.exit()
+                elseif current_page == 27 then
+                    Page27.exit()
+                elseif current_page == 28 then
+                    Page28.exit()
+                elseif current_page == 29 then
+                    Page29.exit()
+                elseif current_page == 30 then
+                    Page30.exit()
+                elseif current_page == 31 then
+                    Page31.exit()
                 end
                 previous_page = current_page
                 current_page = current_page - 1
@@ -218,6 +243,16 @@ local function update()
                     Page25.exit()
                 elseif current_page == 26 then
                     Page26.exit()
+                elseif current_page == 27 then
+                    Page27.exit()
+                elseif current_page == 28 then
+                    Page28.exit()
+                elseif current_page == 29 then
+                    Page29.exit()
+                elseif current_page == 30 then
+                    Page30.exit()
+                elseif current_page == 31 then
+                    Page31.exit()
                 end
                 previous_page = current_page
                 current_page = current_page + 1
@@ -260,6 +295,16 @@ local function update()
                 Page25.exit()
             elseif current_page == 26 then
                 Page26.exit()
+            elseif current_page == 27 then
+                Page27.exit()
+            elseif current_page == 28 then
+                Page28.exit()
+            elseif current_page == 29 then
+                Page29.exit()
+            elseif current_page == 30 then
+                Page30.exit()
+            elseif current_page == 31 then
+                Page31.exit()
             end
             vmupro.system.log(vmupro.system.LOG_INFO, "SDKTest", "Exit requested")
             app_running = false
@@ -321,6 +366,16 @@ local function render()
         Page25.render(drawPageCounter)
     elseif current_page == 26 then
         Page26.render(drawPageCounter)
+    elseif current_page == 27 then
+        Page27.render(drawPageCounter)
+    elseif current_page == 28 then
+        Page28.render(drawPageCounter)
+    elseif current_page == 29 then
+        Page29.render(drawPageCounter)
+    elseif current_page == 30 then
+        Page30.render(drawPageCounter)
+    elseif current_page == 31 then
+        Page31.render(drawPageCounter)
     end
     -- More pages will be added here
 
@@ -328,8 +383,8 @@ local function render()
     updateAndDrawFPS()
 
     -- Refresh display once after all drawing is complete
-    -- Note: Pages 13-26 use double buffer renderer which calls pushDoubleBufferFrame() instead
-    if current_page >= 13 and current_page <= 26 then
+    -- Note: Pages 13-31 use double buffer renderer which calls pushDoubleBufferFrame() instead
+    if current_page >= 13 and current_page <= 31 then
         vmupro.graphics.pushDoubleBufferFrame()
     else
         vmupro.graphics.refresh()

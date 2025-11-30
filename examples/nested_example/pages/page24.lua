@@ -14,18 +14,18 @@ local sprites_loaded = false
 local load_error = false
 
 -- Z-index cycling
-local cycle_interval = 1000000  -- 1 second
+local cycle_interval = 1000000 -- 1 second
 local last_cycle_time = 0
-local cycle_state = 0  -- 0-5 for different Z-index arrangements
+local cycle_state = 0          -- 0-5 for different Z-index arrangements
 
 -- Z-index configurations (6 permutations of 3 sprites)
 local z_configs = {
-    {1, 2, 3},  -- S1=1, S2=2, S3=3 (S1 back, S3 front)
-    {1, 3, 2},  -- S1=1, S3=2, S2=3 (S1 back, S2 front)
-    {2, 1, 3},  -- S2=1, S1=2, S3=3 (S2 back, S3 front)
-    {2, 3, 1},  -- S3=1, S1=2, S2=3 (S3 back, S2 front)
-    {3, 1, 2},  -- S2=1, S3=2, S1=3 (S2 back, S1 front)
-    {3, 2, 1}   -- S3=1, S2=2, S1=3 (S3 back, S1 front)
+    { 1, 2, 3 }, -- S1=1, S2=2, S3=3 (S1 back, S3 front)
+    { 1, 3, 2 }, -- S1=1, S3=2, S2=3 (S1 back, S2 front)
+    { 2, 1, 3 }, -- S2=1, S1=2, S3=3 (S2 back, S3 front)
+    { 2, 3, 1 }, -- S3=1, S1=2, S2=3 (S3 back, S2 front)
+    { 3, 1, 2 }, -- S2=1, S3=2, S1=3 (S2 back, S1 front)
+    { 3, 2, 1 } -- S3=1, S2=2, S1=3 (S3 back, S1 front)
 }
 
 --- @brief Load sprites
@@ -164,7 +164,7 @@ function Page24.render(drawPageCounter)
     vmupro.graphics.drawText("Drawing order control", 10, 40, vmupro.graphics.GREY, vmupro.graphics.BLACK)
 
     -- Navigation hint
-    vmupro.graphics.drawText("< Prev | Next >", 75, 225, vmupro.graphics.GREY, vmupro.graphics.BLACK)
+    vmupro.graphics.drawText("< Prev", 10, 225, vmupro.graphics.GREY, vmupro.graphics.BLACK)
 
     -- Page counter
     drawPageCounter()

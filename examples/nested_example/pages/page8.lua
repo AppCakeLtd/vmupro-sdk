@@ -4,8 +4,9 @@
 Page8 = {}
 
 -- Track last log time
-local last_log_time = 0
+local last_log_time = nil
 local log_interval = 5000000  -- Log once every 5 seconds (in microseconds)
+local page8_initialized = false
 
 -- Track memory update time
 local last_mem_update = 0
@@ -15,6 +16,13 @@ local cached_mem_limit = 0
 
 --- @brief Render Page 8: System - Logging & Info
 function Page8.render(drawPageCounter)
+    -- Initialize on first render
+    if not page8_initialized then
+        last_log_time = vmupro.system.getTimeUs()
+        last_mem_update = vmupro.system.getTimeUs()
+        page8_initialized = true
+    end
+
     -- Clear screen
     vmupro.graphics.clear(vmupro.graphics.BLACK)
 
@@ -43,7 +51,10 @@ function Page8.render(drawPageCounter)
 
     local mem_usage_kb = math.floor(cached_mem_usage / 1024)
     local mem_limit_kb = math.floor(cached_mem_limit / 1024)
-    local mem_percent = math.floor((cached_mem_usage / cached_mem_limit) * 100)
+    local mem_percent = 0
+    if cached_mem_limit > 0 then
+        mem_percent = math.floor((cached_mem_usage / cached_mem_limit) * 100)
+    end
 
     vmupro.graphics.drawText("Memory:", 10, y_pos, vmupro.graphics.ORANGE, vmupro.graphics.BLACK)
     y_pos = y_pos + 14

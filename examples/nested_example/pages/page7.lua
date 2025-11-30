@@ -30,7 +30,7 @@ function Page7.render(drawPageCounter)
     local current_time = vmupro.system.getTimeUs()
     vmupro.graphics.drawText("Current time (us):", 10, y_pos, vmupro.graphics.ORANGE, vmupro.graphics.BLACK)
     y_pos = y_pos + 14
-    vmupro.graphics.drawText(string.format("%d", current_time), 10, y_pos, vmupro.graphics.YELLOW, vmupro.graphics.BLACK)
+    vmupro.graphics.drawText(string.format("%.0f", current_time), 10, y_pos, vmupro.graphics.YELLOW, vmupro.graphics.BLACK)
     y_pos = y_pos + 20
 
     -- Test: Elapsed time counter
