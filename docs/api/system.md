@@ -69,7 +69,9 @@ vmupro.system.log(vmupro.system.LOG_INFO, "Performance", "Operation took " .. el
 **Parameters:** None
 
 **Returns:**
-- `time` (number): Time in microseconds since system boot
+- `time` (number): Time in microseconds since system boot. Returns a Lua number (double-precision float) which can represent large values without integer overflow.
+
+**Note:** The return value is a Lua number, not an integer. This allows it to accurately represent very large microsecond values (uptime of days or weeks) without overflow. You can safely use it in arithmetic operations and format it with `string.format()` using `%f` or by concatenating with strings.
 
 ---
 

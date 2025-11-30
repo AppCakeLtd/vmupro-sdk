@@ -37,11 +37,12 @@ function vmupro.system.setLogLevel(level) end
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
 function vmupro.system.sleep(ms) end
 
---- @brief Get current time in microseconds
---- @return number Current time in microseconds
+--- @brief Get current time in microseconds since system boot
+--- @return number Current time in microseconds (Lua number/double, not integer - handles large values without overflow)
 --- @usage local time = vmupro.system.getTimeUs()
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
+---       Returns a Lua number (double-precision float) to prevent integer overflow.
 function vmupro.system.getTimeUs() end
 
 --- @brief Delay for specified microseconds
