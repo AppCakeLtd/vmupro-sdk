@@ -36,6 +36,19 @@ local function loadSprites()
 
     if not sprite1_handle or not sprite2_handle or not sprite3_handle then
         vmupro.system.log(vmupro.system.LOG_ERROR, "Page31", "Failed to load sprites")
+        -- Clean up any sprites that were successfully loaded
+        if sprite1_handle then
+            vmupro.sprite.free(sprite1_handle)
+            sprite1_handle = nil
+        end
+        if sprite2_handle then
+            vmupro.sprite.free(sprite2_handle)
+            sprite2_handle = nil
+        end
+        if sprite3_handle then
+            vmupro.sprite.free(sprite3_handle)
+            sprite3_handle = nil
+        end
         load_error = true
         return
     end
@@ -113,6 +126,7 @@ function Page31.exit()
         sprite3_handle = nil
     end
     sprites_loaded = false
+    load_error = false
     vmupro.system.log(vmupro.system.LOG_INFO, "Page31", "overlappingSprites demo cleaned up")
 end
 
@@ -168,7 +182,7 @@ function Page31.render(drawPageCounter)
     end
 
     -- Navigation hint
-    vmupro.graphics.drawText("< Prev", 75, 225, vmupro.graphics.GREY, vmupro.graphics.BLACK)
+    vmupro.graphics.drawText("< Prev | Next >", 75, 225, vmupro.graphics.GREY, vmupro.graphics.BLACK)
 
     -- Page counter
     drawPageCounter()

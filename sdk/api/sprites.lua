@@ -129,9 +129,20 @@ function vmupro.sprite.free(sprite) end
 --- @param y number Y coordinate
 --- @usage vmupro.sprite.setPosition(my_sprite, 100, 50)
 --- @note Sprites store their position internally for later rendering
+--- @note Also available as vmupro.sprite.moveTo() (alias)
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
 function vmupro.sprite.setPosition(sprite, x, y) end
+
+--- @brief Alias for setPosition() - sets sprite position to absolute coordinates
+--- @param sprite SpriteHandle Sprite object from vmupro.sprite.new()
+--- @param x number X coordinate
+--- @param y number Y coordinate
+--- @usage vmupro.sprite.moveTo(my_sprite, 100, 50)
+--- @note This is an alias for setPosition() - both functions do exactly the same thing
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.moveTo(sprite, x, y) end
 
 --- @brief Move sprite by relative offset from current position
 --- @param sprite SpriteHandle Sprite object from vmupro.sprite.new()
@@ -438,6 +449,7 @@ function vmupro.sprite.getZIndex(sprite) end
 --- @note Added sprites will be automatically drawn when vmupro.sprite.drawAll() is called
 --- @note Sprites are drawn in Z-index order (lower Z-index values drawn first)
 --- @note Sprites use their internally stored position (set with setPosition/moveBy)
+--- @note IMPORTANT: Always call vmupro.sprite.removeAll() in cleanup/exit functions to prevent sprite leaking
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
 function vmupro.sprite.add(sprite) end
@@ -447,15 +459,29 @@ function vmupro.sprite.add(sprite) end
 --- @usage vmupro.sprite.remove(my_sprite)
 --- @note Removed sprites will no longer be drawn by vmupro.sprite.drawAll()
 --- @note Should be called before freeing sprites with vmupro.sprite.free()
+--- @note For cleanup: Use vmupro.sprite.removeAll() instead to remove all sprites at once (more reliable)
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
 function vmupro.sprite.remove(sprite) end
+
+--- @brief Remove all sprites from the scene in a single operation
+--- @usage vmupro.sprite.removeAll()
+--- @note RECOMMENDED way to clean up sprites when exiting a page or state
+--- @note Sets in_scene = false for all sprites in the scene
+--- @note Does NOT free sprite memory - sprites still exist and can be drawn manually
+--- @note Fast and reliable - no iteration needed on Lua side
+--- @note IMPORTANT: Always call this in exit/cleanup functions when using the scene system
+--- @note Prevents sprite leaking between pages/states
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.removeAll() end
 
 --- @brief Draw all sprites in the scene sorted by Z-index
 --- @usage vmupro.sprite.drawAll()
 --- @note Draws all sprites that have been added to the scene with vmupro.sprite.add()
 --- @note Sprites are rendered in Z-index order (lower values first = behind, higher values last = in front)
 --- @note Uses each sprite's internally stored position, visibility, and other properties
+--- @note IMPORTANT: If you see sprites from other pages appearing, call vmupro.sprite.removeAll() in your exit function
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
 function vmupro.sprite.drawAll() end
@@ -775,3 +801,146 @@ function vmupro.sprite.querySpritesAtPoint(x, y) end
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
 function vmupro.sprite.querySpritesInRect(x, y, width, height) end
+
+--- Returns an array of all sprites intersecting a line segment.
+--- @param x1 number X coordinate of line start point
+--- @param y1 number Y coordinate of line start point
+--- @param x2 number X coordinate of line end point
+--- @param y2 number Y coordinate of line end point
+--- @return table Array of sprites intersecting the line, each containing {id = sprite_handle}
+--- @usage local sprites = vmupro.sprite.querySpritesAlongLine(50, 120, 200, 120)
+--- @usage for i, sprite_data in ipairs(sprites) do
+--- @usage     applyLaserDamage(sprite_data.id)
+--- @usage end
+--- @note Does NOT respect collision groups (returns all sprites intersecting the line)
+--- @note Uses collision rectangles if set, otherwise uses sprite bounds
+--- @note Returns empty table {} if no sprites intersect the line
+--- @note Uses parametric line-rectangle intersection algorithm
+--- @note Useful for raycasting, line-of-sight checks, laser weapons, etc.
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.querySpritesAlongLine(x1, y1, x2, y2) end
+
+--- Returns what would happen if sprite moved to goal position (does NOT actually move)
+--- @param sprite SpriteHandle|SpritesheetHandle Sprite to test movement for
+--- @param goalX number Target X position
+--- @param goalY number Target Y position
+--- @return number actualX - Position sprite would end at (current X if collision, goalX if clear)
+--- @return number actualY - Position sprite would end at (current Y if collision, goalY if clear)
+--- @return table collisions - Array of collided sprites {id = handle}, empty if no collision
+--- @usage local actualX, actualY, hits = vmupro.sprite.checkCollisions(player, newX, newY)
+--- @usage if #hits == 0 then
+--- @usage     vmupro.sprite.moveTo(player, newX, newY) -- Safe to move
+--- @usage else
+--- @usage     vmupro.system.log("Would collide with " .. #hits .. " sprites")
+--- @usage end
+--- @note DOES respect collision groups/masks - only detects sprites configured to collide
+--- @note Only checks sprites that are in the scene (added with add()) and visible
+--- @note Does NOT modify sprite position - use moveWithCollisions() to move automatically
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.checkCollisions(sprite, goalX, goalY) end
+
+--- Moves sprite to goal position if no collision detected, stays at current position if collision
+--- @param sprite SpriteHandle|SpritesheetHandle Sprite to move
+--- @param goalX number Target X position
+--- @param goalY number Target Y position
+--- @return number actualX - Actual position sprite moved to (current X if collision, goalX if clear)
+--- @return number actualY - Actual position sprite moved to (current Y if collision, goalY if clear)
+--- @return table collisions - Array of collided sprites {id = handle}, empty if no collision
+--- @usage local actualX, actualY, hits = vmupro.sprite.moveWithCollisions(player, newX, newY)
+--- @usage if #hits > 0 then
+--- @usage     -- Collision occurred, sprite did not move
+--- @usage     for i = 1, #hits do
+--- @usage         if hits[i].id == enemy.id then
+--- @usage             vmupro.system.log("Hit enemy!")
+--- @usage         end
+--- @usage     end
+--- @usage end
+--- @note DOES respect collision groups/masks - only detects sprites configured to collide
+--- @note Only checks sprites that are in the scene (added with add()) and visible
+--- @note Automatically moves sprite if path is clear, stays at original position if collision
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.moveWithCollisions(sprite, goalX, goalY) end
+
+--- Set an 8-bit tag identifier for the sprite
+--- @param sprite SpriteHandle|SpritesheetHandle Sprite to tag
+--- @param tag number Tag value (0-255)
+--- @usage vmupro.sprite.setTag(player, 1)  -- 1 = player type
+--- @usage vmupro.sprite.setTag(enemy, 2)   -- 2 = enemy type
+--- @note Tag is an 8-bit value (0-255) for quick sprite type identification
+--- @note Useful for categorizing sprites without storing full userdata
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.setTag(sprite, tag) end
+
+--- Get the tag identifier for the sprite
+--- @param sprite SpriteHandle|SpritesheetHandle Sprite to query
+--- @return number tag - Tag value (0-255), 0 if not set
+--- @usage local type = vmupro.sprite.getTag(sprite)
+--- @usage if type == 1 then
+--- @usage     vmupro.system.log("This is a player sprite")
+--- @usage elseif type == 2 then
+--- @usage     vmupro.system.log("This is an enemy sprite")
+--- @usage end
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.getTag(sprite) end
+
+--- Store arbitrary Lua data with the sprite
+--- @param sprite SpriteHandle|SpritesheetHandle Sprite to attach data to
+--- @param data any Lua value to store (table, number, string, boolean, etc.)
+--- @usage vmupro.sprite.setUserdata(player, {health = 100, lives = 3})
+--- @usage vmupro.sprite.setUserdata(enemy, {ai_state = "patrol", target = nil})
+--- @note Stored data persists until sprite is freed or userdata is replaced
+--- @note Data is stored in Lua registry and automatically cleaned up when sprite is freed
+--- @note Can store any Lua type: tables, numbers, strings, booleans, etc.
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.setUserdata(sprite, data) end
+
+--- Retrieve Lua data stored with the sprite
+--- @param sprite SpriteHandle|SpritesheetHandle Sprite to retrieve data from
+--- @return any data - Previously stored Lua value, or nil if none set
+--- @usage local data = vmupro.sprite.getUserdata(player)
+--- @usage if data then
+--- @usage     data.health = data.health - 10
+--- @usage     vmupro.sprite.setUserdata(player, data)  -- Update
+--- @usage end
+--- @note Returns nil if no userdata has been set for this sprite
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.getUserdata(sprite) end
+
+--- Set custom update callback function for the sprite
+--- @param sprite SpriteHandle|SpritesheetHandle Sprite to attach callback to
+--- @param callback function Update function called every frame during updateAnimations()
+--- @usage vmupro.sprite.setUpdateFunction(enemy, function()
+--- @usage     -- Custom per-frame logic
+--- @usage     local x, y = vmupro.sprite.getPosition(enemy)
+--- @usage     vmupro.sprite.moveTo(enemy, x + 1, y)
+--- @usage end)
+--- @note Callback is invoked automatically during vmupro.sprite.updateAnimations()
+--- @note Callback is stored in Lua registry and cleaned up when sprite is freed
+--- @note Pass nil to remove the update callback
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.setUpdateFunction(sprite, callback) end
+
+--- Set custom draw callback function for the sprite (replaces default rendering)
+--- @param sprite SpriteHandle|SpritesheetHandle Sprite to attach callback to
+--- @param callback function Draw function(x, y, width, height) called during drawAll()
+--- @usage vmupro.sprite.setDrawFunction(sprite, function(x, y, w, h)
+--- @usage     -- Custom rendering - replaces default sprite drawing
+--- @usage     vmupro.graphics.drawRect(x, y, x+w, y+h, vmupro.graphics.RED)
+--- @usage     vmupro.graphics.drawText("!", x+w/2, y+h/2, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
+--- @usage end)
+--- @note Callback parameters: x, y (position), width, height (dimensions)
+--- @note When set, sprite skips default rendering - callback must draw the sprite
+--- @note Callback is invoked automatically during vmupro.sprite.drawAll()
+--- @note Callback is stored in Lua registry and cleaned up when sprite is freed
+--- @note Pass nil to remove draw callback and restore default rendering
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.setDrawFunction(sprite, callback) end

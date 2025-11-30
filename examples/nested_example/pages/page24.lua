@@ -95,19 +95,19 @@ function Page24.exit()
         db_running = false
     end
 
-    -- Remove sprites from scene before freeing
+    -- Remove all sprites from scene
+    vmupro.sprite.removeAll()
+
+    -- Free individual sprites
     if sprite1_handle then
-        vmupro.sprite.remove(sprite1_handle)
         vmupro.sprite.free(sprite1_handle)
         sprite1_handle = nil
     end
     if sprite2_handle then
-        vmupro.sprite.remove(sprite2_handle)
         vmupro.sprite.free(sprite2_handle)
         sprite2_handle = nil
     end
     if sprite3_handle then
-        vmupro.sprite.remove(sprite3_handle)
         vmupro.sprite.free(sprite3_handle)
         sprite3_handle = nil
     end

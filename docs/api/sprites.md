@@ -278,6 +278,35 @@ print("Player at:", x, y)  -- Player at: 120 75
 - Position is stored in the sprite object and persists across frames
 - Must be called using module notation: `vmupro.sprite.setPosition(sprite, x, y)`
 - Position can be queried later with `getPosition()`
+- Also available as `vmupro.sprite.moveTo()` (alias)
+
+---
+
+### vmupro.sprite.moveTo(sprite, x, y)
+
+Alias for `setPosition()` - sets the sprite's position to absolute coordinates.
+
+```lua
+-- Set sprite position (same as setPosition)
+vmupro.sprite.moveTo(player, 100, 50)
+
+-- Commonly used with sprites in the scene
+vmupro.sprite.add(player)
+vmupro.sprite.moveTo(player, 120, 75)
+vmupro.sprite.drawAll()
+```
+
+**Parameters:**
+- `sprite` (table): Sprite object from `vmupro.sprite.new()`
+- `x` (number): X coordinate
+- `y` (number): Y coordinate
+
+**Returns:** None
+
+**Notes:**
+- This is an alias for `setPosition()` - both functions do exactly the same thing
+- Must be called using module notation: `vmupro.sprite.moveTo(sprite, x, y)`
+- Both names are provided for developer preference and code readability
 
 ---
 
@@ -666,6 +695,7 @@ vmupro.sprite.drawAll()  -- Draws all sprites sorted by Z-index
 - Sprites use their internally stored position (set with `setPosition()` or `moveBy()`)
 - Multiple calls to `add()` with the same sprite are safe (sprite is only added once)
 - Must be called using module notation: `vmupro.sprite.add(sprite)`
+- **Important:** Always call `vmupro.sprite.removeAll()` in cleanup/exit functions to prevent sprite leaking
 
 ---
 
@@ -697,6 +727,83 @@ vmupro.sprite.free(enemy)
 - Safe to call even if sprite is not in the scene
 - Sprite can still be drawn manually using individual draw functions
 - Must be called using module notation: `vmupro.sprite.remove(sprite)`
+- **For cleanup:** Use `vmupro.sprite.removeAll()` instead to remove all sprites at once (more reliable)
+
+---
+
+### vmupro.sprite.removeAll()
+
+Removes all sprites from the scene in a single operation. This is the **recommended** way to clean up sprites when exiting a page or state.
+
+```lua
+-- Page cleanup example
+function Page35.exit()
+    -- Stop double buffer renderer
+    if db_running then
+        vmupro.graphics.stopDoubleBufferRenderer()
+        db_running = false
+    end
+
+    -- Remove all sprites from scene at once
+    vmupro.sprite.removeAll()
+
+    -- Free individual sprite memory
+    if left_sprite then
+        vmupro.sprite.clearCollisionRect(left_sprite)
+        vmupro.sprite.setDrawFunction(left_sprite, nil)
+        vmupro.sprite.free(left_sprite)
+        left_sprite = nil
+    end
+
+    if right_sprite then
+        vmupro.sprite.clearCollisionRect(right_sprite)
+        vmupro.sprite.setDrawFunction(right_sprite, nil)
+        vmupro.sprite.free(right_sprite)
+        right_sprite = nil
+    end
+end
+```
+
+**Parameters:** None
+
+**Returns:** None
+
+**Behavior:**
+- Sets `in_scene = false` for all sprites in the scene
+- Sprites will NOT be drawn by `vmupro.sprite.drawAll()` after this call
+- Does NOT free sprite memory - sprites still exist and can be drawn manually
+- Fast and reliable - no iteration needed on Lua side
+- Logs debug message: "Removed N sprites from scene"
+
+**Why Use removeAll() Instead of Individual remove() Calls?**
+
+**Before (unreliable):**
+```lua
+-- Have to track all sprites and hope nothing goes wrong
+for i = 1, #target_sprites do
+    if target_sprites[i] then
+        vmupro.sprite.remove(target_sprites[i])
+        vmupro.sprite.free(target_sprites[i])
+    end
+end
+```
+
+**After (reliable):**
+```lua
+-- Clean up ALL sprites in scene at once
+vmupro.sprite.removeAll()
+
+-- Then free individual sprites as needed
+vmupro.sprite.free(sprite1)
+vmupro.sprite.free(sprite2)
+```
+
+**Notes:**
+- **Always call this in exit/cleanup functions** when using the scene system
+- Prevents sprite leaking between pages/states
+- More reliable than tracking individual sprites for removal
+- Must be called using module notation: `vmupro.sprite.removeAll()`
+- After calling this, you can still free sprites normally with `vmupro.sprite.free()`
 
 ---
 
@@ -732,6 +839,7 @@ end
 - Uses each sprite's internally stored position, visibility, and properties
 - Must be called using module notation: `vmupro.sprite.drawAll()`
 - This is different from `vmupro.sprite.draw(sprite, x, y, flags)` which draws a specific sprite manually
+- **Important:** If you see sprites from other pages appearing, call `vmupro.sprite.removeAll()` in your exit function
 
 ---
 
@@ -1933,6 +2041,690 @@ end
 - Returns an empty table `{}` if no sprites found in the rectangle
 - Useful for area-of-effect attacks, spatial queries, or region-based game logic
 - A sprite is included if any part of it intersects the query rectangle
+
+---
+
+### vmupro.sprite.querySpritesAlongLine(x1, y1, x2, y2)
+
+Returns all sprites that intersect a line segment from (x1, y1) to (x2, y2). Uses parametric line-rectangle intersection to check all sprites in the scene.
+
+```lua
+-- Example 1: Laser weapon raycast
+local laser_x1 = player_x + 16
+local laser_y1 = player_y + 16
+local laser_x2 = laser_x1 + 200  -- Horizontal laser beam
+local laser_y2 = laser_y1
+
+local hit_sprites = vmupro.sprite.querySpritesAlongLine(laser_x1, laser_y1, laser_x2, laser_y2)
+
+if #hit_sprites > 0 then
+  -- Laser hit something - apply damage to first target
+  local target = hit_sprites[1].id
+  applyDamage(target, 25)
+  createExplosionEffect(laser_x2, laser_y2)
+end
+
+
+-- Example 2: Line-of-sight check
+function hasLineOfSight(from_sprite, to_sprite)
+  local x1, y1 = vmupro.sprite.getPosition(from_sprite)
+  local x2, y2 = vmupro.sprite.getPosition(to_sprite)
+
+  -- Check for obstacles between the two sprites
+  local obstacles = vmupro.sprite.querySpritesAlongLine(x1 + 16, y1 + 16, x2 + 16, y2 + 16)
+
+  -- Filter out the sprites we're checking from/to
+  for i = #obstacles, 1, -1 do
+    if obstacles[i].id == from_sprite or obstacles[i].id == to_sprite then
+      table.remove(obstacles, i)
+    end
+  end
+
+  -- No obstacles = clear line of sight
+  return #obstacles == 0
+end
+
+if hasLineOfSight(enemy, player) then
+  -- Enemy can see player - start chasing
+  enemy_state = "chase"
+end
+
+
+-- Example 3: Mouse click selection with line cast
+function selectSpriteAtCursor(cursor_x, cursor_y)
+  -- Cast a short line from cursor point
+  local sprites = vmupro.sprite.querySpritesAlongLine(cursor_x, cursor_y, cursor_x + 1, cursor_y + 1)
+
+  if #sprites > 0 then
+    -- Return first sprite under cursor
+    return sprites[1].id
+  end
+
+  return nil
+end
+
+local clicked_sprite = selectSpriteAtCursor(mouse_x, mouse_y)
+if clicked_sprite then
+  highlightSprite(clicked_sprite)
+end
+
+
+-- Example 4: Diagonal projectile trajectory check
+local projectile_x = 50
+local projectile_y = 100
+local projectile_dx = 3
+local projectile_dy = -2
+
+-- Check what's along the projectile's path
+local path_length = 100
+local end_x = projectile_x + (projectile_dx * path_length)
+local end_y = projectile_y + (projectile_dy * path_length)
+
+local sprites_in_path = vmupro.sprite.querySpritesAlongLine(projectile_x, projectile_y, end_x, end_y)
+
+for i, sprite_data in ipairs(sprites_in_path) do
+  local sprite_tag = vmupro.sprite.getTag(sprite_data.id)
+  if sprite_tag == TAG_ENEMY then
+    -- Mark enemy for damage
+    queueDamage(sprite_data.id, 10)
+  end
+end
+```
+
+**Parameters:**
+- `x1` (number): X coordinate of line start point
+- `y1` (number): Y coordinate of line start point
+- `x2` (number): X coordinate of line end point
+- `y2` (number): Y coordinate of line end point
+
+**Returns:**
+- `sprites` (table): Array of sprites intersecting the line, each containing `{id = sprite_handle}`
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.querySpritesAlongLine(x1, y1, x2, y2)`
+- Does NOT respect collision groups (returns all sprites intersecting the line regardless of groups)
+- Uses collision rectangles if set, otherwise uses sprite bounds
+- Returns an empty table `{}` if no sprites intersect the line
+- Uses parametric line-rectangle intersection algorithm for accurate results
+- Useful for raycasting, line-of-sight checks, laser weapons, trajectory prediction, etc.
+- The line segment is treated as having zero thickness (mathematical line)
+- Sprites are returned in no particular order (not sorted by distance)
+
+---
+
+### vmupro.sprite.checkCollisions(sprite, goalX, goalY)
+
+Tests what would happen if the sprite moved to the goal position without actually moving it. Returns the position the sprite would end up at and any collisions that would occur.
+
+```lua
+-- Check if movement is safe before committing
+local newX = player_x + 5
+local newY = player_y
+local actualX, actualY, collisions = vmupro.sprite.checkCollisions(player, newX, newY)
+
+if #collisions == 0 then
+  -- Safe to move
+  vmupro.sprite.moveTo(player, newX, newY)
+  vmupro.system.log("Moved to new position")
+else
+  -- Would collide
+  vmupro.system.log("Would hit " .. #collisions .. " sprites!")
+
+  -- Handle what we'd hit
+  for i = 1, #collisions do
+    local other = collisions[i]
+    if other.id == wall.id then
+      vmupro.system.log("Wall blocking path")
+    elseif other.id == enemy.id then
+      vmupro.system.log("Enemy in the way")
+    end
+  end
+end
+
+-- Pathfinding: test multiple positions
+local directions = {
+  {dx = 5, dy = 0},   -- right
+  {dx = -5, dy = 0},  -- left
+  {dx = 0, dy = 5},   -- down
+  {dx = 0, dy = -5}   -- up
+}
+
+for i = 1, #directions do
+  local testX = player_x + directions[i].dx
+  local testY = player_y + directions[i].dy
+  local _, _, hits = vmupro.sprite.checkCollisions(player, testX, testY)
+
+  if #hits == 0 then
+    vmupro.system.log("Direction " .. i .. " is clear")
+  end
+end
+```
+
+**Parameters:**
+- `sprite` (table): Sprite object to test movement for
+- `goalX` (number): Target X position
+- `goalY` (number): Target Y position
+
+**Returns:**
+- `actualX` (number): Position sprite would end at (current X if collision detected, goalX if clear)
+- `actualY` (number): Position sprite would end at (current Y if collision detected, goalY if clear)
+- `collisions` (table): Array of collided sprites `{id = handle}`, empty table if no collision
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.checkCollisions(sprite, goalX, goalY)`
+- Does NOT move the sprite - only tests what would happen
+- DOES respect collision groups and masks - only returns sprites configured to collide
+- Only checks sprites that are in the scene (added with `add()`) and visible
+- If collision detected: actualX/actualY = current position, collisions array populated
+- If no collision: actualX/actualY = goal position, collisions array empty
+- Useful for pathfinding, AI decision making, or validating movement before committing
+- Use `moveWithCollisions()` if you want to move automatically
+
+---
+
+### vmupro.sprite.moveWithCollisions(sprite, goalX, goalY)
+
+Moves the sprite to the goal position if no collision is detected. If a collision would occur, the sprite stays at its original position.
+
+```lua
+-- Move with automatic collision handling
+local newX = player_x + player_velocity_x
+local newY = player_y + player_velocity_y
+local actualX, actualY, collisions = vmupro.sprite.moveWithCollisions(player, newX, newY)
+
+if #collisions > 0 then
+  -- Collision occurred, sprite did not move
+  vmupro.system.log("Blocked by " .. #collisions .. " sprites")
+
+  -- Handle collision response
+  for i = 1, #collisions do
+    local other = collisions[i]
+    if other.id == enemy.id then
+      -- Hit enemy - take damage
+      player_health = player_health - 10
+      vmupro.system.log("Hit enemy!")
+    elseif other.id == collectible.id then
+      -- Shouldn't happen if groups set up correctly
+      vmupro.system.log("Collision with collectible")
+    end
+  end
+else
+  -- Moved successfully
+  player_x = actualX
+  player_y = actualY
+end
+
+-- Simple platform game movement
+function movePlayer(dx, dy)
+  local currentX, currentY = vmupro.sprite.getPosition(player)
+  local targetX = currentX + dx
+  local targetY = currentY + dy
+
+  local actualX, actualY, hits = vmupro.sprite.moveWithCollisions(player, targetX, targetY)
+
+  if #hits > 0 then
+    -- Hit something - stop moving in that direction
+    if dx ~= 0 then player_velocity_x = 0 end
+    if dy ~= 0 then player_velocity_y = 0 end
+  end
+end
+```
+
+**Parameters:**
+- `sprite` (table): Sprite object to move
+- `goalX` (number): Target X position
+- `goalY` (number): Target Y position
+
+**Returns:**
+- `actualX` (number): Actual position sprite moved to (current X if collision, goalX if clear)
+- `actualY` (number): Actual position sprite moved to (current Y if collision, goalY if clear)
+- `collisions` (table): Array of collided sprites `{id = handle}`, empty table if no collision
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.moveWithCollisions(sprite, goalX, goalY)`
+- Automatically moves sprite if path is clear, stays at original position if collision detected
+- DOES respect collision groups and masks - only detects sprites configured to collide
+- Only checks sprites that are in the scene (added with `add()`) and visible
+- If collision detected: sprite does not move, collisions array populated
+- If no collision: sprite moves to goal position, collisions array empty
+- More convenient than `checkCollisions()` for simple collision handling
+- Use `checkCollisions()` if you need to test movement without committing
+
+---
+
+## Sprite Metadata & Storage
+
+### vmupro.sprite.setTag(sprite, tag)
+
+Sets an 8-bit tag identifier (0-255) for quick sprite type identification.
+
+```lua
+-- Define sprite type constants
+local SPRITE_TYPE_PLAYER = 1
+local SPRITE_TYPE_ENEMY = 2
+local SPRITE_TYPE_BULLET = 3
+local SPRITE_TYPE_COLLECTIBLE = 4
+
+-- Tag sprites by type
+vmupro.sprite.setTag(player, SPRITE_TYPE_PLAYER)
+vmupro.sprite.setTag(enemy1, SPRITE_TYPE_ENEMY)
+vmupro.sprite.setTag(enemy2, SPRITE_TYPE_ENEMY)
+vmupro.sprite.setTag(bullet, SPRITE_TYPE_BULLET)
+
+-- Check collisions and respond based on tag
+local collisions = vmupro.sprite.overlappingSprites(bullet)
+for i = 1, #collisions do
+  local other = collisions[i]
+  local tag = vmupro.sprite.getTag(other)
+
+  if tag == SPRITE_TYPE_ENEMY then
+    -- Bullet hit enemy
+    vmupro.system.log("Hit enemy!")
+  elseif tag == SPRITE_TYPE_PLAYER then
+    -- Friendly fire
+    vmupro.system.log("Hit player!")
+  end
+end
+
+-- Use tags for sprite management
+function updateEnemies()
+  for i = 1, #all_sprites do
+    if vmupro.sprite.getTag(all_sprites[i]) == SPRITE_TYPE_ENEMY then
+      -- Update enemy AI
+      updateEnemyAI(all_sprites[i])
+    end
+  end
+end
+```
+
+**Parameters:**
+- `sprite` (table): Sprite object to tag
+- `tag` (number): Tag value (0-255)
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.setTag(sprite, tag)`
+- Tag is an 8-bit value, valid range is 0-255
+- Default tag value is 0
+- Useful for quick sprite categorization without full userdata
+- More lightweight than storing sprite type in userdata
+- Tag persists until sprite is freed or tag is changed
+
+---
+
+### vmupro.sprite.getTag(sprite)
+
+Gets the 8-bit tag identifier for the sprite.
+
+```lua
+-- Get sprite tag
+local player_tag = vmupro.sprite.getTag(player)
+if player_tag == 1 then
+  vmupro.system.log("This is a player sprite")
+end
+
+-- Filter sprites by tag
+function getSpritesWithTag(tag_value)
+  local result = {}
+  for i = 1, #all_sprites do
+    if vmupro.sprite.getTag(all_sprites[i]) == tag_value then
+      table.insert(result, all_sprites[i])
+    end
+  end
+  return result
+end
+
+local all_enemies = getSpritesWithTag(SPRITE_TYPE_ENEMY)
+vmupro.system.log("Found " .. #all_enemies .. " enemies")
+```
+
+**Parameters:**
+- `sprite` (table): Sprite object to query
+
+**Returns:**
+- `tag` (number): Tag value (0-255), returns 0 if not set
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.getTag(sprite)`
+- Returns 0 if no tag has been set
+- Fast and lightweight sprite identification method
+
+---
+
+### vmupro.sprite.setUserdata(sprite, data)
+
+Stores arbitrary Lua data with the sprite for complex state management.
+
+```lua
+-- Store complex game state with sprite
+local player = vmupro.sprite.new("player")
+vmupro.sprite.setUserdata(player, {
+  health = 100,
+  max_health = 100,
+  lives = 3,
+  score = 0,
+  powerups = {"speed", "shield"},
+  inventory = {
+    keys = 2,
+    coins = 50
+  }
+})
+
+-- Update player state
+local data = vmupro.sprite.getUserdata(player)
+data.health = data.health - 10
+if data.health <= 0 then
+  data.lives = data.lives - 1
+  data.health = data.max_health
+end
+vmupro.sprite.setUserdata(player, data)
+
+-- Store AI state for enemies
+local enemy = vmupro.sprite.newSheet("enemy-table-32-32")
+vmupro.sprite.setUserdata(enemy, {
+  ai_state = "patrol",
+  patrol_points = {{x=50, y=100}, {x=150, y=100}},
+  current_point = 1,
+  detection_range = 80,
+  target = nil
+})
+
+-- Store any Lua type
+vmupro.sprite.setUserdata(sprite1, 42)                    -- number
+vmupro.sprite.setUserdata(sprite2, "important")           -- string
+vmupro.sprite.setUserdata(sprite3, true)                  -- boolean
+vmupro.sprite.setUserdata(sprite4, {complex = "table"})   -- table
+```
+
+**Parameters:**
+- `sprite` (table): Sprite object to attach data to
+- `data` (any): Lua value to store (table, number, string, boolean, nil, etc.)
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.setUserdata(sprite, data)`
+- Can store any Lua type: tables, numbers, strings, booleans, functions, etc.
+- Stored data is kept in Lua registry and automatically cleaned up when sprite is freed
+- Replaces any previously stored userdata for this sprite
+- Pass `nil` to clear userdata
+- Data persists across frames until sprite is freed or explicitly replaced
+- No size limit, but large data may impact performance
+
+---
+
+### vmupro.sprite.getUserdata(sprite)
+
+Retrieves Lua data previously stored with the sprite.
+
+```lua
+-- Retrieve and modify sprite data
+local data = vmupro.sprite.getUserdata(player)
+if data then
+  -- Update health
+  data.health = data.health - damage
+
+  -- Check for game over
+  if data.health <= 0 then
+    if data.lives > 0 then
+      data.lives = data.lives - 1
+      data.health = data.max_health
+      vmupro.system.log("Player died! Lives remaining: " .. data.lives)
+    else
+      vmupro.system.log("Game Over!")
+    end
+  end
+
+  -- Save modified data back
+  vmupro.sprite.setUserdata(player, data)
+end
+
+-- Enemy AI using userdata
+function updateEnemy(enemy)
+  local ai = vmupro.sprite.getUserdata(enemy)
+  if not ai then return end
+
+  if ai.ai_state == "patrol" then
+    -- Patrol between points
+    local target_point = ai.patrol_points[ai.current_point]
+    moveTowards(enemy, target_point.x, target_point.y)
+
+    -- Check if player detected
+    if distanceToPlayer(enemy) < ai.detection_range then
+      ai.ai_state = "chase"
+      ai.target = player
+      vmupro.sprite.setUserdata(enemy, ai)
+    end
+  elseif ai.ai_state == "chase" then
+    -- Chase player
+    local px, py = vmupro.sprite.getPosition(ai.target)
+    moveTowards(enemy, px, py)
+  end
+end
+
+-- Check if userdata exists
+local data = vmupro.sprite.getUserdata(sprite)
+if data == nil then
+  -- No userdata set, initialize
+  vmupro.sprite.setUserdata(sprite, {initialized = true})
+end
+```
+
+**Parameters:**
+- `sprite` (table): Sprite object to retrieve data from
+
+**Returns:**
+- `data` (any): Previously stored Lua value, or `nil` if none set
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.getUserdata(sprite)`
+- Returns `nil` if no userdata has been set for this sprite
+- Returns exact value that was stored (same type)
+- Userdata is automatically freed when sprite is freed
+- Always check for `nil` before using the returned data
+
+---
+
+## Sprite Callbacks
+
+The sprite system supports custom callback functions for update and draw logic. These callbacks are stored in the Lua registry and automatically invoked at the appropriate time. Callbacks are automatically cleaned up when the sprite is freed.
+
+### vmupro.sprite.setUpdateFunction(sprite, callback)
+
+Set a custom update callback function for a sprite. The callback is invoked automatically during `vmupro.sprite.updateAnimations()` for custom per-frame logic.
+
+```lua
+-- Example 1: Simple movement AI
+local enemy = vmupro.sprite.newSheet("assets/enemy-32-32")
+vmupro.sprite.add(enemy)
+
+vmupro.sprite.setUpdateFunction(enemy, function()
+  -- Custom per-frame logic
+  local x, y = vmupro.sprite.getPosition(enemy)
+  vmupro.sprite.moveTo(enemy, x + 1, y)
+end)
+
+-- In your main loop, callbacks are invoked automatically
+vmupro.sprite.updateAnimations()  -- Calls the update callback for enemy
+
+
+-- Example 2: Complex AI with userdata state
+local patrol_bot = vmupro.sprite.newSheet("assets/bot-32-32")
+vmupro.sprite.setUserdata(patrol_bot, {
+  patrol_points = {{x=50, y=100}, {x=200, y=100}},
+  current_point = 1,
+  speed = 2
+})
+vmupro.sprite.add(patrol_bot)
+
+vmupro.sprite.setUpdateFunction(patrol_bot, function()
+  local state = vmupro.sprite.getUserdata(patrol_bot)
+  local x, y = vmupro.sprite.getPosition(patrol_bot)
+  local target = state.patrol_points[state.current_point]
+
+  -- Move towards target
+  local dx = target.x - x
+  local dy = target.y - y
+  local distance = math.sqrt(dx * dx + dy * dy)
+
+  if distance < 5 then
+    -- Reached target, switch to next patrol point
+    state.current_point = state.current_point + 1
+    if state.current_point > #state.patrol_points then
+      state.current_point = 1
+    end
+    vmupro.sprite.setUserdata(patrol_bot, state)
+  else
+    -- Move towards target
+    local nx = dx / distance
+    local ny = dy / distance
+    vmupro.sprite.moveTo(patrol_bot, x + nx * state.speed, y + ny * state.speed)
+  end
+end)
+
+
+-- Example 3: Animation controller
+local character = vmupro.sprite.newSheet("assets/character-anim-32-32")
+vmupro.sprite.setUserdata(character, {
+  anim_timer = 0,
+  anim_speed = 10  -- Change frame every 10 updates
+})
+vmupro.sprite.add(character)
+
+vmupro.sprite.setUpdateFunction(character, function()
+  local state = vmupro.sprite.getUserdata(character)
+  state.anim_timer = state.anim_timer + 1
+
+  if state.anim_timer >= state.anim_speed then
+    state.anim_timer = 0
+    local current = vmupro.sprite.getCurrentFrame(character)
+    local count = vmupro.sprite.getFrameCount(character)
+    vmupro.sprite.setCurrentFrame(character, (current + 1) % count)
+  end
+
+  vmupro.sprite.setUserdata(character, state)
+end)
+
+
+-- Remove update callback
+vmupro.sprite.setUpdateFunction(sprite, nil)
+```
+
+**Parameters:**
+- `sprite` (table): Sprite object to attach callback to
+- `callback` (function): Update function called every frame, or `nil` to remove callback
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.setUpdateFunction(sprite, callback)`
+- Callback is invoked automatically during `vmupro.sprite.updateAnimations()`
+- Callback is stored in Lua registry and cleaned up when sprite is freed
+- Pass `nil` to remove the update callback
+- Callbacks are called in the order sprites were added to the scene
+- Use with `setUserdata()` to maintain state between callback invocations
+
+---
+
+### vmupro.sprite.setDrawFunction(sprite, callback)
+
+Set a custom draw callback function for a sprite. The callback is invoked automatically during `vmupro.sprite.drawAll()` and **replaces** the default sprite rendering. The callback must draw the sprite itself.
+
+```lua
+-- Example 1: Custom sprite rendering with debug overlay
+local player = vmupro.sprite.newSheet("assets/player-32-32")
+vmupro.sprite.add(player)
+
+vmupro.sprite.setDrawFunction(player, function(x, y, w, h)
+  -- Custom rendering - replaces default sprite drawing
+  -- Draw the sprite manually first
+  vmupro.sprite.drawFrame(player, vmupro.sprite.getCurrentFrame(player), x, y, vmupro.sprite.kImageUnflipped)
+
+  -- Draw debug overlay
+  vmupro.graphics.drawRect(x, y, x + w, y + h, vmupro.graphics.RED)
+  vmupro.graphics.drawText("P", x + w/2 - 3, y + h/2 - 3, vmupro.graphics.YELLOW, vmupro.graphics.BLACK)
+end)
+
+
+-- Example 2: Health bar display
+local enemy = vmupro.sprite.newSheet("assets/enemy-32-32")
+vmupro.sprite.setUserdata(enemy, {health = 75, max_health = 100})
+vmupro.sprite.add(enemy)
+
+vmupro.sprite.setDrawFunction(enemy, function(x, y, w, h)
+  -- Draw sprite
+  vmupro.sprite.drawFrame(enemy, vmupro.sprite.getCurrentFrame(enemy), x, y, vmupro.sprite.kImageUnflipped)
+
+  -- Draw health bar above sprite
+  local state = vmupro.sprite.getUserdata(enemy)
+  local bar_width = w
+  local bar_height = 3
+  local health_width = math.floor(bar_width * state.health / state.max_health)
+
+  -- Background (empty health)
+  vmupro.graphics.drawFillRect(x, y - 5, x + bar_width, y - 5 + bar_height, vmupro.graphics.RED)
+
+  -- Foreground (current health)
+  if health_width > 0 then
+    vmupro.graphics.drawFillRect(x, y - 5, x + health_width, y - 5 + bar_height, vmupro.graphics.GREEN)
+  end
+end)
+
+
+-- Example 3: Damage flash effect
+local character = vmupro.sprite.newSheet("assets/character-32-32")
+vmupro.sprite.setUserdata(character, {damage_flash_time = 0})
+vmupro.sprite.add(character)
+
+vmupro.sprite.setDrawFunction(character, function(x, y, w, h)
+  local state = vmupro.sprite.getUserdata(character)
+  local current_time = vmupro.system.getTimeUs()
+
+  -- Check if damage flash is active
+  if current_time - state.damage_flash_time < 200000 then  -- 200ms flash
+    -- Draw white rectangle for flash effect
+    vmupro.graphics.drawFillRect(x, y, x + w, y + h, vmupro.graphics.WHITE)
+  else
+    -- Normal sprite rendering
+    vmupro.sprite.drawFrame(character, vmupro.sprite.getCurrentFrame(character), x, y, vmupro.sprite.kImageUnflipped)
+  end
+end)
+
+-- Trigger damage flash from game logic
+function takeDamage(sprite)
+  local state = vmupro.sprite.getUserdata(sprite)
+  state.damage_flash_time = vmupro.system.getTimeUs()
+  vmupro.sprite.setUserdata(sprite, state)
+end
+
+
+-- Example 4: Invisible sprite that draws custom geometry
+local marker = vmupro.sprite.newSheet("assets/marker-8-8")
+vmupro.sprite.add(marker)
+
+vmupro.sprite.setDrawFunction(marker, function(x, y, w, h)
+  -- Don't draw sprite, draw custom indicator instead
+  vmupro.graphics.drawCircle(x + w/2, y + h/2, 5, vmupro.graphics.YELLOW)
+  vmupro.graphics.drawText("!", x + w/2 - 2, y + h/2 - 4, vmupro.graphics.RED, vmupro.graphics.BLACK)
+end)
+
+
+-- Remove draw callback (returns to default rendering)
+vmupro.sprite.setDrawFunction(sprite, nil)
+```
+
+**Parameters:**
+- `sprite` (table): Sprite object to attach callback to
+- `callback` (function): Draw function `callback(x, y, width, height)`, or `nil` to remove callback
+  - `x` (number): Current sprite X position
+  - `y` (number): Current sprite Y position
+  - `width` (number): Sprite width in pixels
+  - `height` (number): Sprite height in pixels
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.setDrawFunction(sprite, callback)`
+- Callback is invoked automatically during `vmupro.sprite.drawAll()`
+- When callback is set, sprite skips default rendering - **callback must draw the sprite**
+- Callback receives sprite position and dimensions as parameters
+- Callback is stored in Lua registry and cleaned up when sprite is freed
+- Pass `nil` to remove callback and return to default rendering
+- Use for health bars, damage effects, debug visualization, custom rendering
+- Callbacks are called in Z-order (back to front)
 
 ---
 
