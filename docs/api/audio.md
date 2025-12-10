@@ -186,3 +186,200 @@ vmupro.audio.clearRingBuffer()
 vmupro.audio.exitListenMode()
 vmupro.system.log(vmupro.system.LOG_INFO, "Audio", "Audio listen mode stopped")
 ```
+
+## Sound Sample Playback
+
+The VMU Pro sound system provides high-level WAV file playback with automatic mixing and memory management. This is the recommended way to play sound effects and music in your applications.
+
+### vmupro.sound.sample.new(path)
+
+Loads a WAV file from the SD card.
+
+```lua
+local beep = vmupro.sound.sample.new("sounds/beep")  -- loads /sdcard/sounds/beep.wav
+if beep then
+    print("Loaded: " .. beep.sampleRate .. "Hz, " .. beep.channels .. " channels")
+    print("Total samples: " .. beep.sampleCount)
+end
+```
+
+**Parameters:**
+- `path` (string): Path relative to `/sdcard/`, without `.wav` extension
+
+**Returns:**
+- `sample` (table): Sample object with metadata, or `nil` on error
+  - `id` (number): Internal handle
+  - `sampleRate` (number): Sample rate in Hz (e.g., 44100, 22050)
+  - `channels` (number): 1 = mono, 2 = stereo
+  - `sampleCount` (number): Total number of samples
+
+**Supported Formats:**
+- 16-bit PCM only
+- Mono or stereo
+- Any sample rate (automatically resampled to 44100 Hz on playback)
+- Standard WAV file format (RIFF/WAVE)
+
+---
+
+### vmupro.sound.sample.play(sample, repeat_count)
+
+Plays a loaded sound sample.
+
+```lua
+vmupro.sound.sample.play(beep)      -- play once
+vmupro.sound.sample.play(beep, 2)   -- play 3 times total (1 + 2 repeats)
+vmupro.sound.sample.play(music, 99) -- loop music 100 times
+```
+
+**Parameters:**
+- `sample` (table): Sample object returned from `new()`
+- `repeat_count` (number, optional): Number of times to repeat
+  - `0` or omitted = play once
+  - `1` = play twice (once + 1 repeat)
+  - `99` = play 100 times (useful for music looping)
+
+**Returns:** None
+
+**Note:** Infinite looping (-1) is not yet implemented. Use a high repeat count for music.
+
+---
+
+### vmupro.sound.sample.stop(sample)
+
+Stops a playing sound.
+
+```lua
+vmupro.sound.sample.stop(beep)
+```
+
+**Parameters:**
+- `sample` (table): Sample object to stop
+
+**Returns:** None
+
+---
+
+### vmupro.sound.sample.isPlaying(sample)
+
+Checks if a sound is currently playing.
+
+```lua
+if vmupro.sound.sample.isPlaying(beep) then
+    print("Still playing...")
+end
+```
+
+**Parameters:**
+- `sample` (table): Sample object to check
+
+**Returns:**
+- `boolean`: `true` if playing, `false` otherwise
+
+---
+
+### vmupro.sound.sample.free(sample)
+
+Frees a sound sample and releases memory.
+
+```lua
+vmupro.sound.sample.free(beep)
+```
+
+**Parameters:**
+- `sample` (table): Sample object to free
+
+**Returns:** None
+
+**Note:** Always free samples when done to avoid memory leaks.
+
+---
+
+### vmupro.sound.update()
+
+Mixes and outputs audio to the device. **Must be called every frame** in your update() callback for audio to work.
+
+```lua
+function vmupro.update()
+    -- CRITICAL: Must call this every frame for audio
+    vmupro.sound.update()
+
+    -- Your game logic here...
+end
+```
+
+**Parameters:** None
+
+**Returns:** None
+
+**Note:** Without calling this function every frame, no audio will be heard.
+
+## Complete Sound Example
+
+```lua
+-- Global sound variables
+local jumpSound
+local coinSound
+local musicLoop
+
+function vmupro.load()
+    -- Load sounds during initialization
+    jumpSound = vmupro.sound.sample.new("sfx/jump")
+    coinSound = vmupro.sound.sample.new("sfx/coin")
+    musicLoop = vmupro.sound.sample.new("music/theme")
+
+    if jumpSound then
+        vmupro.system.log(vmupro.system.LOG_INFO, "Audio",
+            "Loaded jump: " .. jumpSound.sampleRate .. "Hz, " ..
+            jumpSound.channels .. " channels")
+    end
+
+    -- Start background music (loop 100 times)
+    if musicLoop then
+        vmupro.sound.sample.play(musicLoop, 99)
+    end
+end
+
+function vmupro.update()
+    -- CRITICAL: Must call this every frame for audio to work
+    vmupro.sound.update()
+
+    -- Play sound on button press
+    vmupro.input.read()
+
+    if vmupro.input.pressed(vmupro.input.A) then
+        vmupro.sound.sample.play(jumpSound)
+    end
+
+    if vmupro.input.pressed(vmupro.input.B) then
+        vmupro.sound.sample.play(coinSound)
+    end
+
+    if vmupro.input.pressed(vmupro.input.X) then
+        -- Stop music
+        vmupro.sound.sample.stop(musicLoop)
+    end
+
+    if vmupro.input.pressed(vmupro.input.Y) then
+        -- Restart music if not playing
+        if not vmupro.sound.sample.isPlaying(musicLoop) then
+            vmupro.sound.sample.play(musicLoop, 99)
+        end
+    end
+end
+
+function vmupro.cleanup()
+    -- Free all sounds when app exits
+    if jumpSound then vmupro.sound.sample.free(jumpSound) end
+    if coinSound then vmupro.sound.sample.free(coinSound) end
+    if musicLoop then vmupro.sound.sample.free(musicLoop) end
+end
+```
+
+## Sound Playback Tips
+
+1. **Always call `vmupro.sound.update()`** every frame in your update loop
+2. **Load sounds during initialization** to avoid stuttering during gameplay
+3. **Free sounds on cleanup** to prevent memory leaks
+4. **Use high repeat counts** for music (e.g., 99) until infinite looping is implemented
+5. **Check for nil** when loading sounds in case files are missing
+6. **WAV files only** - ensure your audio assets are 16-bit PCM WAV format

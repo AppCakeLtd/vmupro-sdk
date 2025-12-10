@@ -74,3 +74,71 @@ function vmupro.audio.addStreamSamples(samples, stereo_mode, applyGlobalVolume) 
 -- Audio mode constants (provided by firmware)
 vmupro.audio.MONO = VMUPRO_AUDIO_MONO or 0     --- Mono audio mode
 vmupro.audio.STEREO = VMUPRO_AUDIO_STEREO or 1 --- Stereo audio mode
+
+--- @brief Sound sample playback namespace
+vmupro.sound = vmupro.sound or {}
+vmupro.sound.sample = vmupro.sound.sample or {}
+
+--- @class SampleObject
+--- @field id number Internal handle for the sample
+--- @field sampleRate number Sample rate in Hz (e.g., 44100, 22050)
+--- @field channels number 1 = mono, 2 = stereo
+--- @field sampleCount number Total number of samples in the audio file
+
+--- @brief Load a WAV file from the SD card
+--- @param path string Path relative to /sdcard/, without .wav extension
+--- @return SampleObject|nil Sample object with metadata, or nil on error
+--- @usage local beep = vmupro.sound.sample.new("sounds/beep")
+--- @usage if beep then
+--- @usage     print("Loaded: " .. beep.sampleRate .. "Hz")
+--- @usage end
+--- @note Supported formats: 16-bit PCM WAV, mono or stereo, any sample rate
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sound.sample.new(path) end
+
+--- @brief Play a loaded sound sample
+--- @param sample SampleObject Sample object returned from new()
+--- @param repeat_count number|nil Number of times to repeat (0 or nil = once, 1 = twice, 99 = loop music)
+--- @usage vmupro.sound.sample.play(beep)       -- play once
+--- @usage vmupro.sound.sample.play(beep, 2)    -- play 3 times total
+--- @usage vmupro.sound.sample.play(music, 99)  -- loop music 100 times
+--- @note Infinite looping (-1) not yet implemented. Use high repeat count for music.
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sound.sample.play(sample, repeat_count) end
+
+--- @brief Stop a playing sound
+--- @param sample SampleObject Sample object to stop
+--- @usage vmupro.sound.sample.stop(beep)
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sound.sample.stop(sample) end
+
+--- @brief Check if a sound is currently playing
+--- @param sample SampleObject Sample object to check
+--- @return boolean true if playing, false otherwise
+--- @usage if vmupro.sound.sample.isPlaying(beep) then
+--- @usage     print("Still playing...")
+--- @usage end
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sound.sample.isPlaying(sample) end
+
+--- @brief Free a sound sample and release memory
+--- @param sample SampleObject Sample object to free
+--- @usage vmupro.sound.sample.free(beep)
+--- @note Always free samples when done to avoid memory leaks
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sound.sample.free(sample) end
+
+--- @brief Mix and output audio to device (MUST be called every frame)
+--- @usage function vmupro.update()
+--- @usage     vmupro.sound.update()  -- CRITICAL for audio to work
+--- @usage     -- Your game logic here...
+--- @usage end
+--- @note Without calling this every frame, no audio will be heard
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sound.update() end
