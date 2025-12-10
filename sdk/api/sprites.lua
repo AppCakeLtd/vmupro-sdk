@@ -641,6 +641,71 @@ function vmupro.sprite.getCollisionRect(sprite) end
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
 function vmupro.sprite.clearCollisionRect(sprite) end
 
+--- @brief Set a clipping rectangle to only draw a portion of the sprite
+--- @param sprite SpriteHandle|SpritesheetHandle Sprite or spritesheet object
+--- @param x number X offset from sprite's top-left (can be negative)
+--- @param y number Y offset from sprite's top-left (can be negative)
+--- @param width number Width of visible region
+--- @param height number Height of visible region
+--- @usage vmupro.sprite.setClipRect(healthBar, 0, 0, 60, 20) -- Show left 60 pixels
+--- @usage vmupro.sprite.setClipRect(card, 0, 0, revealWidth, 64) -- Reveal effect
+--- @note Clip rect is relative to sprite's top-left corner (not world space)
+--- @note Only the portion inside the clip rect will be drawn
+--- @note Negative offsets allow clipping from any edge
+--- @note Works with drawAll(), draw(), and drawFrame()
+--- @note Does not affect collision detection (use collision rect for that)
+--- @note Use clearClipRect() to remove clipping
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.setClipRect(sprite, x, y, width, height) end
+
+--- @brief Remove clipping rectangle from sprite to draw it fully
+--- @param sprite SpriteHandle|SpritesheetHandle Sprite or spritesheet object
+--- @usage vmupro.sprite.clearClipRect(healthBar)
+--- @note Safe to call even if no clip rect is set
+--- @note After clearing, the full sprite will be drawn
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.clearClipRect(sprite) end
+
+--- @brief Use another sprite's alpha channel as a stencil mask
+--- @param sprite SpriteHandle|SpritesheetHandle Sprite to apply stencil to
+--- @param maskSprite SpriteHandle|SpritesheetHandle Sprite with alpha channel to use as mask (PNG with transparency)
+--- @usage vmupro.sprite.setStencilImage(character, circular_mask)
+--- @note Mask sprite must be RGBA8888 format (PNG with alpha channel)
+--- @note Mask is tiled if smaller than the main sprite
+--- @note Alpha channel multiplication: mask's alpha multiplied with source sprite's alpha
+--- @note Works with both draw() and drawAll()
+--- @note Compatible with setClipRect() - both can be used together
+--- @note Has CPU performance cost - use sparingly
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.setStencilImage(sprite, maskSprite) end
+
+--- @brief Use an 8-byte pattern as an 8x8 tiled stencil mask
+--- @param sprite SpriteHandle|SpritesheetHandle Sprite to apply stencil pattern to
+--- @param pattern table Array of 8 integers (0-255), each row of 8x8 pattern
+--- @usage vmupro.sprite.setStencilPattern(sprite, {0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55})
+--- @note Pattern is exactly 8 bytes (8 rows of 8 bits)
+--- @note Each bit: 1 = visible pixel, 0 = transparent pixel
+--- @note Pattern tiles across the entire sprite
+--- @note Good for dithering, texture effects, or retro transparency
+--- @note Works with both draw() and drawAll()
+--- @note More efficient than image stenciling for simple patterns
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.setStencilPattern(sprite, pattern) end
+
+--- @brief Remove stencil mask from sprite
+--- @param sprite SpriteHandle|SpritesheetHandle Sprite to remove stencil from
+--- @usage vmupro.sprite.clearStencil(sprite)
+--- @note Safe to call even if no stencil is set
+--- @note Removes both image and pattern stencils
+--- @note After clearing, sprite renders normally
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+function vmupro.sprite.clearStencil(sprite) end
+
 --- @brief Get world-space collision bounds for collision detection
 --- @param sprite SpriteHandle|SpritesheetHandle Sprite or spritesheet object
 --- @return number|nil, number|nil, number|nil, number|nil World X, world Y, width, height (or nil if no collision rect set)

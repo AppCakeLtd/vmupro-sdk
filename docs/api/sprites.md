@@ -1518,6 +1518,254 @@ vmupro.sprite.clearCollisionRect(player)
 
 ---
 
+### vmupro.sprite.setClipRect(sprite, x, y, width, height)
+
+Sets a clipping rectangle for a sprite to only draw a portion of it. The rectangle is defined relative to the sprite's top-left corner. This is useful for health bars, progress meters, reveal effects, and partial sprite rendering.
+
+```lua
+-- Health bar example
+local healthBar = vmupro.sprite.new("assets/healthbar")  -- 100x20 full health bar
+vmupro.sprite.setPosition(healthBar, 10, 10)
+vmupro.sprite.add(healthBar)
+
+-- Player has 60% health - only show left 60% of the bar
+vmupro.sprite.setClipRect(healthBar, 0, 0, 60, 20)
+
+-- Player healed to 80%
+vmupro.sprite.setClipRect(healthBar, 0, 0, 80, 20)
+
+-- Full health again
+vmupro.sprite.clearClipRect(healthBar)
+```
+
+```lua
+-- Progress bar example
+local progressBar = vmupro.sprite.newSheet("ui/progress-table-200-16")
+vmupro.sprite.setPosition(progressBar, 20, 200)
+
+-- Update progress (0-100%)
+function updateProgress(percent)
+    local barWidth = 200
+    local clipWidth = math.floor(barWidth * percent / 100)
+    vmupro.sprite.setClipRect(progressBar, 0, 0, clipWidth, 16)
+end
+
+updateProgress(35)  -- 35% complete
+```
+
+```lua
+-- Reveal effect example
+local card = vmupro.sprite.new("sprites/card")
+vmupro.sprite.setPosition(card, 50, 50)
+
+-- Gradually reveal from left to right
+local revealWidth = 0
+function update()
+    revealWidth = revealWidth + 2
+    if revealWidth <= 64 then
+        vmupro.sprite.setClipRect(card, 0, 0, revealWidth, 64)
+    else
+        vmupro.sprite.clearClipRect(card)
+    end
+end
+```
+
+**Parameters:**
+- `sprite` (table): Sprite object from `vmupro.sprite.new()` or `vmupro.sprite.newSheet()`
+- `x` (number): X offset from sprite's top-left (can be negative)
+- `y` (number): Y offset from sprite's top-left (can be negative)
+- `width` (number): Width of visible region
+- `height` (number): Height of visible region
+
+**Returns:** None
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.setClipRect(sprite, ...)`
+- Clip rect is relative to sprite's top-left corner (not world space)
+- Only the portion inside the clip rect will be drawn
+- Negative offsets allow clipping from any edge
+- Can be used with both single sprites and spritesheets
+- Works with `drawAll()`, `draw()`, and `drawFrame()`
+- Does not affect collision detection (use collision rect for that)
+- Use `clearClipRect()` to remove clipping and draw the full sprite again
+
+---
+
+### vmupro.sprite.clearClipRect(sprite)
+
+Removes the clipping rectangle from a sprite, allowing the full sprite to be drawn again.
+
+```lua
+-- Remove clip rect and draw full sprite
+vmupro.sprite.clearClipRect(healthBar)
+
+-- Now the sprite will be drawn completely
+vmupro.sprite.draw(healthBar, 10, 10, vmupro.sprite.kImageUnflipped)
+```
+
+**Parameters:**
+- `sprite` (table): Sprite object from `vmupro.sprite.new()` or `vmupro.sprite.newSheet()`
+
+**Returns:** None
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.clearClipRect(sprite)`
+- Safe to call even if no clip rect is set
+- After clearing, the full sprite will be drawn
+
+---
+
+### vmupro.sprite.setStencilImage(sprite, maskSprite)
+
+Uses another sprite's alpha channel as a stencil mask. The mask sprite is tiled if smaller than the main sprite. Useful for circular masks, fade effects, and alpha-based visibility control.
+
+```lua
+-- Load a sprite and a circular mask
+local character = vmupro.sprite.new("assets/character")
+local circular_mask = vmupro.sprite.new("assets/circular_mask")  -- PNG with alpha gradient
+
+-- Apply the circular mask to the character
+vmupro.sprite.setStencilImage(character, circular_mask)
+vmupro.sprite.setPosition(character, 100, 100)
+vmupro.sprite.add(character)
+
+-- The sprite will be drawn with the circular mask applied
+vmupro.sprite.drawAll()
+```
+
+```lua
+-- Fade effect example
+local sprite = vmupro.sprite.new("assets/player")
+local fade_mask = vmupro.sprite.new("assets/fade_gradient")  -- Vertical alpha gradient
+
+vmupro.sprite.setStencilImage(sprite, fade_mask)
+vmupro.sprite.setPosition(sprite, 50, 50)
+
+-- Draw with fade effect
+vmupro.sprite.draw(sprite, 50, 50, vmupro.sprite.kImageUnflipped)
+```
+
+**Parameters:**
+- `sprite` (table): Sprite object to apply stencil to
+- `maskSprite` (table): Sprite with alpha channel to use as mask (must be PNG with transparency)
+
+**Returns:** None
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.setStencilImage(sprite, maskSprite)`
+- Mask sprite must be RGBA8888 format (PNG with alpha channel)
+- Mask is tiled if smaller than the main sprite
+- Alpha channel multiplication: mask's alpha is multiplied with source sprite's alpha
+- RGB565 sprites are automatically converted to RGBA8888 when stenciled
+- Works with both `draw()` and `drawAll()`
+- Compatible with `setClipRect()` - both can be used together
+- Stencil is applied during drawing, original sprite data unchanged
+- Has CPU performance cost - use sparingly
+- Memory allocated in PSRAM, automatically freed after drawing
+
+---
+
+### vmupro.sprite.setStencilPattern(sprite, pattern)
+
+Uses an 8-byte pattern as an 8x8 tiled stencil mask. Each byte represents a row, each bit represents a pixel (1 = visible, 0 = transparent). Perfect for dithering, checkerboard patterns, and texture effects.
+
+```lua
+-- Load a sprite
+local background = vmupro.sprite.new("assets/background")
+
+-- Checkerboard pattern (alternating pixels)
+local checkerboard = {
+    0xAA,  -- 10101010
+    0x55,  -- 01010101
+    0xAA,  -- 10101010
+    0x55,  -- 01010101
+    0xAA,  -- 10101010
+    0x55,  -- 01010101
+    0xAA,  -- 10101010
+    0x55   -- 01010101
+}
+
+vmupro.sprite.setStencilPattern(background, checkerboard)
+vmupro.sprite.setPosition(background, 0, 0)
+vmupro.sprite.add(background)
+
+vmupro.sprite.drawAll()  -- Drawn with checkerboard mask
+```
+
+```lua
+-- 50% dither pattern
+local dither_50 = {
+    0xAA, 0x55, 0xAA, 0x55,
+    0xAA, 0x55, 0xAA, 0x55
+}
+
+vmupro.sprite.setStencilPattern(sprite, dither_50)
+```
+
+```lua
+-- Horizontal lines pattern
+local lines = {
+    0xFF,  -- 11111111 (full row)
+    0x00,  -- 00000000 (empty row)
+    0xFF,  -- 11111111
+    0x00,  -- 00000000
+    0xFF,  -- 11111111
+    0x00,  -- 00000000
+    0xFF,  -- 11111111
+    0x00   -- 00000000
+}
+
+vmupro.sprite.setStencilPattern(sprite, lines)
+```
+
+**Parameters:**
+- `sprite` (table): Sprite object to apply stencil pattern to
+- `pattern` (table): Array of 8 integers (0-255), each representing one row of the 8x8 pattern
+
+**Returns:** None
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.setStencilPattern(sprite, pattern)`
+- Pattern is exactly 8 bytes (8 rows of 8 bits)
+- Each bit: 1 = visible pixel, 0 = transparent pixel
+- Pattern tiles across the entire sprite
+- Good for dithering, texture effects, or retro transparency
+- Works with both `draw()` and `drawAll()`
+- Compatible with `setClipRect()`
+- More efficient than image stenciling for simple patterns
+
+---
+
+### vmupro.sprite.clearStencil(sprite)
+
+Removes any stencil mask (image or pattern) from a sprite, returning it to normal rendering.
+
+```lua
+local sprite = vmupro.sprite.new("assets/player")
+local mask = vmupro.sprite.new("assets/fade_mask")
+
+-- Apply stencil
+vmupro.sprite.setStencilImage(sprite, mask)
+vmupro.sprite.drawAll()  -- Draws with mask
+
+-- Remove stencil later
+vmupro.sprite.clearStencil(sprite)
+vmupro.sprite.drawAll()  -- Draws normally
+```
+
+**Parameters:**
+- `sprite` (table): Sprite object to remove stencil from
+
+**Returns:** None
+
+**Notes:**
+- Must be called using module notation: `vmupro.sprite.clearStencil(sprite)`
+- Safe to call even if no stencil is set
+- Removes both image and pattern stencils
+- After clearing, sprite renders normally
+
+---
+
 ### vmupro.sprite.getCollideBounds(sprite)
 
 Gets the world-space collision bounds for collision detection. This combines the sprite's position with the collision rectangle offset.
