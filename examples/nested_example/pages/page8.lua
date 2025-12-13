@@ -10,9 +10,10 @@ local page8_initialized = false
 
 -- Track memory update time
 local last_mem_update = 0
-local mem_update_interval = 2000000  -- Update memory every 2 seconds (in microseconds)
+local mem_update_interval = 1000000  -- Update memory every 1 second (in microseconds)
 local cached_mem_usage = 0
 local cached_mem_limit = 0
+local cached_largest_block = 0
 
 --- @brief Render Page 8: System - Logging & Info
 function Page8.render(drawPageCounter)
@@ -46,11 +47,13 @@ function Page8.render(drawPageCounter)
     if current_time_mem - last_mem_update >= mem_update_interval then
         cached_mem_usage = vmupro.system.getMemoryUsage()
         cached_mem_limit = vmupro.system.getMemoryLimit()
+        cached_largest_block = vmupro.system.getLargestFreeBlock()
         last_mem_update = current_time_mem
     end
 
     local mem_usage_kb = math.floor(cached_mem_usage / 1024)
     local mem_limit_kb = math.floor(cached_mem_limit / 1024)
+    local largest_block_kb = math.floor(cached_largest_block / 1024)
     local mem_percent = 0
     if cached_mem_limit > 0 then
         mem_percent = math.floor((cached_mem_usage / cached_mem_limit) * 100)
@@ -58,9 +61,9 @@ function Page8.render(drawPageCounter)
 
     vmupro.graphics.drawText("Memory:", 10, y_pos, vmupro.graphics.ORANGE, vmupro.graphics.BLACK)
     y_pos = y_pos + 14
-    vmupro.graphics.drawText(string.format("%d/%d KB", mem_usage_kb, mem_limit_kb), 10, y_pos, vmupro.graphics.BLUE, vmupro.graphics.BLACK)
+    vmupro.graphics.drawText(string.format("%d/%d KB (%d%%)", mem_usage_kb, mem_limit_kb, mem_percent), 10, y_pos, vmupro.graphics.BLUE, vmupro.graphics.BLACK)
     y_pos = y_pos + 14
-    vmupro.graphics.drawText(string.format("(%d%%)", mem_percent), 10, y_pos, vmupro.graphics.BLUE, vmupro.graphics.BLACK)
+    vmupro.graphics.drawText(string.format("Largest: %d KB", largest_block_kb), 10, y_pos, vmupro.graphics.YELLOWGREEN, vmupro.graphics.BLACK)
     y_pos = y_pos + 20
 
     -- Test: Send log messages (throttled - check serial)

@@ -94,6 +94,17 @@ function vmupro.system.getMemoryUsage() end
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
 function vmupro.system.getMemoryLimit() end
 
+--- @brief Get the largest contiguous free memory block in bytes
+--- @return number Size of the largest contiguous free block in bytes
+--- @usage local largest = vmupro.system.getLargestFreeBlock()
+--- @usage -- Check if there's enough contiguous memory for a large allocation
+--- @usage if vmupro.system.getLargestFreeBlock() >= required_size then ... end
+--- @note This is a stub definition for IDE support only.
+---       Actual implementation is provided by VMU Pro firmware at runtime.
+---       This is useful for checking if large allocations (like sound samples) will succeed,
+---       as even if total free memory is sufficient, fragmentation may prevent allocation.
+function vmupro.system.getLargestFreeBlock() end
+
 -- Log level constants (provided by firmware)
 vmupro.system.LOG_ERROR = VMUPRO_LOG_ERROR or 0   --- Error log level
 vmupro.system.LOG_WARN = VMUPRO_LOG_WARN or 1     --- Warning log level

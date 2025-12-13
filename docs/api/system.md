@@ -158,6 +158,67 @@ vmupro.system.log(vmupro.system.LOG_DEBUG, "Graphics", "Last framebuffer side: "
 **Returns:**
 - `fb_side` (number): Framebuffer side identifier
 
+---
+
+## Memory Functions
+
+### vmupro.system.getMemoryUsage()
+
+Gets the current memory usage in bytes.
+
+```lua
+local usage = vmupro.system.getMemoryUsage()
+vmupro.system.log(vmupro.system.LOG_INFO, "Memory", "Current usage: " .. usage .. " bytes")
+```
+
+**Parameters:** None
+
+**Returns:**
+- `usage` (number): Current memory usage in bytes
+
+---
+
+### vmupro.system.getMemoryLimit()
+
+Gets the maximum memory limit in bytes available for the LUA application.
+
+```lua
+local limit = vmupro.system.getMemoryLimit()
+vmupro.system.log(vmupro.system.LOG_INFO, "Memory", "Memory limit: " .. limit .. " bytes")
+```
+
+**Parameters:** None
+
+**Returns:**
+- `limit` (number): Maximum memory limit in bytes
+
+---
+
+### vmupro.system.getLargestFreeBlock()
+
+Gets the size of the largest contiguous free memory block in bytes.
+
+```lua
+local largest = vmupro.system.getLargestFreeBlock()
+vmupro.system.log(vmupro.system.LOG_INFO, "Memory", "Largest free block: " .. largest .. " bytes")
+
+-- Check before loading a large resource
+local required_size = 50000  -- 50KB needed
+if vmupro.system.getLargestFreeBlock() >= required_size then
+    -- Safe to allocate
+    local sound = vmupro.sound.sample.new("assets/large-sound")
+else
+    vmupro.system.log(vmupro.system.LOG_WARN, "Memory", "Not enough contiguous memory")
+end
+```
+
+**Parameters:** None
+
+**Returns:**
+- `size` (number): Size of the largest contiguous free block in bytes
+
+**Note:** This function is particularly useful when loading large resources like sound samples. Even if `getMemoryLimit() - getMemoryUsage()` suggests sufficient free memory, fragmentation may prevent a large contiguous allocation from succeeding. Always check `getLargestFreeBlock()` before attempting large allocations.
+
 ## Example Usage
 
 ### 60 FPS Game Loop with Timing
