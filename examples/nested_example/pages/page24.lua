@@ -164,7 +164,7 @@ function Page24.render(drawPageCounter)
     vmupro.graphics.drawText("Drawing order control", 10, 40, vmupro.graphics.GREY, vmupro.graphics.BLACK)
 
     -- Navigation hint
-    vmupro.graphics.drawText("< Prev", 10, 225, vmupro.graphics.GREY, vmupro.graphics.BLACK)
+    vmupro.graphics.drawText("< Prev | Next >", 75, 225, vmupro.graphics.GREY, vmupro.graphics.BLACK)
 
     -- Page counter
     drawPageCounter()

@@ -210,7 +210,7 @@ function Page35.render(drawPageCounter)
     end
 
     -- Navigation hint
-    vmupro.graphics.drawText("< Prev", 75, 225, vmupro.graphics.GREY, vmupro.graphics.BLACK)
+    vmupro.graphics.drawText("< Prev | Next >", 75, 225, vmupro.graphics.GREY, vmupro.graphics.BLACK)
 
     -- Page counter
     drawPageCounter()

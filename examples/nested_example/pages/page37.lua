@@ -234,7 +234,7 @@ function Page37.render(drawPageCounter)
     vmupro.graphics.drawText("Pattern stenciling", 10, 40, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
 
     -- Navigation hint
-    vmupro.graphics.drawText("< Prev", 75, 225, vmupro.graphics.GREY, vmupro.graphics.BLACK)
+    vmupro.graphics.drawText("< Prev | Next >", 75, 225, vmupro.graphics.GREY, vmupro.graphics.BLACK)
 
     -- Page counter
     drawPageCounter()
