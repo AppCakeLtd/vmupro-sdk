@@ -42,7 +42,7 @@ vmupro.audio.setGlobalVolume(10) -- Set volume to maximum
 
 ### vmupro.audio.startListenMode()
 
-Starts audio listen mode, enabling the audio ring buffer for streaming samples.
+Starts audio listen mode, enabling the audio ring buffer for streaming samples and sound playback.
 
 ```lua
 vmupro.audio.startListenMode()
@@ -52,7 +52,13 @@ vmupro.audio.startListenMode()
 
 **Returns:** None
 
-**Note:** Must be called before using `addStreamSamples()` to enable the audio ringbuffer system.
+**Important - Lifecycle Management:** The application is responsible for managing the audio listen mode lifecycle. You must:
+1. Call `startListenMode()` when entering a screen/page that uses audio
+2. Call `exitListenMode()` when leaving that screen/page
+
+This ensures proper resource management and prevents audio from playing when it shouldn't.
+
+**Note:** Must be called before using `addStreamSamples()` or sound sample playback functions.
 
 ---
 
@@ -72,7 +78,7 @@ vmupro.audio.clearRingBuffer()
 
 ### vmupro.audio.exitListenMode()
 
-Exits audio listen mode, stopping the audio ring buffer.
+Exits audio listen mode, stopping the audio ring buffer and releasing audio resources.
 
 ```lua
 vmupro.audio.exitListenMode()
@@ -81,6 +87,8 @@ vmupro.audio.exitListenMode()
 **Parameters:** None
 
 **Returns:** None
+
+**Important:** Always call this function when leaving a screen/page that uses audio. Failing to exit listen mode may cause resource leaks or unexpected audio behavior. See `startListenMode()` for lifecycle management details.
 
 ---
 
@@ -191,6 +199,18 @@ vmupro.system.log(vmupro.system.LOG_INFO, "Audio", "Audio listen mode stopped")
 
 The VMU Pro sound system provides high-level WAV file playback with automatic mixing and memory management. This is the recommended way to play sound effects and music in your applications.
 
+**Important - Audio Lifecycle:** Before using sound sample playback, you must call `vmupro.audio.startListenMode()` to initialize the audio system. When done with audio (e.g., leaving a screen/page), call `vmupro.audio.exitListenMode()` to properly clean up. The application is responsible for managing this lifecycle.
+
+```lua
+-- When entering a screen that uses audio:
+vmupro.audio.startListenMode()
+
+-- ... load and play sounds ...
+
+-- When leaving the screen:
+vmupro.audio.exitListenMode()
+```
+
 ### vmupro.sound.sample.new(path)
 
 Loads a WAV file from the SD card.
@@ -221,7 +241,7 @@ end
 
 ---
 
-### vmupro.sound.sample.play(sample, repeat_count)
+### vmupro.sound.sample.play(sample, repeat_count, finish_callback)
 
 Plays a loaded sound sample.
 
@@ -229,6 +249,21 @@ Plays a loaded sound sample.
 vmupro.sound.sample.play(beep)      -- play once
 vmupro.sound.sample.play(beep, 2)   -- play 3 times total (1 + 2 repeats)
 vmupro.sound.sample.play(music, 99) -- loop music 100 times
+
+-- With finish callback
+vmupro.sound.sample.play(sfx, 0, function()
+    print("Sound finished!")
+end)
+
+-- Manual looping with callback
+vmupro.sound.sample.play(music, 0, function()
+    vmupro.sound.sample.play(music, 0)  -- Loop when finished
+end)
+
+-- Chained sound effects
+vmupro.sound.sample.play(chargeSound, 0, function()
+    vmupro.sound.sample.play(fireSound)  -- Play second sound after first finishes
+end)
 ```
 
 **Parameters:**
@@ -237,10 +272,11 @@ vmupro.sound.sample.play(music, 99) -- loop music 100 times
   - `0` or omitted = play once
   - `1` = play twice (once + 1 repeat)
   - `99` = play 100 times (useful for music looping)
+- `finish_callback` (function, optional): Callback function called when playback finishes (after all repeats)
 
 **Returns:** None
 
-**Note:** Infinite looping (-1) is not yet implemented. Use a high repeat count for music.
+**Note:** Infinite looping (-1) is not yet implemented. Use a high repeat count for music, or use the finish callback to manually loop.
 
 ---
 
@@ -294,6 +330,84 @@ vmupro.sound.sample.free(beep)
 
 ---
 
+### vmupro.sound.sample.setVolume(sample, left, right)
+
+Sets the stereo volume for a sound sample.
+
+```lua
+vmupro.sound.sample.setVolume(beep, 1.0, 1.0)  -- Full volume both channels
+vmupro.sound.sample.setVolume(beep, 0.5, 0.5)  -- 50% volume both channels
+vmupro.sound.sample.setVolume(beep, 1.0, 0.0)  -- Left channel only (pan left)
+vmupro.sound.sample.setVolume(beep, 0.0, 1.0)  -- Right channel only (pan right)
+```
+
+**Parameters:**
+- `sample` (table): Sample object to adjust
+- `left` (number): Left channel volume (0.0 to 1.0)
+- `right` (number): Right channel volume (0.0 to 1.0)
+
+**Returns:** None
+
+**Note:** Use this for per-sample volume control and stereo panning effects.
+
+---
+
+### vmupro.sound.sample.getVolume(sample)
+
+Gets the current stereo volume for a sound sample.
+
+```lua
+local left, right = vmupro.sound.sample.getVolume(beep)
+print("Volume: L=" .. left .. " R=" .. right)
+```
+
+**Parameters:**
+- `sample` (table): Sample object to query
+
+**Returns:**
+- `left` (number): Left channel volume (0.0 to 1.0)
+- `right` (number): Right channel volume (0.0 to 1.0)
+
+---
+
+### vmupro.sound.sample.setRate(sample, rate)
+
+Sets the playback rate (speed/pitch) for a sound sample.
+
+```lua
+vmupro.sound.sample.setRate(beep, 1.0)   -- Normal speed
+vmupro.sound.sample.setRate(beep, 0.5)   -- Half speed (lower pitch)
+vmupro.sound.sample.setRate(beep, 2.0)   -- Double speed (higher pitch)
+vmupro.sound.sample.setRate(beep, 1.5)   -- 1.5x speed
+```
+
+**Parameters:**
+- `sample` (table): Sample object to adjust
+- `rate` (number): Playback rate multiplier (1.0 = normal speed)
+
+**Returns:** None
+
+**Note:** Changing the rate affects both playback speed and pitch. A rate of 0.5 plays at half speed with lower pitch, while 2.0 plays at double speed with higher pitch.
+
+---
+
+### vmupro.sound.sample.getRate(sample)
+
+Gets the current playback rate for a sound sample.
+
+```lua
+local rate = vmupro.sound.sample.getRate(beep)
+print("Playback rate: " .. rate .. "x")
+```
+
+**Parameters:**
+- `sample` (table): Sample object to query
+
+**Returns:**
+- `rate` (number): Current playback rate multiplier
+
+---
+
 ### vmupro.sound.update()
 
 Mixes and outputs audio to the device. **Must be called every frame** in your update() callback for audio to work.
@@ -322,6 +436,9 @@ local coinSound
 local musicLoop
 
 function vmupro.load()
+    -- IMPORTANT: Start audio listen mode before loading/playing sounds
+    vmupro.audio.startListenMode()
+
     -- Load sounds during initialization
     jumpSound = vmupro.sound.sample.new("sfx/jump")
     coinSound = vmupro.sound.sample.new("sfx/coin")
@@ -372,14 +489,18 @@ function vmupro.cleanup()
     if jumpSound then vmupro.sound.sample.free(jumpSound) end
     if coinSound then vmupro.sound.sample.free(coinSound) end
     if musicLoop then vmupro.sound.sample.free(musicLoop) end
+
+    -- IMPORTANT: Exit audio listen mode when done
+    vmupro.audio.exitListenMode()
 end
 ```
 
 ## Sound Playback Tips
 
-1. **Always call `vmupro.sound.update()`** every frame in your update loop
-2. **Load sounds during initialization** to avoid stuttering during gameplay
-3. **Free sounds on cleanup** to prevent memory leaks
-4. **Use high repeat counts** for music (e.g., 99) until infinite looping is implemented
-5. **Check for nil** when loading sounds in case files are missing
-6. **WAV files only** - ensure your audio assets are 16-bit PCM WAV format
+1. **Manage audio lifecycle** - Call `vmupro.audio.startListenMode()` before using audio and `vmupro.audio.exitListenMode()` when done (e.g., when leaving a screen/page)
+2. **Always call `vmupro.sound.update()`** every frame in your update loop
+3. **Load sounds during initialization** to avoid stuttering during gameplay
+4. **Free sounds on cleanup** to prevent memory leaks
+5. **Use high repeat counts** for music (e.g., 99) until infinite looping is implemented
+6. **Check for nil** when loading sounds in case files are missing
+7. **WAV files only** - ensure your audio assets are 16-bit PCM WAV format

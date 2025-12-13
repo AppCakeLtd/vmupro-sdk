@@ -6,17 +6,28 @@ Page38 = {}
 -- Track double buffer state
 local db_running = false
 
--- Sound samples (loaded on-demand)
+-- Sound samples (loaded on enter)
 local coin_sound = nil
 local fail_sound = nil
 local complete_sound = nil
+
+-- Loading status
+local sounds_loaded = false
+local load_error = nil
 
 -- Visual feedback
 local last_played = ""
 local last_played_time = 0
 local feedback_duration = 500000  -- 500ms
 
---- @brief Load a sound on-demand
+-- Estimated memory needed per sound (conservative estimate in bytes)
+-- WAV files typically need: samples * channels * bytes_per_sample
+-- Plus overhead for the sound object structure
+local ESTIMATED_SOUND_SIZE = 100000  -- ~100KB per sound (conservative)
+local TOTAL_SOUNDS = 3
+local MEMORY_OVERHEAD = 10000  -- 10KB overhead for structures
+
+--- @brief Load a sound with error handling
 local function loadSound(path, name)
     local sound = vmupro.sound.sample.new(path)
     if sound then
@@ -30,44 +41,89 @@ local function loadSound(path, name)
     return sound
 end
 
+--- @brief Enter function - load all sounds with memory check
+function Page38.enter()
+    vmupro.system.log(vmupro.system.LOG_INFO, "Page38", "Entering sound demo page")
+
+    -- Start audio listen mode (required for sound playback)
+    vmupro.audio.startListenMode()
+
+    -- Check if we have enough contiguous memory for all sounds
+    local required_memory = (ESTIMATED_SOUND_SIZE * TOTAL_SOUNDS) + MEMORY_OVERHEAD
+    local largest_block = vmupro.system.getLargestFreeBlock()
+
+    vmupro.system.log(vmupro.system.LOG_INFO, "Page38",
+        string.format("Memory check: need ~%d KB, largest block: %d KB",
+            math.floor(required_memory / 1024),
+            math.floor(largest_block / 1024)))
+
+    if largest_block < required_memory then
+        load_error = string.format("Need %dKB, have %dKB",
+            math.floor(required_memory / 1024),
+            math.floor(largest_block / 1024))
+        vmupro.system.log(vmupro.system.LOG_WARN, "Page38",
+            "Insufficient contiguous memory for all sounds: " .. load_error)
+        sounds_loaded = false
+        return
+    end
+
+    -- Load all sounds
+    coin_sound = loadSound("assets/winning-a-coin", "Coin")
+    fail_sound = loadSound("assets/player-losing-or-failing", "Fail")
+    complete_sound = loadSound("assets/game-level-completed", "Complete")
+
+    -- Check if all loaded successfully
+    if coin_sound and fail_sound and complete_sound then
+        sounds_loaded = true
+        load_error = nil
+        vmupro.system.log(vmupro.system.LOG_INFO, "Page38", "All sounds loaded successfully")
+    else
+        sounds_loaded = false
+        load_error = "One or more sounds failed to load"
+        vmupro.system.log(vmupro.system.LOG_ERROR, "Page38", load_error)
+    end
+end
+
 --- @brief Update logic - handle button presses to play sounds
 function Page38.update()
     -- CRITICAL: Must call this every frame for audio to work
     vmupro.sound.update()
 
+    -- Don't process input if sounds aren't loaded
+    if not sounds_loaded then
+        return
+    end
+
     local current_time = vmupro.system.getTimeUs()
 
-    -- A button - load and play coin sound
+    -- A button - play coin sound with finish callback
     if vmupro.input.pressed(vmupro.input.A) then
-        if not coin_sound then
-            coin_sound = loadSound("assets/winning-a-coin", "Coin")
-        end
         if coin_sound then
-            vmupro.sound.sample.play(coin_sound)
+            vmupro.sound.sample.play(coin_sound, 0, function()
+                vmupro.system.log(vmupro.system.LOG_INFO, "Page38", "Coin sound done playing")
+            end)
             last_played = "COIN"
             last_played_time = current_time
         end
     end
 
-    -- MODE button - load and play fail sound
+    -- MODE button - play fail sound with finish callback
     if vmupro.input.pressed(vmupro.input.MODE) then
-        if not fail_sound then
-            fail_sound = loadSound("assets/player-losing-or-failing", "Fail")
-        end
         if fail_sound then
-            vmupro.sound.sample.play(fail_sound)
+            vmupro.sound.sample.play(fail_sound, 0, function()
+                vmupro.system.log(vmupro.system.LOG_INFO, "Page38", "Fail sound done playing")
+            end)
             last_played = "FAIL"
             last_played_time = current_time
         end
     end
 
-    -- UP button - load and play level complete sound
+    -- UP button - play level complete sound with finish callback
     if vmupro.input.pressed(vmupro.input.UP) then
-        if not complete_sound then
-            complete_sound = loadSound("assets/game-level-completed", "Complete")
-        end
         if complete_sound then
-            vmupro.sound.sample.play(complete_sound)
+            vmupro.sound.sample.play(complete_sound, 0, function()
+                vmupro.system.log(vmupro.system.LOG_INFO, "Page38", "Complete sound done playing")
+            end)
             last_played = "COMPLETE"
             last_played_time = current_time
         end
@@ -114,6 +170,12 @@ function Page38.exit()
         complete_sound = nil
     end
 
+    -- Exit audio listen mode
+    vmupro.audio.exitListenMode()
+
+    -- Reset state
+    sounds_loaded = false
+    load_error = nil
     last_played = ""
     vmupro.system.log(vmupro.system.LOG_INFO, "Page38", "Sound demo cleaned up")
 end
@@ -135,9 +197,23 @@ function Page38.render(drawPageCounter)
 
     vmupro.text.setFont(vmupro.text.FONT_SMALL)
 
+    -- Show error if sounds failed to load
+    if load_error then
+        vmupro.graphics.drawText("WAV sample playback", 10, 40, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
+        vmupro.graphics.drawText("ERROR:", 10, 60, vmupro.graphics.RED, vmupro.graphics.BLACK)
+        vmupro.graphics.drawText(load_error, 10, 75, vmupro.graphics.RED, vmupro.graphics.BLACK)
+        vmupro.graphics.drawText("Sounds preload on enter", 10, 100, vmupro.graphics.GREY, vmupro.graphics.BLACK)
+        vmupro.graphics.drawText("using getLargestFreeBlock()", 10, 112, vmupro.graphics.GREY, vmupro.graphics.BLACK)
+        vmupro.graphics.drawText("< Prev", 75, 225, vmupro.graphics.GREY, vmupro.graphics.BLACK)
+        drawPageCounter()
+        return
+    end
+
     -- Description
     vmupro.graphics.drawText("WAV sample playback", 10, 40, vmupro.graphics.WHITE, vmupro.graphics.BLACK)
-    vmupro.graphics.drawText("Sounds load on-demand", 10, 52, vmupro.graphics.GREY, vmupro.graphics.BLACK)
+    local status_text = sounds_loaded and "All sounds loaded" or "Loading..."
+    local status_color = sounds_loaded and vmupro.graphics.GREEN or vmupro.graphics.YELLOW
+    vmupro.graphics.drawText(status_text, 10, 52, status_color, vmupro.graphics.BLACK)
 
     -- Instructions
     vmupro.graphics.drawText("Controls:", 10, 70, vmupro.graphics.YELLOW, vmupro.graphics.BLACK)

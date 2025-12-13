@@ -239,6 +239,10 @@ local function update()
                 previous_page = current_page
                 current_page = current_page - 1
                 vmupro.system.log(vmupro.system.LOG_INFO, "SDKTest", string.format("Navigate to page %d", current_page))
+                -- Call enter function for pages that need setup
+                if current_page == 38 then
+                    Page38.enter()
+                end
             end
         end
     end
@@ -306,6 +310,10 @@ local function update()
                 previous_page = current_page
                 current_page = current_page + 1
                 vmupro.system.log(vmupro.system.LOG_INFO, "SDKTest", string.format("Navigate to page %d", current_page))
+                -- Call enter function for pages that need setup
+                if current_page == 38 then
+                    Page38.enter()
+                end
             end
         end
     end
