@@ -414,12 +414,48 @@ The listen mode and sample streaming system enables various audio applications:
 - **Stream Timing**: Coordinate audio streaming with application frame rate
 - **Volume Control**: Use the applyGlobalVolume parameter appropriately
 
+## Synthesizers
+
+The VMU Pro includes a real-time synthesizer system for generating procedural audio. See the [Synth API](../api/synth.md) documentation for full details.
+
+### Quick Synth Example
+
+```lua
+-- Create a simple synth
+local synth = vmupro.sound.synth.new(vmupro.sound.kWaveSine)
+
+-- Configure ADSR envelope
+vmupro.sound.synth.setAttack(synth, 0.01)
+vmupro.sound.synth.setDecay(synth, 0.1)
+vmupro.sound.synth.setSustain(synth, 0.7)
+vmupro.sound.synth.setRelease(synth, 0.3)
+
+-- Play a note (A4 = 440Hz)
+vmupro.sound.synth.playNote(synth, 440.0, 1.0, 0.5)
+
+-- Or use MIDI note numbers
+vmupro.sound.synth.playMIDINote(synth, 69, 1.0, 0.5)  -- Same as 440Hz
+
+-- Free when done
+vmupro.sound.synth.free(synth)
+```
+
+### Available Waveforms
+
+- `kWaveSquare` - Classic 8-bit sound
+- `kWaveTriangle` - Softer than square
+- `kWaveSine` - Pure tone
+- `kWaveNoise` - White noise for drums/effects
+- `kWaveSawtooth` - Bright, buzzy sound
+- `kWavePOPhase`, `kWavePODigital`, `kWavePOVosim` - PO-style synthesis
+
 ## Important Notes
 
 - Audio samples must be int16_t values in the range -32768 to 32767
 - Always use `VMUPRO_AUDIO_MONO` or `VMUPRO_AUDIO_STEREO` constants
-- Call `vmupro.audio.startListenMode()` before streaming samples
+- Call `vmupro.audio.startListenMode()` before streaming samples or using synths
 - Always call `vmupro.audio.exitListenMode()` when done
 - The sample buffer parameter is userdata (pointer to int16_t array)
+- Maximum of 16 synths can be active simultaneously
 
 This guide provides the foundation for creating audio-enabled applications on the VMU Pro platform using the correct API functions and data types.

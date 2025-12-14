@@ -79,6 +79,9 @@ vmupro.audio.STEREO = VMUPRO_AUDIO_STEREO or 1 --- Stereo audio mode
 vmupro.sound = vmupro.sound or {}
 vmupro.sound.sample = vmupro.sound.sample or {}
 
+--- @brief Synthesizer namespace (see synth.lua for full API)
+vmupro.sound.synth = vmupro.sound.synth or {}
+
 --- @class SampleObject
 --- @field id number Internal handle for the sample
 --- @field sampleRate number Sample rate in Hz (e.g., 44100, 22050)
