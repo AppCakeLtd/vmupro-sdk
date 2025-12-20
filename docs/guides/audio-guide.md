@@ -414,6 +414,40 @@ The listen mode and sample streaming system enables various audio applications:
 - **Stream Timing**: Coordinate audio streaming with application frame rate
 - **Volume Control**: Use the applyGlobalVolume parameter appropriately
 
+## Sample Playback
+
+Load and play audio samples directly from files:
+
+```lua
+-- Load a sample (WAV format, without extension)
+local kick = vmupro.sound.sample.new("assets/kick")
+local snare = vmupro.sound.sample.new("assets/snare")
+
+if kick then
+    -- Play once
+    vmupro.sound.sample.play(kick, 0)
+
+    -- Play with callback when finished
+    vmupro.sound.sample.play(snare, 0, function()
+        print("Snare finished playing")
+    end)
+
+    -- Set volume (left, right channels 0.0-1.0)
+    vmupro.sound.sample.setVolume(kick, 1.0, 1.0)
+
+    -- Adjust playback rate (0.5 = half speed, 2.0 = double speed)
+    vmupro.sound.sample.setRate(kick, 1.5)
+
+    -- Check if playing
+    if vmupro.sound.sample.isPlaying(kick) then
+        vmupro.sound.sample.stop(kick)
+    end
+
+    -- Free when done
+    vmupro.sound.sample.free(kick)
+end
+```
+
 ## Synthesizers
 
 The VMU Pro includes a real-time synthesizer system for generating procedural audio. See the [Synth API](../api/synth.md) documentation for full details.
@@ -449,13 +483,61 @@ vmupro.sound.synth.free(synth)
 - `kWaveSawtooth` - Bright, buzzy sound
 - `kWavePOPhase`, `kWavePODigital`, `kWavePOVosim` - PO-style synthesis
 
+## MIDI Playback
+
+Play MIDI files with custom instruments:
+
+```lua
+-- Create instruments
+local piano_inst = vmupro.sound.instrument.new()
+local piano_sample = vmupro.sound.sample.new("assets/piano")
+vmupro.sound.instrument.addVoice(piano_inst, piano_sample, nil)  -- nil = all notes
+
+local drum_inst = vmupro.sound.instrument.new()
+local kick = vmupro.sound.sample.new("assets/kick")
+local snare = vmupro.sound.sample.new("assets/snare")
+vmupro.sound.instrument.addVoice(drum_inst, kick, 36)   -- C2 = Kick
+vmupro.sound.instrument.addVoice(drum_inst, snare, 38)  -- D2 = Snare
+
+-- Load MIDI sequence
+local song = vmupro.sound.sequence.new("assets/song.mid")
+
+-- Assign instruments to tracks
+vmupro.sound.sequence.setTrackInstrument(song, 1, piano_inst)
+vmupro.sound.sequence.setTrackInstrument(song, 2, drum_inst)
+
+-- Or use program callback for dynamic switching
+vmupro.sound.sequence.setProgramCallback(song, function(track, program)
+    if program == 0 then return piano_inst      -- Piano
+    elseif program == 71 then return clarinet_inst  -- Clarinet
+    else return piano_inst end
+end)
+
+-- Play with looping
+vmupro.sound.sequence.setLooping(song, true)
+vmupro.sound.sequence.play(song)
+
+-- IMPORTANT: Call update every frame
+function update()
+    vmupro.sound.update()
+end
+
+-- Clean up
+vmupro.sound.sequence.stop(song)
+vmupro.sound.sequence.free(song)
+vmupro.sound.instrument.free(piano_inst)
+vmupro.sound.sample.free(piano_sample)
+```
+
+See the [Sequence API](../api/sequence.md) and [Instrument API](../api/instrument.md) for complete documentation.
+
 ## Important Notes
 
-- Audio samples must be int16_t values in the range -32768 to 32767
-- Always use `VMUPRO_AUDIO_MONO` or `VMUPRO_AUDIO_STEREO` constants
-- Call `vmupro.audio.startListenMode()` before streaming samples or using synths
+- Call `vmupro.audio.startListenMode()` before using synths or samples
 - Always call `vmupro.audio.exitListenMode()` when done
-- The sample buffer parameter is userdata (pointer to int16_t array)
+- Call `vmupro.sound.update()` every frame for MIDI and synth playback
 - Maximum of 16 synths can be active simultaneously
+- Maximum of 16 voices per instrument
+- Free resources in order: sequences, instruments, samples/synths
 
-This guide provides the foundation for creating audio-enabled applications on the VMU Pro platform using the correct API functions and data types.
+This guide provides the foundation for creating audio-enabled applications on the VMU Pro platform.

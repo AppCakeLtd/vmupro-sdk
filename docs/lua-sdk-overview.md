@@ -6,40 +6,89 @@ The VMU Pro LUA SDK provides a comprehensive scripting environment for developin
 
 ### Graphics API
 Complete graphics rendering capabilities:
-- Frame buffer management
-- Pixel manipulation
-- Drawing primitives (lines, rectangles, circles)
-- Text rendering
-- Sprite support
+- Frame buffer management (double-buffered)
+- Drawing primitives (lines, rectangles, circles, ellipses, polygons)
+- Text rendering with multiple fonts
+- Fill operations (solid, flood fill with tolerance)
+- Mosaic/pixelation effects
+- RGB565 color format with predefined color constants
+
+### Sprites API
+Comprehensive sprite system:
+- Sprite and spritesheet loading (BMP and PNG formats)
+- Per-pixel alpha transparency (PNG with RGBA8888)
+- Scaling, flipping, and rotation
+- Visual effects: color tinting, color addition, blur, mosaic, alpha blending
+- Stencil masking (image-based and pattern-based)
+- Animation system with frame control and playback
+- Scene management with Z-ordering
+- Position, visibility, and center point control
+
+### Collision Detection API
+Robust collision system (part of Sprites API):
+- Collision rectangles with position-relative offsets
+- Collision groups with 32-bit bitmasks
+- Overlapping sprite detection
+- Point, rectangle, and line queries
+- Movement with collision response (moveWithCollisions)
+- Tags and userdata for sprite identification
+
+### Double Buffer API
+Smooth rendering control:
+- Start/stop double buffer renderer
+- Manual frame pushing
+- Framebuffer side tracking
 
 ### Audio API
-Audio playback and generation:
-- Tone generation
-- Sound file playback (WAV, MP3)
-- Volume control
-- Audio effects
+Audio playback and control:
+- Global volume control (0-10)
+- Sample playback (WAV, ADPCM)
+- Listen mode for audio streaming
+- Ring buffer management
+
+### Synth API
+Real-time audio synthesis:
+- Multiple waveforms (square, sine, triangle, sawtooth, noise)
+- ADSR envelope control
+- Frequency and MIDI note playback
+- Volume control per synth
+- Up to 16 simultaneous synths
+
+### Instrument API
+Sample-based instruments:
+- Voice mapping to MIDI notes
+- Wildcard mapping for melodic instruments
+- Per-note mapping for drums
+- Up to 16 voices per instrument
+
+### Sequence API
+MIDI playback:
+- Load and play standard MIDI files
+- Track management and instrument assignment
+- Program change callbacks for dynamic instrument switching
+- Looping and playback control
+- Track polyphony monitoring
 
 ### Input API
 User input handling:
-- Button state reading
-- Event-driven input
-- Button mapping
-- Input queuing
+- Button state reading (pressed, held, released)
+- D-pad and face buttons
+- MODE button for system functions
 
 ### File System API
 Secure file operations:
-- File reading and writing
-- Directory operations
-- File existence checking
+- File reading and writing (limited to `/sdcard`)
+- Directory creation and management
+- File existence and size checking
 - Binary and text file support
 
-### Utility API
+### System API
 System utilities:
-- Timing functions
+- Timing functions (milliseconds, microseconds)
+- Logging with levels and tags
+- Brightness control
+- Memory usage monitoring
 - Random number generation
-- System information
-- Memory monitoring
-- Battery status
 
 ## Development Workflow
 
@@ -124,6 +173,7 @@ The SDK provides:
 ## Next Steps
 
 - Follow the [Getting Started](getting-started.md) guide to create your first app
-- Explore the [API Reference](api/graphics.md) for detailed function documentation
+- Explore the [API Reference](api/display.md) for detailed function documentation
+- Learn about [Sprites and Animation](api/sprites.md) for game graphics
 - Study the [Examples](examples/hello-world.md) for practical implementation patterns
 - Review the [Advanced Topics](advanced/troubleshooting.md) for optimization and troubleshooting

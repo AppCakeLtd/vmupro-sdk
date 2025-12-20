@@ -190,7 +190,7 @@ LUA applications can access files and folders within the `/sdcard` directory:
 
 ## Next Steps
 
-- Check out the [API Reference](api/graphics.md) for detailed function documentation
+- Check out the [API Reference](api/display.md) for detailed function documentation
 - Look at more [Examples](examples/hello-world.md) for inspiration
 - Learn about [Graphics Programming](guides/graphics-guide.md)
 - Explore [Audio Programming](guides/audio-guide.md)

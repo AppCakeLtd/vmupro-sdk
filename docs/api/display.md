@@ -4,7 +4,7 @@ The Graphics API provides comprehensive functions for drawing and manipulating t
 
 ## Overview
 
-The graphics system uses a double-buffered frame buffer approach with extensive drawing capabilities including basic primitives, advanced blitting, layer management, visual effects, and collision detection.
+The graphics system uses a double-buffered frame buffer approach with extensive drawing capabilities including basic primitives (lines, rectangles, circles, ellipses, polygons), text rendering, fill operations, and visual effects. For sprite-based rendering with collision detection, see the [Sprites API](sprites.md).
 
 ## Display Management
 

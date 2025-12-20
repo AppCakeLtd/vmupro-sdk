@@ -108,20 +108,20 @@ vmupro.graphics.drawLine(0, 0, 239, 239, vmupro.graphics.BLUE)
 
 ### Rectangles
 
-Draw rectangular shapes:
+Draw rectangular shapes using corner coordinates:
 
 ```lua
-vmupro.graphics.drawRect(x, y, width, height, color)     -- outline
-vmupro.graphics.drawFillRect(x, y, width, height, color) -- filled
+vmupro.graphics.drawRect(x1, y1, x2, y2, color)     -- outline
+vmupro.graphics.drawFillRect(x1, y1, x2, y2, color) -- filled
 ```
 
 **Examples:**
 ```lua
--- Outline rectangle in white
-vmupro.graphics.drawRect(50, 50, 100, 80, vmupro.graphics.WHITE)
+-- Outline rectangle from (50,50) to (150,130) in white
+vmupro.graphics.drawRect(50, 50, 150, 130, vmupro.graphics.WHITE)
 
--- Filled rectangle in red
-vmupro.graphics.drawFillRect(70, 70, 60, 40, vmupro.graphics.RED)
+-- Filled rectangle from (70,70) to (130,110) in red
+vmupro.graphics.drawFillRect(70, 70, 130, 110, vmupro.graphics.RED)
 ```
 
 ### Text Rendering
@@ -200,71 +200,92 @@ local rainbow_color = get_cycling_color(1.0)
 vmupro.graphics.drawText("RAINBOW TEXT", 50, 100, rainbow_color, vmupro.graphics.BLACK)
 ```
 
-## Advanced Graphics Techniques
+## Sprite System
 
-### Sprite System with Color
+The VMU Pro provides a powerful built-in sprite system. For simple graphics, use the drawing primitives above. For game graphics with images, use the sprite API.
+
+### Loading and Drawing Sprites
 
 ```lua
-local Sprite = {}
-Sprite.__index = Sprite
+-- Load a sprite from file (BMP or PNG, without extension)
+local player = vmupro.sprite.new("sprites/player")
 
-function Sprite.new(width, height, data)
-    local sprite = {
-        width = width,
-        height = height,
-        data = data  -- 2D array of RGB565 color values
-    }
-    setmetatable(sprite, Sprite)
-    return sprite
+if player then
+    print("Loaded sprite: " .. player.width .. "x" .. player.height)
 end
 
-function Sprite:draw(x, y)
-    for row = 1, self.height do
-        for col = 1, self.width do
-            local color = self.data[row][col]
-            if color > 0 then -- 0 = transparent
-                -- Draw as 1x1 filled rectangle since no pixel function
-                vmupro.graphics.drawFillRect(x + col - 1, y + row - 1, 1, 1, color)
-            end
-        end
-    end
-end
+-- Draw the sprite at position (100, 100)
+vmupro.sprite.draw(player, 100, 100)
 
--- Example: 8x8 colorful sprite
-local colorful_sprite_data = {}
-for row = 1, 8 do
-    colorful_sprite_data[row] = {}
-    for col = 1, 8 do
-        -- Create a rainbow pattern
-        local hue = ((row + col) * 30) % 360
-        colorful_sprite_data[row][col] = hue_to_rgb565(hue)
-    end
-end
+-- Draw with flipping
+vmupro.sprite.draw(player, 100, 100, vmupro.sprite.kImageFlippedX)
 
-function hue_to_rgb565(hue)
-    -- Convert HSV to RGB (simplified)
-    local c = 1.0
-    local x = c * (1 - math.abs(((hue / 60) % 2) - 1))
-    local m = 0
+-- Draw with scaling (2x size)
+vmupro.sprite.drawScaled(player, 100, 100, 2.0)
 
-    local r, g, b = 0, 0, 0
-    if hue < 60 then
-        r, g, b = c, x, 0
-    elseif hue < 120 then
-        r, g, b = x, c, 0
-    elseif hue < 180 then
-        r, g, b = 0, c, x
-    elseif hue < 240 then
-        r, g, b = 0, x, c
-    elseif hue < 300 then
-        r, g, b = x, 0, c
-    else
-        r, g, b = c, 0, x
-    end
-
-    return rgb_to_565((r + m) * 255, (g + m) * 255, (b + m) * 255)
-end
+-- Free when done
+vmupro.sprite.free(player)
 ```
+
+### Spritesheets and Animation
+
+```lua
+-- Load a spritesheet (filename format: name-table-width-height)
+local walk_sheet = vmupro.sprite.newSheet("sprites/player-table-32-32")
+
+-- Draw a specific frame (1-based index)
+vmupro.sprite.drawFrame(walk_sheet, 1, 100, 100)
+
+-- Play animation (frames 1-4 at 10 FPS, looping)
+vmupro.sprite.playAnimation(walk_sheet, 0, 3, 10, true)
+
+-- In your update loop:
+vmupro.sprite.updateAnimations()
+
+-- Draw current animation frame
+local frame = vmupro.sprite.getCurrentFrame(walk_sheet) + 1
+vmupro.sprite.drawFrame(walk_sheet, frame, player_x, player_y)
+```
+
+### Visual Effects
+
+```lua
+-- Color tinting (multiply colors)
+vmupro.sprite.drawTinted(player, x, y, 0xFF0000)  -- Red tint
+
+-- Color addition (brighten)
+vmupro.sprite.drawColorAdd(player, x, y, 0x404040)  -- Brighten
+
+-- Alpha blending (transparency)
+vmupro.sprite.drawBlended(player, x, y, 128)  -- 50% opacity
+
+-- Mosaic/pixelation
+vmupro.sprite.drawMosaic(player, x, y, 4)  -- 4x4 pixel blocks
+
+-- Blur effect
+vmupro.sprite.drawBlurred(player, x, y, 3)  -- Blur radius 3
+```
+
+### Scene Management
+
+```lua
+-- Add sprites to scene with Z-ordering
+vmupro.sprite.setZIndex(background, 0)
+vmupro.sprite.setZIndex(player, 10)
+vmupro.sprite.setZIndex(foreground, 20)
+
+vmupro.sprite.add(background)
+vmupro.sprite.add(player)
+vmupro.sprite.add(foreground)
+
+-- Draw all sprites in Z-order
+vmupro.sprite.drawAll()
+
+-- Clean up when leaving
+vmupro.sprite.removeAll()
+```
+
+For complete sprite documentation including collision detection, see the [Sprites API](../api/sprites.md).
 
 ## Performance Optimization
 

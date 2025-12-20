@@ -7,14 +7,15 @@
 ## API Reference
 
 * [Display API](api/display.md)
+* [Sprites API](api/sprites.md)
+* [Double Buffer API](api/doublebuffer.md)
 * [Audio API](api/audio.md)
 * [Synth API](api/synth.md)
+* [Instrument API](api/instrument.md)
+* [Sequence API](api/sequence.md)
 * [Input API](api/input.md)
 * [File System API](api/file.md)
 * [System API](api/system.md)
-* [Layer System API](api/layers.md)
-* [Sprites API](api/sprites.md)
-* [Double Buffer API](api/doublebuffer.md)
 
 ## Guides
 

@@ -165,7 +165,7 @@ Create `metadata.json`:
 
 ## Step 4: Create an Icon
 
-Create a 32x32 BMP file named `icon.bmp`. You can:
+Create a 76x76 BMP file named `icon.bmp`. You can:
 - Use an image editor to create one
 - Copy from the examples directory
 - Use online BMP generators
@@ -245,8 +245,8 @@ local game_mode = "normal"  -- "normal", "timed", "challenge"
 
 ### Graphics Not Showing
 - Call `vmupro.graphics.refresh()` after drawing
-- Check coordinate ranges (0-127 x, 0-63 y)
-- Ensure color values are 0 or 1
+- Check coordinate ranges (0-239 x, 0-239 y for 240x240 display)
+- Use RGB565 color format (see display API for constants)
 
 ### File Operations Failing
 - Use absolute paths starting with `/sdcard/`
