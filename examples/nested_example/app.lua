@@ -45,12 +45,13 @@ import "pages/page35"
 import "pages/page36"
 import "pages/page37"
 import "pages/page38"
+import "pages/page39"
 
 -- Application state
 local app_running = true
 local current_page = 1
 local previous_page = 1
-local total_pages = 38 -- Will increment as we add more test pages
+local total_pages = 39 -- Will increment as we add more test pages
 
 -- Frame timing control
 local target_frame_time_us = 16666 -- Target 60 FPS (16.666ms in microseconds)
@@ -170,6 +171,8 @@ local function update()
         Page37.update()
     elseif current_page == 38 then
         Page38.update()
+    elseif current_page == 39 then
+        Page39.update()
     end
 
     -- Special handling for page 6 (button test page) - require MODE button
@@ -235,6 +238,8 @@ local function update()
                     Page37.exit()
                 elseif current_page == 38 then
                     Page38.exit()
+                elseif current_page == 39 then
+                    Page39.exit()
                 end
                 previous_page = current_page
                 current_page = current_page - 1
@@ -242,6 +247,8 @@ local function update()
                 -- Call enter function for pages that need setup
                 if current_page == 38 then
                     Page38.enter()
+                elseif current_page == 39 then
+                    Page39.enter()
                 end
             end
         end
@@ -306,6 +313,8 @@ local function update()
                     Page37.exit()
                 elseif current_page == 38 then
                     Page38.exit()
+                elseif current_page == 39 then
+                    Page39.exit()
                 end
                 previous_page = current_page
                 current_page = current_page + 1
@@ -313,6 +322,8 @@ local function update()
                 -- Call enter function for pages that need setup
                 if current_page == 38 then
                     Page38.enter()
+                elseif current_page == 39 then
+                    Page39.enter()
                 end
             end
         end
@@ -376,6 +387,8 @@ local function update()
                 Page37.exit()
             elseif current_page == 38 then
                 Page38.exit()
+            elseif current_page == 39 then
+                Page39.exit()
             end
             vmupro.system.log(vmupro.system.LOG_INFO, "SDKTest", "Exit requested")
             app_running = false
@@ -461,6 +474,8 @@ local function render()
         Page37.render(drawPageCounter)
     elseif current_page == 38 then
         Page38.render(drawPageCounter)
+    elseif current_page == 39 then
+        Page39.render(drawPageCounter)
     end
     -- More pages will be added here
 
@@ -468,8 +483,8 @@ local function render()
     updateAndDrawFPS()
 
     -- Refresh display once after all drawing is complete
-    -- Note: Pages 13-38 use double buffer renderer which calls pushDoubleBufferFrame() instead
-    if current_page >= 13 and current_page <= 38 then
+    -- Note: Pages 13-39 use double buffer renderer which calls pushDoubleBufferFrame() instead
+    if current_page >= 13 and current_page <= 39 then
         vmupro.graphics.pushDoubleBufferFrame()
     else
         vmupro.graphics.refresh()
