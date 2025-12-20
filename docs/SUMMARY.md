@@ -32,7 +32,6 @@
 ## Tools
 
 * [Packer Tool](tools/packer.md)
-* [Send Tool](tools/send.md)
 * [Development Setup](tools/development.md)
 
 ## Advanced Topics

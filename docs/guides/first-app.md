@@ -177,10 +177,13 @@ Package the application:
 python ../tools/packer/packer.py --projectdir . --appname clicker --meta metadata.json --icon icon.bmp
 ```
 
-Deploy to your VMU Pro:
-```bash
-python ../tools/packer/send.py --func send --localfile clicker.vmupack --remotefile apps/clicker.vmupack --comport COM3
-```
+Deploy to your VMU Pro by copying the `.vmupack` file to the SD card:
+
+1. Remove the SD card from your VMU Pro
+2. Insert the SD card into your computer
+3. Copy `clicker.vmupack` to the `apps/` folder on the SD card
+4. Safely eject and re-insert the SD card into your VMU Pro
+5. Launch the app from the VMU Pro menu
 
 ## Key Concepts Demonstrated
 

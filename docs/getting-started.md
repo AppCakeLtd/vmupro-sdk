@@ -34,12 +34,6 @@ Test the packer tool:
 python tools/packer/packer.py --help
 ```
 
-Test the send tool:
-
-```bash
-python tools/packer/send.py --help
-```
-
 ## Your First Application
 
 Let's create a simple "Hello World" application to get you started.
@@ -130,13 +124,13 @@ This will create `hello_world.vmupack` in your project directory.
 
 ### 6. Deploy to VMU Pro
 
-Connect your VMU Pro device and deploy the application:
+Copy the generated `.vmupack` file to your VMU Pro's SD card:
 
-```bash
-python ../tools/packer/send.py --func send --localfile hello_world.vmupack --remotefile apps/hello_world.vmupack --comport COM3
-```
-
-Replace `COM3` with your actual COM port.
+1. Remove the SD card from your VMU Pro device
+2. Insert the SD card into your computer
+3. Copy `hello_world.vmupack` to the `apps/` folder on the SD card
+4. Safely eject the SD card and insert it back into your VMU Pro
+5. Navigate to the app on your VMU Pro and launch it
 
 ## Application Structure
 

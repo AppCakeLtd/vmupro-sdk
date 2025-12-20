@@ -55,12 +55,12 @@ Install the required Python packages for the SDK tools:
 
 ```bash
 # Install required packages
-pip install Pillow pyserial
+pip install Pillow
 
 # Or create a virtual environment (recommended)
 python -m venv vmu-dev
 source vmu-dev/bin/activate  # On Windows: vmu-dev\Scripts\activate
-pip install Pillow pyserial
+pip install Pillow
 ```
 
 ### 4. Verify SDK Tools
@@ -70,9 +70,6 @@ Test that the SDK tools are working correctly:
 ```bash
 # Test packer tool
 python vmupro-sdk/tools/packer/packer.py --help
-
-# Test send tool
-python vmupro-sdk/tools/packer/send.py --help
 ```
 
 ## IDE Setup
@@ -101,7 +98,7 @@ Create `.vscode/settings.json` in your project root:
 
 #### Build Tasks
 
-Create `.vscode/tasks.json` for building and deploying:
+Create `.vscode/tasks.json` for building:
 
 ```json
 {
@@ -116,40 +113,16 @@ Create `.vscode/tasks.json` for building and deploying:
                 "--projectdir", ".",
                 "--appname", "${workspaceFolderBasename}",
                 "--meta", "metadata.json",
-                "--sdkversion", "1.0.0",
                 "--icon", "icon.bmp"
             ],
-            "group": "build"
-        },
-        {
-            "label": "Deploy App",
-            "type": "shell",
-            "command": "python",
-            "args": [
-                "vmupro-sdk/tools/packer/send.py",
-                "--func", "send",
-                "--localfile", "${workspaceFolderBasename}.vmupack",
-                "--remotefile", "apps/${workspaceFolderBasename}.vmupack",
-                "--exec", "--monitor"
-            ],
-            "dependsOn": "Package Application"
-        },
-        {
-            "label": "Deploy Game",
-            "type": "shell",
-            "command": "python",
-            "args": [
-                "vmupro-sdk/tools/packer/send.py",
-                "--func", "send",
-                "--localfile", "${workspaceFolderBasename}.vmupack",
-                "--remotefile", "games/${workspaceFolderBasename}.vmupack",
-                "--exec", "--monitor"
-            ],
-            "dependsOn": "Package Application"
+            "group": "build",
+            "problemMatcher": []
         }
     ]
 }
 ```
+
+After packaging, copy the generated `.vmupack` file to your VMU Pro's SD card manually.
 
 ## Project Templates
 
@@ -318,7 +291,6 @@ Create `build.sh` that works with the SDK submodule:
 # build.sh - Build script using VMU Pro SDK submodule
 
 PROJECT_NAME=$(basename "$(pwd)")
-SDK_VERSION="1.0.0"
 SDK_PATH="vmupro-sdk"
 
 # Ensure SDK submodule is initialized
@@ -347,7 +319,6 @@ python "$SDK_PATH/tools/packer/packer.py" \
     --projectdir . \
     --appname "$PROJECT_NAME" \
     --meta metadata.json \
-    --sdkversion "$SDK_VERSION" \
     --icon icon.bmp
 
 if [ $? -ne 0 ]; then
@@ -355,28 +326,15 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Deploy to device using SDK tools
-echo "Deploying to $DEPLOY_DIR/..."
-python "$SDK_PATH/tools/packer/send.py" \
-    --func send \
-    --localfile "$PROJECT_NAME.vmupack" \
-    --remotefile "$DEPLOY_DIR/$PROJECT_NAME.vmupack" \
-    --exec \
-    --monitor
-
-if [ $? -eq 0 ]; then
-    echo "✓ Successfully deployed $PROJECT_NAME"
-else
-    echo "✗ Deployment failed"
-    exit 1
-fi
+echo "✓ Successfully built $PROJECT_NAME.vmupack"
+echo ""
+echo "To deploy: Copy $PROJECT_NAME.vmupack to $DEPLOY_DIR/ on your VMU Pro SD card"
 ```
 
 ### Makefile with SDK Integration
 
 ```makefile
 PROJECT_NAME := $(shell basename $(CURDIR))
-SDK_VERSION := 1.0.0
 SDK_PATH := vmupro-sdk
 
 # Determine deployment directory from metadata
@@ -389,9 +347,9 @@ else
     DEPLOY_DIR := apps
 endif
 
-.PHONY: all build deploy clean reset help sdk-update
+.PHONY: all build clean help sdk-update
 
-all: build deploy
+all: build
 
 build:
 	@echo "Building $(PROJECT_NAME)..."
@@ -399,25 +357,13 @@ build:
 		--projectdir . \
 		--appname $(PROJECT_NAME) \
 		--meta metadata.json \
-		--sdkversion $(SDK_VERSION) \
 		--icon icon.bmp
-
-deploy: build
-	@echo "Deploying to $(DEPLOY_DIR)/..."
-	python $(SDK_PATH)/tools/packer/send.py \
-		--func send \
-		--localfile $(PROJECT_NAME).vmupack \
-		--remotefile $(DEPLOY_DIR)/$(PROJECT_NAME).vmupack \
-		--exec \
-		--monitor
+	@echo ""
+	@echo "To deploy: Copy $(PROJECT_NAME).vmupack to $(DEPLOY_DIR)/ on your VMU Pro SD card"
 
 sdk-update:
 	@echo "Updating SDK submodule..."
 	git submodule update --init --recursive
-
-reset:
-	@echo "Resetting device..."
-	python $(SDK_PATH)/tools/packer/send.py --func reset
 
 clean:
 	rm -f *.vmupack
@@ -425,8 +371,6 @@ clean:
 help:
 	@echo "Available targets:"
 	@echo "  build      - Package the application"
-	@echo "  deploy     - Build and deploy to device"
-	@echo "  reset      - Reset the VMU Pro device"
 	@echo "  sdk-update - Update SDK submodule"
 	@echo "  clean      - Remove built files"
 ```
@@ -491,7 +435,7 @@ Thumbs.db
 1. **Setup Project**: Add SDK submodule and configure build system
 2. **Develop**: Write your LUA application using SDK API definitions
 3. **Build**: Use SDK tools to package your application
-4. **Deploy**: Upload to device using SDK send tool
+4. **Deploy**: Copy the `.vmupack` file to your VMU Pro's SD card
 5. **Test**: Run and debug on device
 6. **Iterate**: Repeat cycle for improvements
 
