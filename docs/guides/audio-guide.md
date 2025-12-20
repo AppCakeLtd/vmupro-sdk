@@ -19,7 +19,7 @@ The most basic audio operations involve managing the global volume level:
 ```lua
 -- Get current volume
 local volume = vmupro.audio.getGlobalVolume()
-print("Current volume: " .. volume .. "/10")
+vmupro.system.log(vmupro.system.LOG_DEBUG, "Audio", "Current volume: " .. volume .. "/10")
 
 -- Set volume to 50%
 vmupro.audio.setGlobalVolume(128)
@@ -44,7 +44,7 @@ vmupro.audio.clearRingBuffer()
 
 -- Check ring buffer fill state
 local result, filled, total = vmupro.audio.getRingbufferFillState()
-print("Ring buffer: " .. filled .. "/" .. total .. " samples")
+vmupro.system.log(vmupro.system.LOG_DEBUG, "Audio", "Ring buffer: " .. filled .. "/" .. total .. " samples")
 
 -- Push int16_t audio samples to the stream
 -- samples: userdata pointer to int16_t array
@@ -69,9 +69,9 @@ vmupro.audio.clearRingBuffer()
 local result, filled_samples, total_size = vmupro.audio.getRingbufferFillState()
 if result == 0 then  -- Success
     local fill_percentage = (filled_samples / total_size) * 100
-    print("Buffer is " .. fill_percentage .. "% full")
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Audio", "Buffer is " .. fill_percentage .. "% full")
 else
-    print("Failed to get ring buffer state")
+    vmupro.system.log(vmupro.system.LOG_ERROR, "Audio", "Failed to get ring buffer state")
 end
 ```
 
@@ -429,7 +429,7 @@ if kick then
 
     -- Play with callback when finished
     vmupro.sound.sample.play(snare, 0, function()
-        print("Snare finished playing")
+        vmupro.system.log(vmupro.system.LOG_DEBUG, "Audio", "Snare finished playing")
     end)
 
     -- Set volume (left, right channels 0.0-1.0)

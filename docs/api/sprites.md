@@ -264,7 +264,7 @@ vmupro.sprite.setPosition(player, 120, 75)
 
 -- Position persists in sprite object
 local x, y = vmupro.sprite.getPosition(player)
-print("Player at:", x, y)  -- Player at: 120 75
+vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Player at: " .. x .. ", " .. y)  -- Player at: 120, 75
 ```
 
 **Parameters:**
@@ -329,7 +329,7 @@ vmupro.sprite.moveBy(player, 0, 5)
 
 -- Position is now (110, 105)
 local x, y = vmupro.sprite.getPosition(player)
-print("Position:", x, y)  -- Position: 110 105
+vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Position: " .. x .. ", " .. y)  -- Position: 110, 105
 
 -- Movement in game loop
 if button_pressed_right then
@@ -362,7 +362,7 @@ local x, y = vmupro.sprite.getPosition(my_sprite)
 
 -- Use position for logic
 if x > 200 then
-    print("Sprite is past screen center")
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Sprite is past screen center")
 end
 
 -- Copy position to another sprite
@@ -433,9 +433,9 @@ Gets the current visibility state of a sprite.
 local is_visible = vmupro.sprite.getVisible(my_sprite)
 
 if is_visible then
-    print("Sprite is visible")
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Sprite is visible")
 else
-    print("Sprite is hidden")
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Sprite is hidden")
 end
 
 -- Conditional logic based on visibility
@@ -503,16 +503,16 @@ Gets the current Z-index of a sprite.
 ```lua
 -- Get current Z-index
 local z = vmupro.sprite.getZIndex(my_sprite)
-print("Sprite Z-index:", z)
+vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Sprite Z-index: " .. z)
 
 -- Compare Z-indices
 local player_z = vmupro.sprite.getZIndex(player)
 local enemy_z = vmupro.sprite.getZIndex(enemy)
 
 if player_z > enemy_z then
-    print("Player is in front of enemy")
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Player is in front of enemy")
 else
-    print("Enemy is in front of player")
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Enemy is in front of player")
 end
 
 -- Swap Z-indices
@@ -580,12 +580,12 @@ Gets the sprite's current center point.
 ```lua
 -- Get current center point
 local cx, cy = vmupro.sprite.getCenter(player)
-print("Center:", cx, cy)  -- e.g., "Center: 0.5 0.5"
+vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Center: " .. cx .. ", " .. cy)  -- e.g., "Center: 0.5, 0.5"
 
 -- Check if using default center
 local cx, cy = vmupro.sprite.getCenter(sprite)
 if cx == 0.5 and cy == 0.5 then
-    print("Using default center")
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Using default center")
 end
 
 -- Copy center from one sprite to another
@@ -615,8 +615,8 @@ Gets the sprite's actual drawing bounds in screen space, accounting for position
 ```lua
 -- Get sprite's screen-space bounding box
 local x, y, w, h = vmupro.sprite.getBounds(player)
-print("Sprite draws at:", x, y)
-print("Size:", w, h)
+vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Sprite draws at: " .. x .. ", " .. y)
+vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Size: " .. w .. ", " .. h)
 
 -- Check collision between two sprites
 local x1, y1, w1, h1 = vmupro.sprite.getBounds(sprite1)
@@ -624,7 +624,7 @@ local x2, y2, w2, h2 = vmupro.sprite.getBounds(sprite2)
 
 if x1 < x2 + w2 and x1 + w1 > x2 and
    y1 < y2 + h2 and y1 + h1 > y2 then
-    print("Collision detected!")
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Collision detected!")
 end
 
 -- Draw debug bounding box
@@ -871,10 +871,10 @@ Loads a spritesheet from a BMP or PNG file and returns a spritesheet handle with
 local walk_sheet = vmupro.sprite.newSheet("sprites/player-table-32-32")
 
 if walk_sheet then
-    print("Spritesheet loaded:")
-    print("  Total size: " .. walk_sheet.width .. "x" .. walk_sheet.height)
-    print("  Frame size: " .. walk_sheet.frameWidth .. "x" .. walk_sheet.frameHeight)
-    print("  Frame count: " .. walk_sheet.frameCount)
+    vmupro.system.log(vmupro.system.LOG_INFO, "Sprites", "Spritesheet loaded:")
+    vmupro.system.log(vmupro.system.LOG_INFO, "Sprites", "  Total size: " .. walk_sheet.width .. "x" .. walk_sheet.height)
+    vmupro.system.log(vmupro.system.LOG_INFO, "Sprites", "  Frame size: " .. walk_sheet.frameWidth .. "x" .. walk_sheet.frameHeight)
+    vmupro.system.log(vmupro.system.LOG_INFO, "Sprites", "  Frame count: " .. walk_sheet.frameCount)
 end
 
 -- Load different sized spritesheets
@@ -1136,17 +1136,17 @@ Gets the current frame index of a spritesheet.
 ```lua
 -- Get current frame
 local current = vmupro.sprite.getCurrentFrame(walk_sheet)
-print("Currently on frame:", current)
+vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Currently on frame: " .. current)
 
 -- Check if at first frame
 if vmupro.sprite.getCurrentFrame(walk_sheet) == 0 then
-    print("Animation at start")
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Animation at start")
 end
 
 -- Check if at last frame
 local total = vmupro.sprite.getFrameCount(walk_sheet)
 if vmupro.sprite.getCurrentFrame(walk_sheet) == total - 1 then
-    print("Animation complete")
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Animation complete")
 end
 ```
 
@@ -1171,7 +1171,7 @@ Gets the total number of frames in a spritesheet.
 ```lua
 -- Get frame count
 local count = vmupro.sprite.getFrameCount(walk_sheet)
-print("Animation has", count, "frames")
+vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Animation has " .. count .. " frames")
 
 -- Loop through all frames
 for i = 0, vmupro.sprite.getFrameCount(walk_sheet) - 1 do
@@ -1182,7 +1182,7 @@ end
 -- Calculate animation duration
 local fps = 10
 local duration = vmupro.sprite.getFrameCount(walk_sheet) / fps
-print("Animation duration:", duration, "seconds at", fps, "FPS")
+vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Animation duration: " .. duration .. " seconds at " .. fps .. " FPS")
 ```
 
 **Parameters:**
@@ -1343,9 +1343,9 @@ Checks if the sprite is currently playing an animation (and not paused).
 ```lua
 -- Check if animation is playing
 if vmupro.sprite.isAnimating(player) then
-    print("Player is animating")
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Player is animating")
 else
-    print("Player animation stopped or paused")
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Player animation stopped or paused")
 end
 
 -- Conditional logic based on animation state
@@ -1472,9 +1472,9 @@ Gets the collision rectangle relative to the sprite's position.
 local cx, cy, cw, ch = vmupro.sprite.getCollisionRect(player)
 
 if cx then
-    print("Collision rect:", cx, cy, cw, ch)  -- e.g., "Collision rect: 6 2 20 28"
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Collision rect: " .. cx .. ", " .. cy .. ", " .. cw .. ", " .. ch)
 else
-    print("No collision rect set")
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "No collision rect set")
 end
 ```
 
@@ -1777,15 +1777,15 @@ vmupro.sprite.setCollisionRect(player, 6, 2, 20, 28)
 
 -- Get world-space collision bounds
 local bx, by, bw, bh = vmupro.sprite.getCollideBounds(player)
-print("Collision at:", bx, by)  -- "Collision at: 106 52"
-print("Size:", bw, bh)           -- "Size: 20 28"
+vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Collision at: " .. bx .. ", " .. by)
+vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Size: " .. bw .. ", " .. bh)
 
 -- Check collision with another sprite
 local ex, ey, ew, eh = vmupro.sprite.getCollideBounds(enemy)
 
 if ex and bx < ex + ew and bx + bw > ex and
    by < ey + eh and by + bh > ey then
-    print("Collision detected!")
+    vmupro.system.log(vmupro.system.LOG_INFO, "Sprites", "Collision detected!")
 end
 ```
 
@@ -1866,7 +1866,7 @@ local playerGroups = vmupro.sprite.getGroups(player)
 
 -- Returns array like {1} or {2, 5, 6}
 for _, group in ipairs(playerGroups) do
-    print("Player belongs to group:", group)
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Player belongs to group: " .. group)
 end
 ```
 
@@ -1941,7 +1941,7 @@ local playerCollides = vmupro.sprite.getCollidesWithGroups(player)
 
 -- Returns array like {2, 4} (enemy and enemy bullet groups)
 for _, group in ipairs(playerCollides) do
-    print("Player collides with group:", group)
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Player collides with group: " .. group)
 end
 ```
 
@@ -2050,12 +2050,12 @@ local mask = vmupro.sprite.getGroupMask(player)
 -- Check if sprite belongs to specific group (bitwise AND)
 local GROUP_PLAYER = 0x00000001  -- Group 1
 if (mask & GROUP_PLAYER) ~= 0 then
-    print("Player belongs to player group")
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Player belongs to player group")
 end
 
 -- Check multiple groups
 if (mask & 0x0000000F) ~= 0 then  -- Groups 1-4
-    print("Belongs to at least one of groups 1-4")
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Belongs to at least one of groups 1-4")
 end
 ```
 
@@ -2121,7 +2121,7 @@ local mask = vmupro.sprite.getCollidesWithGroupsMask(player)
 -- Check if sprite collides with specific group
 local GROUP_ENEMY = 0x00000002  -- Group 2
 if (mask & GROUP_ENEMY) ~= 0 then
-    print("Player collides with enemies")
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Player collides with enemies")
 end
 
 -- Check collision filtering between two sprites (efficient bitmask version)
@@ -2262,7 +2262,7 @@ end
 local room_x, room_y = 0, 0
 local room_width, room_height = 240, 160
 local enemies_in_room = vmupro.sprite.querySpritesInRect(room_x, room_y, room_width, room_height)
-print("Enemies in room: " .. #enemies_in_room)
+vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Enemies in room: " .. #enemies_in_room)
 
 -- Area-of-effect attack
 local aoe_sprites = vmupro.sprite.querySpritesInRect(attack_x, attack_y, attack_w, attack_h)
@@ -3251,9 +3251,9 @@ local enemy_sprite = vmupro.sprite.new("sprites/enemy")
 
 if player_sprite then
     -- Access sprite properties
-    print("Player size: " .. player_sprite.width .. "x" .. player_sprite.height)
-    print("Player handle ID: " .. player_sprite.id)
-    print("Transparent color: " .. string.format("0x%04X", player_sprite.transparentColor))
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Player size: " .. player_sprite.width .. "x" .. player_sprite.height)
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Player handle ID: " .. player_sprite.id)
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Transparent color: " .. string.format("0x%04X", player_sprite.transparentColor))
 end
 
 -- Game state

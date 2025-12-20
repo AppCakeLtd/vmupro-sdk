@@ -19,9 +19,9 @@ Check if files exist before attempting to read them:
 ```lua
 -- Check if a file exists
 if vmupro.file.exists("/sdcard/save.txt") then
-    print("Save file found!")
+    vmupro.system.log(vmupro.system.LOG_INFO, "File", "Save file found!")
 else
-    print("No save file exists")
+    vmupro.system.log(vmupro.system.LOG_INFO, "File", "No save file exists")
 end
 ```
 
@@ -31,9 +31,9 @@ Read entire files with a single function call:
 -- Read complete file contents
 local data = vmupro.file.read("/sdcard/config.txt")
 if data then
-    print("File contents: " .. data)
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "File", "File contents: " .. data)
 else
-    print("Failed to read file")
+    vmupro.system.log(vmupro.system.LOG_ERROR, "File", "Failed to read file")
 end
 ```
 
@@ -43,9 +43,9 @@ Create empty files (required before writing):
 -- Create an empty file
 local success = vmupro.file.createFile("/sdcard/data.txt")
 if success then
-    print("File created successfully")
+    vmupro.system.log(vmupro.system.LOG_INFO, "File", "File created successfully")
 else
-    print("Failed to create file")
+    vmupro.system.log(vmupro.system.LOG_ERROR, "File", "Failed to create file")
 end
 ```
 
@@ -56,9 +56,9 @@ Write data to files, replacing existing content:
 vmupro.file.createFile("/sdcard/save.txt")
 local success = vmupro.file.write("/sdcard/save.txt", "Player Score: 1250\nLevel: 5")
 if success then
-    print("Save data written successfully")
+    vmupro.system.log(vmupro.system.LOG_INFO, "File", "Save data written successfully")
 else
-    print("Failed to write save data")
+    vmupro.system.log(vmupro.system.LOG_ERROR, "File", "Failed to write save data")
 end
 ```
 
@@ -68,9 +68,9 @@ Delete files when no longer needed:
 -- Delete a file
 local success = vmupro.file.deleteFile("/sdcard/temp.txt")
 if success then
-    print("Temporary file deleted")
+    vmupro.system.log(vmupro.system.LOG_INFO, "File", "Temporary file deleted")
 else
-    print("Failed to delete file")
+    vmupro.system.log(vmupro.system.LOG_ERROR, "File", "Failed to delete file")
 end
 ```
 
@@ -80,9 +80,9 @@ Delete empty folders:
 -- Delete an empty folder
 local success = vmupro.file.deleteFolder("/sdcard/temp")
 if success then
-    print("Folder deleted")
+    vmupro.system.log(vmupro.system.LOG_INFO, "File", "Folder deleted")
 else
-    print("Failed to delete folder (must be empty)")
+    vmupro.system.log(vmupro.system.LOG_ERROR, "File", "Failed to delete folder (must be empty)")
 end
 ```
 
@@ -93,14 +93,14 @@ Manage folders within the `/sdcard` directory:
 ```lua
 -- Check if a folder exists
 if vmupro.file.folderExists("/sdcard/saves") then
-    print("Saves folder found")
+    vmupro.system.log(vmupro.system.LOG_INFO, "File", "Saves folder found")
 else
-    print("Creating saves folder...")
+    vmupro.system.log(vmupro.system.LOG_INFO, "File", "Creating saves folder...")
     local success = vmupro.file.createFolder("/sdcard/saves")
     if success then
-        print("Saves folder created")
+        vmupro.system.log(vmupro.system.LOG_INFO, "File", "Saves folder created")
     else
-        print("Failed to create saves folder")
+        vmupro.system.log(vmupro.system.LOG_ERROR, "File", "Failed to create saves folder")
     end
 end
 ```
@@ -113,13 +113,13 @@ Get file size information:
 -- Get file size
 local size = vmupro.file.getSize("/sdcard/data.txt")
 if size and size > 0 then
-    print("File size: " .. size .. " bytes")
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "File", "File size: " .. size .. " bytes")
 
     if size > 1024 then
-        print("Large file detected")
+        vmupro.system.log(vmupro.system.LOG_DEBUG, "File", "Large file detected")
     end
 else
-    print("File doesn't exist")
+    vmupro.system.log(vmupro.system.LOG_WARN, "File", "File doesn't exist")
 end
 ```
 
@@ -218,10 +218,10 @@ end
 
 -- Example usage
 if load_game() then
-    print("Welcome back, " .. game_state.player_name .. "!")
-    print("Score: " .. game_state.score .. ", Level: " .. game_state.level)
+    vmupro.system.log(vmupro.system.LOG_INFO, "Save", "Welcome back, " .. game_state.player_name .. "!")
+    vmupro.system.log(vmupro.system.LOG_INFO, "Save", "Score: " .. game_state.score .. ", Level: " .. game_state.level)
 else
-    print("Starting new game")
+    vmupro.system.log(vmupro.system.LOG_INFO, "Save", "Starting new game")
 end
 
 -- Update game state
@@ -318,8 +318,8 @@ end
 load_config()
 
 -- Example usage
-print("Volume: " .. get_config("volume"))
-print("Difficulty: " .. get_config("difficulty"))
+vmupro.system.log(vmupro.system.LOG_DEBUG, "Config", "Volume: " .. get_config("volume"))
+vmupro.system.log(vmupro.system.LOG_DEBUG, "Config", "Difficulty: " .. get_config("difficulty"))
 
 -- Change settings
 set_config("volume", 8)
@@ -386,8 +386,8 @@ write_log("ERROR", "Failed to connect to server")
 
 -- Read back log
 local log_contents = read_log()
-print("Log contents:")
-print(log_contents)
+vmupro.system.log(vmupro.system.LOG_DEBUG, "Logger", "Log contents:")
+vmupro.system.log(vmupro.system.LOG_DEBUG, "Logger", log_contents)
 ```
 
 ### Asset Manager
@@ -472,13 +472,13 @@ save_asset("player.spr", "Player sprite data...")
 -- Load assets
 local level_data = load_asset("level1.dat")
 if level_data then
-    print("Level data loaded: " .. #level_data .. " bytes")
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Assets", "Level data loaded: " .. #level_data .. " bytes")
 end
 
 -- Check asset info
 if asset_exists("player.spr") then
     local size = get_asset_size("player.spr")
-    print("Player sprite size: " .. size .. " bytes")
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Assets", "Player sprite size: " .. size .. " bytes")
 end
 ```
 

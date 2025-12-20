@@ -17,9 +17,9 @@ Loads a MIDI file as a sequence.
 ```lua
 local seq = vmupro.sound.sequence.new("assets/song.mid")
 if seq then
-    print("MIDI loaded!")
+    vmupro.system.log(vmupro.system.LOG_INFO, "Audio", "MIDI loaded!")
 else
-    print("Failed to load MIDI file")
+    vmupro.system.log(vmupro.system.LOG_ERROR, "Audio", "Failed to load MIDI file")
 end
 ```
 
@@ -37,7 +37,7 @@ Gets the number of tracks in a MIDI sequence.
 
 ```lua
 local trackCount = vmupro.sound.sequence.getTrackCount(seq)
-print("MIDI has " .. trackCount .. " tracks")
+vmupro.system.log(vmupro.system.LOG_INFO, "Audio", "MIDI has " .. trackCount .. " tracks")
 ```
 
 **Parameters:**
@@ -121,7 +121,7 @@ Gets the maximum polyphony (simultaneous notes) for a track.
 
 ```lua
 local maxVoices = vmupro.sound.sequence.getTrackPolyphony(seq, 1)
-print("Track 1 needs up to " .. maxVoices .. " simultaneous voices")
+vmupro.system.log(vmupro.system.LOG_DEBUG, "Audio", "Track 1 needs up to " .. maxVoices .. " simultaneous voices")
 ```
 
 **Parameters:**
@@ -197,7 +197,7 @@ Checks if a sequence is currently playing.
 
 ```lua
 if vmupro.sound.sequence.isPlaying(seq) then
-    print("Music is playing")
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Audio", "Music is playing")
 end
 ```
 
@@ -283,7 +283,7 @@ vmupro.sound.instrument.addVoice(drumInst, snare, 38)
 -- Load song and check tracks
 local song = vmupro.sound.sequence.new("assets/song.mid")
 local trackCount = vmupro.sound.sequence.getTrackCount(song)
-print("Song has " .. trackCount .. " tracks")
+vmupro.system.log(vmupro.system.LOG_INFO, "Audio", "Song has " .. trackCount .. " tracks")
 
 -- Assign instruments to tracks
 vmupro.sound.sequence.setTrackInstrument(song, 1, pianoInst)

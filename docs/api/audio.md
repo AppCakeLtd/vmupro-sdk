@@ -218,8 +218,8 @@ Loads a WAV file from the SD card.
 ```lua
 local beep = vmupro.sound.sample.new("sounds/beep")  -- loads /sdcard/sounds/beep.wav
 if beep then
-    print("Loaded: " .. beep.sampleRate .. "Hz, " .. beep.channels .. " channels")
-    print("Total samples: " .. beep.sampleCount)
+    vmupro.system.log(vmupro.system.LOG_INFO, "Audio", "Loaded: " .. beep.sampleRate .. "Hz, " .. beep.channels .. " channels")
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Audio", "Total samples: " .. beep.sampleCount)
 end
 ```
 
@@ -252,7 +252,7 @@ vmupro.sound.sample.play(music, 99) -- loop music 100 times
 
 -- With finish callback
 vmupro.sound.sample.play(sfx, 0, function()
-    print("Sound finished!")
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Audio", "Sound finished!")
 end)
 
 -- Manual looping with callback
@@ -301,7 +301,7 @@ Checks if a sound is currently playing.
 
 ```lua
 if vmupro.sound.sample.isPlaying(beep) then
-    print("Still playing...")
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Audio", "Still playing...")
 end
 ```
 
@@ -358,7 +358,7 @@ Gets the current stereo volume for a sound sample.
 
 ```lua
 local left, right = vmupro.sound.sample.getVolume(beep)
-print("Volume: L=" .. left .. " R=" .. right)
+vmupro.system.log(vmupro.system.LOG_DEBUG, "Audio", "Volume: L=" .. left .. " R=" .. right)
 ```
 
 **Parameters:**
@@ -397,7 +397,7 @@ Gets the current playback rate for a sound sample.
 
 ```lua
 local rate = vmupro.sound.sample.getRate(beep)
-print("Playback rate: " .. rate .. "x")
+vmupro.system.log(vmupro.system.LOG_DEBUG, "Audio", "Playback rate: " .. rate .. "x")
 ```
 
 **Parameters:**

@@ -113,7 +113,7 @@ function vmupro.sound.synth.free(synth) end
 --- @brief Check if a synth is currently playing
 --- @param synth SynthObject Synth object to check
 --- @return boolean true if playing, false otherwise
---- @usage if vmupro.sound.synth.isPlaying(synth) then print("Playing") end
+--- @usage if vmupro.sound.synth.isPlaying(synth) then vmupro.system.log(vmupro.system.LOG_DEBUG, "Synth", "Playing") end
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
 function vmupro.sound.synth.isPlaying(synth) end

@@ -116,7 +116,7 @@ vmupro.graphics.resumeDoubleBufferRenderer()
 -- Application initialization
 function init_application()
     vmupro.graphics.startDoubleBufferRenderer()
-    print("Double buffering initialized")
+    vmupro.system.log(vmupro.system.LOG_INFO, "Graphics", "Double buffering initialized")
 end
 
 -- Main game loop
@@ -152,7 +152,7 @@ end
 -- Application cleanup
 function cleanup_application()
     vmupro.graphics.stopDoubleBufferRenderer()
-    print("Double buffering stopped")
+    vmupro.system.log(vmupro.system.LOG_INFO, "Graphics", "Double buffering stopped")
 end
 
 -- Main execution
@@ -286,10 +286,10 @@ function render_frame()
 
     frame_count = frame_count + 1
 
-    -- Print FPS every second
+    -- Log FPS every second
     if frame_count % 60 == 0 then
         local fps = 1000000 / delta_time  -- Convert microseconds to FPS
-        print("FPS: " .. math.floor(fps))
+        vmupro.system.log(vmupro.system.LOG_DEBUG, "Perf", "FPS: " .. math.floor(fps))
     end
 end
 

@@ -211,7 +211,7 @@ The VMU Pro provides a powerful built-in sprite system. For simple graphics, use
 local player = vmupro.sprite.new("sprites/player")
 
 if player then
-    print("Loaded sprite: " .. player.width .. "x" .. player.height)
+    vmupro.system.log(vmupro.system.LOG_INFO, "Sprites", "Loaded sprite: " .. player.width .. "x" .. player.height)
 end
 
 -- Draw the sprite at position (100, 100)

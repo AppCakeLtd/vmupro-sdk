@@ -48,7 +48,7 @@ end
 function save_high_score()
     local success = vmupro.file.writeFileComplete(SAVE_FILE, tostring(high_score))
     if success then
-        print("Saved high score: " .. high_score)
+        vmupro.system.log(vmupro.system.LOG_INFO, "Clicker", "Saved high score: " .. high_score)
     end
 end
 
@@ -120,20 +120,20 @@ function render()
 end
 
 function init()
-    print("Clicker game starting...")
+    vmupro.system.log(vmupro.system.LOG_INFO, "Clicker", "Clicker game starting...")
     load_high_score()
     return true
 end
 
 function cleanup()
-    print("Clicker game ending...")
+    vmupro.system.log(vmupro.system.LOG_INFO, "Clicker", "Clicker game ending...")
     vmupro.graphics.clear(vmupro.graphics.BLACK)
     vmupro.graphics.refresh()
 end
 
 -- Main execution
 if not init() then
-    print("Failed to initialize")
+    vmupro.system.log(vmupro.system.LOG_ERROR, "Clicker", "Failed to initialize")
     return
 end
 

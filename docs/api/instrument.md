@@ -15,7 +15,7 @@ Creates a new instrument for voice mapping.
 ```lua
 local inst = vmupro.sound.instrument.new()
 if inst then
-    print("Instrument created!")
+    vmupro.system.log(vmupro.system.LOG_INFO, "Audio", "Instrument created!")
 end
 ```
 

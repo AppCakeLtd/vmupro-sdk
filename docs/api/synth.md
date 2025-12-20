@@ -30,7 +30,7 @@ Creates a new synthesizer with the specified waveform type.
 ```lua
 local synth = vmupro.sound.synth.new(vmupro.sound.kWaveSine)
 if synth then
-    print("Synth created!")
+    vmupro.system.log(vmupro.system.LOG_INFO, "Audio", "Synth created!")
 end
 ```
 
@@ -255,7 +255,7 @@ Checks if a synth is currently playing.
 
 ```lua
 if vmupro.sound.synth.isPlaying(synth) then
-    print("Synth is playing")
+    vmupro.system.log(vmupro.system.LOG_DEBUG, "Audio", "Synth is playing")
 end
 ```
 
@@ -293,7 +293,7 @@ Gets the current stereo volume for a synth.
 
 ```lua
 local left, right = vmupro.sound.synth.getVolume(synth)
-print("Volume: L=" .. left .. " R=" .. right)
+vmupro.system.log(vmupro.system.LOG_DEBUG, "Audio", "Volume: L=" .. left .. " R=" .. right)
 ```
 
 **Parameters:**
@@ -334,7 +334,7 @@ Gets a parameter value for PO waveforms.
 
 ```lua
 local value = vmupro.sound.synth.getParameter(synth, 0)
-print("Parameter 0: " .. value)
+vmupro.system.log(vmupro.system.LOG_DEBUG, "Audio", "Parameter 0: " .. value)
 ```
 
 **Parameters:**

@@ -115,7 +115,7 @@ function vmupro.sound.sequence.setLooping(seq, shouldLoop) end
 --- @brief Check if a sequence is currently playing
 --- @param seq SequenceObject Sequence to check
 --- @return boolean true if playing, false otherwise
---- @usage if vmupro.sound.sequence.isPlaying(seq) then print("Playing") end
+--- @usage if vmupro.sound.sequence.isPlaying(seq) then vmupro.system.log(vmupro.system.LOG_DEBUG, "Sequence", "Playing") end
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
 function vmupro.sound.sequence.isPlaying(seq) end

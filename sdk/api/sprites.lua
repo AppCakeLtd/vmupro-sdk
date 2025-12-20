@@ -34,7 +34,7 @@ vmupro.sprite = vmupro.sprite or {}
 --- @param path string Path to sprite file (BMP or PNG format, without extension)
 --- @return SpriteHandle|nil Sprite object table with id, width, height, and transparentColor fields, or nil on failure
 --- @usage local sprite = vmupro.sprite.new("sprites/player")
---- @usage if sprite then print("Size: " .. sprite.width .. "x" .. sprite.height) end
+--- @usage if sprite then vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Size: " .. sprite.width .. "x" .. sprite.height) end
 --- @note Path should NOT include the file extension - it is added automatically (.bmp or .png)
 --- @note Sprites are loaded from embedded vmupack files only (not from SD card)
 --- @note Works the same way as Lua file imports (import "pages/page1")
@@ -179,7 +179,7 @@ function vmupro.sprite.setVisible(sprite, visible) end
 --- @param sprite SpriteHandle Sprite object from vmupro.sprite.new()
 --- @return boolean True if sprite is visible, false if hidden
 --- @usage local is_visible = vmupro.sprite.getVisible(my_sprite)
---- @usage if vmupro.sprite.getVisible(enemy) then print("Enemy is visible") end
+--- @usage if vmupro.sprite.getVisible(enemy) then vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Enemy is visible") end
 --- @note Sprites are visible by default when created
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
@@ -189,7 +189,7 @@ function vmupro.sprite.getVisible(sprite) end
 --- @param path string Path to spritesheet file (BMP or PNG format, without extension)
 --- @return SpritesheetHandle|nil Spritesheet object table with id, width, height, frameWidth, frameHeight, frameCount, and transparentColor fields, or nil on failure
 --- @usage local sheet = vmupro.sprite.newSheet("sprites/player-table-32-32")
---- @usage if sheet then print("Frames: " .. sheet.frameCount .. " (" .. sheet.frameWidth .. "x" .. sheet.frameHeight .. ")") end
+--- @usage if sheet then vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Frames: " .. sheet.frameCount .. " (" .. sheet.frameWidth .. "x" .. sheet.frameHeight .. ")") end
 --- @note Path should NOT include the file extension - it is added automatically (.bmp or .png)
 --- @note Filename must follow the template: name-table-<width>-<height> (e.g., "player-table-32-32")
 --- @note Frame dimensions are extracted from the filename (e.g., "player-table-32-32" = 32x32 pixel frames)
@@ -289,8 +289,8 @@ function vmupro.sprite.setCurrentFrame(sprite, frame_index) end
 --- @param sprite SpriteHandle|SpritesheetHandle Sprite or spritesheet object
 --- @return number Current frame index (0-based)
 --- @usage local frame = vmupro.sprite.getCurrentFrame(my_sheet)
---- @usage print("Current frame:", frame)
---- @usage if vmupro.sprite.getCurrentFrame(player) == 0 then print("First frame") end
+--- @usage vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Current frame: " .. frame)
+--- @usage if vmupro.sprite.getCurrentFrame(player) == 0 then vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "First frame") end
 --- @note Returns 0-based frame index
 --- @note For regular sprites (not spritesheets), returns 0
 --- @note This is a stub definition for IDE support only.
@@ -301,7 +301,7 @@ function vmupro.sprite.getCurrentFrame(sprite) end
 --- @param sprite SpriteHandle|SpritesheetHandle Sprite or spritesheet object
 --- @return number Total number of frames
 --- @usage local count = vmupro.sprite.getFrameCount(my_sheet)
---- @usage print("Total frames:", count)
+--- @usage vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Total frames: " .. count)
 --- @usage for i = 0, vmupro.sprite.getFrameCount(sheet) - 1 do ... end
 --- @note Returns frame count from spritesheet metadata
 --- @note For regular sprites (not spritesheets), returns 1
@@ -436,7 +436,7 @@ function vmupro.sprite.setZIndex(sprite, z) end
 --- @param sprite SpriteHandle Sprite object returned from vmupro.sprite.new()
 --- @return number Current Z-index value
 --- @usage local z = vmupro.sprite.getZIndex(my_sprite)
---- @usage print("Sprite Z-index: " .. vmupro.sprite.getZIndex(my_sprite))
+--- @usage vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Sprite Z-index: " .. vmupro.sprite.getZIndex(my_sprite))
 --- @note Returns the Z-index value set by setZIndex()
 --- @note Default Z-index is 0 if never set
 --- @note This is a stub definition for IDE support only.
@@ -504,7 +504,7 @@ function vmupro.sprite.setCenter(sprite, x, y) end
 --- @param sprite SpriteHandle Sprite object from vmupro.sprite.new()
 --- @return number, number Center X and Y coordinates (normalized 0.0-1.0)
 --- @usage local cx, cy = vmupro.sprite.getCenter(my_sprite)
---- @usage print("Center: " .. cx .. ", " .. cy)
+--- @usage vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Center: " .. cx .. ", " .. cy)
 --- @note Returns normalized coordinates (0.0-1.0 range)
 --- @note Default is (0.5, 0.5) if never set
 --- @note This is a stub definition for IDE support only.
@@ -515,7 +515,7 @@ function vmupro.sprite.getCenter(sprite) end
 --- @param sprite SpriteHandle Sprite object from vmupro.sprite.new()
 --- @return number, number, number, number Top-left X, top-left Y, width, height
 --- @usage local x, y, w, h = vmupro.sprite.getBounds(my_sprite)
---- @usage print("Draws at: " .. x .. "," .. y .. " size: " .. w .. "x" .. h)
+--- @usage vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Draws at: " .. x .. "," .. y .. " size: " .. w .. "x" .. h)
 --- @note Returns the actual screen-space rectangle where the sprite is drawn
 --- @note Accounts for sprite position and center point
 --- @note Useful for collision detection and UI layout
@@ -581,7 +581,7 @@ function vmupro.sprite.resumeAnimation(sprite) end
 --- @brief Check if sprite is currently playing an animation (and not paused)
 --- @param sprite SpritesheetHandle Spritesheet object from vmupro.sprite.newSheet()
 --- @return boolean True if animation is playing, false if stopped or paused
---- @usage if vmupro.sprite.isAnimating(player) then print("Animating") end
+--- @usage if vmupro.sprite.isAnimating(player) then vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Animating") end
 --- @usage if not vmupro.sprite.isAnimating(enemy) then vmupro.sprite.playAnimation(enemy, 0, 3, 10, true) end
 --- @note Returns false if animation is paused
 --- @note Returns false if animation is stopped
@@ -624,7 +624,7 @@ function vmupro.sprite.setCollisionRect(sprite, x, y, width, height) end
 --- @param sprite SpriteHandle|SpritesheetHandle Sprite or spritesheet object
 --- @return number|nil, number|nil, number|nil, number|nil X offset, Y offset, width, height (or nil if no collision rect set)
 --- @usage local cx, cy, cw, ch = vmupro.sprite.getCollisionRect(player)
---- @usage if cx then print("Collision rect: " .. cx .. "," .. cy .. " " .. cw .. "x" .. ch) end
+--- @usage if cx then vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Collision rect: " .. cx .. "," .. cy .. " " .. cw .. "x" .. ch) end
 --- @note Returns nil if no collision rect has been set
 --- @note Returns relative coordinates (offsets from sprite position)
 --- @note For world-space collision bounds, use getCollideBounds() instead
@@ -710,7 +710,7 @@ function vmupro.sprite.clearStencil(sprite) end
 --- @param sprite SpriteHandle|SpritesheetHandle Sprite or spritesheet object
 --- @return number|nil, number|nil, number|nil, number|nil World X, world Y, width, height (or nil if no collision rect set)
 --- @usage local bx, by, bw, bh = vmupro.sprite.getCollideBounds(player)
---- @usage if bx then print("Collision at: " .. bx .. "," .. by) end
+--- @usage if bx then vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Collision at: " .. bx .. "," .. by) end
 --- @note Returns nil if no collision rect has been set
 --- @note Returns world-space coordinates (sprite position + collision rect offset)
 --- @note Use for AABB (Axis-Aligned Bounding Box) collision detection
@@ -737,7 +737,7 @@ function vmupro.sprite.setGroups(sprite, groups) end
 --- @param sprite SpriteHandle|SpritesheetHandle Sprite or spritesheet object
 --- @return table Array of group numbers that this sprite belongs to
 --- @usage local groups = vmupro.sprite.getGroups(player)
---- @usage for _, group in ipairs(groups) do print("Group: " .. group) end
+--- @usage for _, group in ipairs(groups) do vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Group: " .. group) end
 --- @note Returns an array of group numbers (1-32)
 --- @note Returns empty array {} if sprite belongs to no groups
 --- @note This is a stub definition for IDE support only.
@@ -762,7 +762,7 @@ function vmupro.sprite.setCollidesWithGroups(sprite, groups) end
 --- @param sprite SpriteHandle|SpritesheetHandle Sprite or spritesheet object
 --- @return table Array of group numbers that this sprite collides with
 --- @usage local collides = vmupro.sprite.getCollidesWithGroups(player)
---- @usage for _, group in ipairs(collides) do print("Collides with: " .. group) end
+--- @usage for _, group in ipairs(collides) do vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Collides with: " .. group) end
 --- @note Returns an array of group numbers (1-32)
 --- @note Returns empty array {} if sprite doesn't collide with any groups
 --- @note This is a stub definition for IDE support only.
@@ -786,7 +786,7 @@ function vmupro.sprite.setGroupMask(sprite, mask) end
 --- @param sprite SpriteHandle|SpritesheetHandle Sprite or spritesheet object
 --- @return number 32-bit bitmask representing group membership
 --- @usage local mask = vmupro.sprite.getGroupMask(player)
---- @usage if (mask & 0x00000001) ~= 0 then print("Belongs to group 1") end
+--- @usage if (mask & 0x00000001) ~= 0 then vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Belongs to group 1") end
 --- @note Returns 0x00000000 if sprite belongs to no groups
 --- @note Use bitwise operations (&, |, ~) to check or combine groups
 --- @note This is a stub definition for IDE support only.
@@ -809,7 +809,7 @@ function vmupro.sprite.setCollidesWithGroupsMask(sprite, mask) end
 --- @param sprite SpriteHandle|SpritesheetHandle Sprite or spritesheet object
 --- @return number 32-bit bitmask representing which groups this sprite collides with
 --- @usage local mask = vmupro.sprite.getCollidesWithGroupsMask(player)
---- @usage if (mask & 0x00000002) ~= 0 then print("Collides with group 2") end
+--- @usage if (mask & 0x00000002) ~= 0 then vmupro.system.log(vmupro.system.LOG_DEBUG, "Sprites", "Collides with group 2") end
 --- @note Returns 0x00000000 if sprite doesn't collide with any groups
 --- @note Efficient collision filtering: (groupsA & collidesWithB) != 0
 --- @note This is a stub definition for IDE support only.

@@ -84,7 +84,7 @@ function vmupro.sound.sample.new(path) end
 --- @param repeatCount number Number of times to repeat (0 = once, 1 = twice, etc.)
 --- @param callback function|nil Optional callback when playback finishes
 --- @usage vmupro.sound.sample.play(kick, 0)
---- @usage vmupro.sound.sample.play(sfx, 0, function() print("Done!") end)
+--- @usage vmupro.sound.sample.play(sfx, 0, function() vmupro.system.log(vmupro.system.LOG_DEBUG, "Audio", "Done!") end)
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
 function vmupro.sound.sample.play(sample, repeatCount, callback) end
@@ -116,7 +116,7 @@ function vmupro.sound.sample.stop(sample) end
 --- @brief Check if a sample is currently playing
 --- @param sample SampleObject Sample object to check
 --- @return boolean true if playing, false otherwise
---- @usage if vmupro.sound.sample.isPlaying(kick) then print("Playing") end
+--- @usage if vmupro.sound.sample.isPlaying(kick) then vmupro.system.log(vmupro.system.LOG_DEBUG, "Audio", "Playing") end
 --- @note This is a stub definition for IDE support only.
 ---       Actual implementation is provided by VMU Pro firmware at runtime.
 function vmupro.sound.sample.isPlaying(sample) end
