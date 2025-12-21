@@ -13,26 +13,25 @@ Before you begin, ensure you have the following installed:
 
 ## Setting Up Your Development Environment
 
-### 1. Clone the SDK Repository
+### 1. [Download the SDK](https://developer.vmu.pro/downloads/) for your Operating System
 
-```bash
-git clone https://github.com/AppCakeLtd/vmupro-sdk.git
-cd vmupro-sdk
-```
+### 2. Install the SDK Package
 
-### 2. Install Python Dependencies
+### 3. Install Python Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Verify Tools Installation
+### 4. Verify Tools Installation
 
 Test the packer tool:
 
 ```bash
 python tools/packer/packer.py --help
 ```
+
+Run the VMUPro Dev Tools app from the installation location.
 
 ## Your First Application
 
@@ -96,17 +95,15 @@ Create `metadata.json`:
 
 ```json
 {
-    "metadata_version": 1,
-    "app_name": "Hello World",
-    "app_author": "Your Name",
-    "app_version": "1.0.0",
-    "app_entry_point": "app.lua",
-    "app_mode": 1,
-    "app_environment": "lua",
-    "icon_transparency": false,
-    "resources": [
-        "app.lua"
-    ]
+  "metadata_version": 1,
+  "app_name": "Hello World",
+  "app_author": "Your Name",
+  "app_version": "1.0.0",
+  "app_entry_point": "app.lua",
+  "app_mode": 1,
+  "app_environment": "lua",
+  "icon_transparency": false,
+  "resources": ["app.lua"]
 }
 ```
 
@@ -143,10 +140,18 @@ my_app/
 ├── icon.bmp         # Application icon (76x76 BMP)
 ├── assets/          # Additional assets (images, sounds)
 │   ├── sprites/
+│   │   └── player.png
 │   └── sounds/
+│       └── start_game.wav
 └── libraries/       # Additional LUA modules
     └── helper.lua
 ```
+
+With this structure you can:
+
+- _Import LUA libraries by using an `import "libraries/helper"` statement_
+- _Load a sprite using `local player_sprite = vmupro.sprite.new("assets/sprites/player")`_
+- _Load a sound using `local start_game_snd = vmupro.sound.sample.new("assets/sounds/start_game")`_
 
 ## Key Concepts
 
@@ -194,18 +199,15 @@ LUA applications can access files and folders within the `/sdcard` directory:
 ### Common Issues
 
 **Application won't package:**
+
 - Check that all required files exist
 - Verify metadata.json syntax
 - Ensure icon.bmp is valid 76x76 BMP format
 
 **Application won't run:**
+
 - Check LUA syntax errors
 - Verify app_entry_point in metadata.json
 - Use `vmupro.system.log(vmupro.system.LOG_DEBUG, "tag", "message")` for debugging
-
-**Device connection issues:**
-- Verify correct COM port
-- Check device drivers are installed
-- Try a different USB cable
 
 For more detailed troubleshooting, see the [Troubleshooting Guide](advanced/troubleshooting.md).

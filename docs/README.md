@@ -1,12 +1,50 @@
-# VMU Pro LUA SDK Documentation
+# VMUPro LUA SDK Documentation
 
-Welcome to the VMU Pro LUA SDK documentation. This comprehensive guide will help you build amazing applications for the VMU Pro using LUA.
+Welcome to the VMUPro LUA SDK documentation. This comprehensive guide will help you build amazing applications for the VMUPro using LUA.
 
-## What is the VMU Pro LUA SDK?
+## 1. What is a VMUPro?
 
-The VMU Pro LUA SDK is a powerful scripting environment that allows developers to create applications for the VMU Pro device using the LUA programming language. The SDK provides access to graphics, audio, input, and file system APIs for building interactive applications.
+The VMUPro is a tiny smart memory card for the Dreamcast gaming console that doubles as a tiny handheld gaming device with a powerful dual-core processor, ample memory and a sharp backlit IPS TFT 16-bit colour display.
 
-## Key Features
+Any developer can write applications or games for it and either freely distribute as a downloadable package or distribute it through the amazing VMUPro Store directly on VMUPro devices!
+
+## 2. VMUPro Technical Specifications
+
+**Display**
+
+- Backlit 16-bit IPS TFT Colour Display (65,536 Colours) in RGB565 format
+- 240x240 pixel resolution, 1.5" diagonal
+- Up to 80FPS refresh rate (controllable through your app).
+
+**Controls**
+
+- Eight way directional pad (D-pad)
+- Two primary buttons (A, B)
+- Two programmable auxilliary buttons (Sleep, Mode)
+
+**Sound**
+
+- Internal Mono 0.7W Speaker (default 44.1KHz, 16-bit)
+- USB-C Audio Out support
+
+**Connectivity**
+
+- WiFi
+- Bluetooth LE
+- MAPLE Port
+
+**Memory & Storage**
+
+- 8MB RAM (5MB usable in LUA Apps and Games)
+- micro-SD card port with support for up to 2TB microSD cards
+
+**Processing**
+
+- Dual-core 240MHz CPU with threading support
+- Third Low-power core at 40MHz
+- Adjustable CPU Frequency
+
+## 3. Key SDK Features
 
 - **Rich APIs**: Access to graphics, audio, input, and file system functionality
 - **Easy Development**: Simple tooling for packaging and deploying applications
@@ -17,14 +55,14 @@ The VMU Pro LUA SDK is a powerful scripting environment that allows developers t
 - **Advanced Audio**: Sample playback, synthesizers, and MIDI sequence support with program callbacks
 - **Comprehensive File I/O**: Read and write files for save data and assets
 
-## Quick Start
+## 4. Quick Start
 
 1. **Setup**: Install the required tools and dependencies
 2. **Hello World**: Create your first LUA application
 3. **Package**: Use the packer tool to create a .vmupack file
-4. **Deploy**: Send your application to the VMU Pro device
+4. **Deploy**: Send your application to the VMUPro device
 
-## API Categories
+## 5. API Categories
 
 The SDK provides several categories of functionality:
 
