@@ -33,6 +33,17 @@ python tools/packer/packer.py --help
 
 Run the VMUPro Dev Tools app from the installation location.
 
+### 5. Setting up VSCode code completion
+
+If you use Visual Studio Code as your editor, you can set up the LUA Server to look into the SDK installation path in order to provide automatic code completion, code checks and inline documentation.
+To do this, create a `.vscode` folder at the root of your project's folder, and a file `settings.json` in there and paste the following code:
+
+```json
+{
+  "Lua.workspace.library": ["${userHome}/Developer/VMUPro SDK/CoreLibraries"]
+}
+```
+
 ## Your First Application
 
 Let's create a simple "Hello World" application to get you started.
