@@ -16,6 +16,7 @@
 * [Input API](api/input.md)
 * [File System API](api/file.md)
 * [System API](api/system.md)
+* [Debug API](api/debug.md)
 
 ## Guides
 
