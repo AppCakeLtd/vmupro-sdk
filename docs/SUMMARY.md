@@ -1,10 +1,13 @@
 # Summary
 
 * [Introduction](README.md)
-* [Getting Started](getting-started.md)
+
+## LUA SDK
+
+* [Getting Started with LUA](getting-started.md)
 * [LUA SDK Overview](lua-sdk-overview.md)
 
-## API Reference
+### LUA API Reference
 
 * [Display API](api/display.md)
 * [Sprites API](api/sprites.md)
@@ -18,17 +21,37 @@
 * [System API](api/system.md)
 * [Debug API](api/debug.md)
 
-## Guides
+### LUA Guides
 
-* [Your First App](guides/first-app.md)
+* [Your First LUA App](guides/first-app.md)
 * [Working with Graphics](guides/graphics-guide.md)
 * [Audio Programming](guides/audio-guide.md)
 * [File Operations](guides/file-operations.md)
 
+## C/C++ SDK
+
+* [Getting Started with C/C++](c-getting-started.md)
+* [C SDK Overview](c-sdk-overview.md)
+
+### C API Reference
+
+* [Display API](api/c-display.md)
+* [Audio API](api/c-audio.md)
+* [Input API](api/c-input.md)
+* [Fonts API](api/c-fonts.md)
+* [File System API](api/c-file.md)
+* [System & Utilities API](api/c-system.md)
+* [PeerNet API](api/c-peernet.md)
+
+### C Reference
+
+* [Standard Library Functions](stdlib-functions.md)
+
 ## Examples
 
-* [Hello World](examples/hello-world.md)
-* [Complex Examples](examples/complex-examples.md)
+* [Hello World (LUA)](examples/hello-world.md)
+* [Complex Examples (LUA)](examples/complex-examples.md)
+* [C Examples](examples/c-examples.md)
 
 ## Tools
 

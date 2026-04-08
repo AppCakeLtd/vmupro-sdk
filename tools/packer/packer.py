@@ -1,25 +1,29 @@
 # 8BM Copyright/License notice
-# LUA-only packer for VMU Pro applications
+# For use with ESP IDF Python 3.10.x
 # Note: suggested use with Python 3.6 or later due to handling of Path.resolve
 
 import sys
 import argparse
+# import crcmod
 import os
 import json
 import struct
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict
 from PIL import Image
 from pathlib import Path
 
-# Rough outline for LUA apps
-# - load the LUA scripts and resources
+# Rough outline
+# - load the .elf into ram
 # - parse the json metadata (name, author, icon trans)
 # - load and encode the icon
-# - package everything into .vmupack format
 
 # save the raw binary for each section to a file
 # (set via args)
 debugOutput = False
+
+# Store format: separate .lua code into ELF section as a code bundle
+# Non-lua assets remain in resource section
+storeFormat = False
 
 # Icon section
 sect_icon = bytearray()
@@ -38,9 +42,17 @@ resourceNameOffsetKeyVals = []
 # Device binding
 sect_binding = bytearray()
 
+# Lua code bundle (store format only — goes into ELF section)
+sect_luaCodeBundle = bytearray()
+
 sect_header = bytearray()
 
 finalBinary = bytearray()
+
+crypto = None
+doSign = True
+doProductKey = False
+doDeviceKey = False
 
 
 class MetadataError(Exception):
@@ -51,57 +63,18 @@ class PathException(Exception):
     pass
 
 
-def ReadSDKVersion():
-    # type: () -> Tuple[int, int, int]
-    """
-    Read the SDK version from the VERSION file in the SDK root directory.
-    Returns a tuple of (major, minor, patch) as integers.
-    """
-    # Get the path to the SDK root (two levels up from packer.py location)
-    scriptDir = Path(__file__).resolve().parent
-    sdkRoot = scriptDir.parent.parent
-    versionFile = sdkRoot / "VERSION"
-
-    print("Reading SDK version from: {}".format(versionFile))
-
-    if not os.path.isfile(versionFile):
-        print("ERROR: VERSION file not found at {}".format(versionFile))
-        sys.exit(1)
-
-    try:
-        with open(versionFile, "r") as f:
-            versionStr = f.read().strip()
-            print("  SDK Version: {}".format(versionStr))
-
-            # Parse version string (e.g., "1.0.5" -> (1, 0, 5))
-            parts = versionStr.split(".")
-            if len(parts) != 3:
-                print("ERROR: Invalid version format in VERSION file. Expected x.x.x format")
-                sys.exit(1)
-
-            major = int(parts[0])
-            minor = int(parts[1])
-            patch = int(parts[2])
-
-            # Validate ranges (each component should fit in a byte)
-            if major < 0 or major > 255 or minor < 0 or minor > 255 or patch < 0 or patch > 255:
-                print("ERROR: Version components must be in range 0-255")
-                sys.exit(1)
-
-            return (major, minor, patch)
-
-    except Exception as e:
-        print("ERROR: Failed to read VERSION file: {}".format(e))
-        sys.exit(1)
-
-
 def main():
 
     global debugOutput
+    global storeFormat
+
+    global doSign
+    global absPublisherPrivateKeyPath
+    global deviceKeypath
 
     print("\n")
-    print("8BM VMUPro LUA Packer")
-    print("Run py packer_lua.py -h for help or a full list of supported arguments")
+    print("8BM VMUPro Packer")
+    print("Run py packer.py-h for help or a full list of supported arguments")
     print("\n")
 
     print("Executing command line args:")
@@ -109,32 +82,34 @@ def main():
     print("\n")
 
     #
-    # Read SDK version from VERSION file
-    #
-    sdkVersion = ReadSDKVersion()
-    print("SDK version loaded: {}.{}.{}\n".format(sdkVersion[0], sdkVersion[1], sdkVersion[2]))
-
-    #
     # Parse arguments
     #
 
     parser = argparse.ArgumentParser(
-        description="Pack a VMUPro LUA application with icon")
+        description="Pack a VMUPro binary with optional icon")
     parser.add_argument("--projectdir", required=True,
-                        help="Root folder containing your LUA app")
+                        help="Root folder, one beneath build")
     parser.add_argument("--appname", required=True,
-                        help="Application name for output file, e.g. 'hello_world' for 'hello_world.vmupack'")
+                        help="In projectdir/build, e.g. 'vmupro_minimal' for 'build/vmupro_minimal.app.elf'")
     parser.add_argument("--meta", required=True,
                         help="Relative path .JSON metadata for your package: metadata.json from projectdir")
+    parser.add_argument("--sdkversion", required=True,
+                        help="In the format format: x.x.x")
     parser.add_argument("--icon", required=True,
-                        help="Relative path to a 76x76 BMP icon from projectdir")
+                        help="Relative path to a 76x76 icon from projectdir")
     parser.add_argument("--debug", required=False,
                         help="true = Save the raw binary for each section to a file in the 'debug' folder")
+    parser.add_argument("--store-format", required=False, action="store_true",
+                        help="Separate .lua code into ELF section as a code bundle (for store encryption)")
 
     args = parser.parse_args()
 
     if args.debug:
         debugOutput = True
+
+    if args.store_format:
+        storeFormat = True
+        print("Store format enabled: .lua files will be packed into ELF section")
 
     #
     # Validate paths
@@ -142,6 +117,8 @@ def main():
 
     print("Validating paths...")
 
+    # ensure something like ../../examples/minimal/
+    # is resolved to d:\mystuff\examples\minimal, etc
     projectDir = args.projectdir
     if not os.path.isdir(projectDir):
         print("  projectdir doesn't appear to exist at {}".format(projectDir))
@@ -153,9 +130,16 @@ def main():
         print("  Can't confirm absolute path to base dir {}".format(absProjectDir))
         sys.exit(1)
 
-    appName = args.appname
+    # e.g. "my_lovely_game" as part of "<projectDir>/build/my_lovely_game.app.elf"
+    # which will become "<projectDir>/my_lovely_game.vmupack"
+    relElfNameNoExt = args.appname
 
     try:
+        # "vmupro_minimal" -> "build/vmupro_minimal.app.elf"
+        elfPart = os.path.join("build", relElfNameNoExt + ".app.elf")
+        absElfPath = ValidatePath(absProjectDir, elfPart)
+        print("  Using abs elf path: {}".format(absElfPath))
+
         absMetaPath = ValidatePath(absProjectDir, args.meta)
         print("  Using abs metadata path: {}".format(absMetaPath))
 
@@ -165,7 +149,25 @@ def main():
     except Exception as e:
         print("  Exception: {}".format(e))
         print("  Failed to combine paths, see above errors")
+        print("\n  Hint: check <yourelfname>.app.elf exists in the `build` folder\n")
         sys.exit(1)
+
+    CheckKeys()
+
+    #
+    # Read and validate the .elf file
+    #
+    res = PrepareElf(absElfPath)
+
+    if not res:
+        print("Failed to prepare the binary, see previous errors")
+        sys.exit(1)
+
+    #
+    # We've validated that the .elf exists
+    # good time to remove some auto built firmwares
+    #
+    RemoveUnwantedBuildFiles(absProjectDir, relElfNameNoExt)
 
     #
     # Read and validate the metadata.json
@@ -174,12 +176,6 @@ def main():
     res = ParseMetadata(absMetaPath, absProjectDir)
     if not res:
         print("Failed to prepare the metadata, see previous errors")
-        sys.exit(1)
-
-    # Verify this is a LUA application
-    if outMetaJSON.get("app_mode", 0) != 1:
-        print("Error: This packer is for LUA applications only (app_mode must be 1)")
-        sys.exit(1)
 
     #
     # Read or create the icon
@@ -198,7 +194,7 @@ def main():
         print("Failed to add device bindings, see previous errors")
         sys.exit(1)
 
-    res = CreateHeader(absProjectDir, appName, sdkVersion)
+    res = CreateHeader(absProjectDir, relElfNameNoExt)
     if not res:
         print("Failed to create header, see previous errors")
         sys.exit(1)
@@ -207,10 +203,33 @@ def main():
     sys.exit(0)
 
 
-def GetOutputFilenameAbs(absProjectDir, appName):
+def CheckKeys():
+
+    global crypto
+    global doSign
+    global doProductKey
+    global doDeviceKey
+
+    import os
+    import importlib.util
+    import sys
+    from pathlib import Path
+
+    cryptoPath = os.environ.get("VMUPRO_CRYPTO_PATH")
+    if cryptoPath:
+        path = Path(cryptoPath).resolve()
+        spec = importlib.util.spec_from_file_location("crypto", path)
+        crypto = importlib.util.module_from_spec(spec)
+        sys.modules["crypto"] = crypto
+        spec.loader.exec_module(crypto)
+
+        doSign, doProductKey, doDeviceKey = crypto.ValidateSigningLogic()
+
+
+def GetOutputFilenameAbs(absProjectDir, relElfNameNoExt):
     # type: (str,str)->Path
     absOutputVMUPack = os.path.join(
-        absProjectDir, appName + ".vmupack")
+        absProjectDir, relElfNameNoExt + ".vmupack")
     absOutputVMUPack = Path(absOutputVMUPack).resolve()
     return absOutputVMUPack
 
@@ -230,6 +249,46 @@ def ValidatePath(base, tail):
     return str(joined)
 
 
+def EncryptBuffer(inBuffer: bytearray):
+
+    global doDeviceKey
+    global doProductKey
+
+    if doDeviceKey or doProductKey:
+        crypto.Encrypt(inBuffer)
+
+
+def PrepareElf(elfPath):
+    # type: (str)->bool
+
+    global sect_mainElf
+    global doDeviceKey
+    global doProductKey
+
+    print("Loading elf file")
+    print("  Path: {}".format(elfPath))
+
+    if not os.path.isfile(elfPath):
+        print("Elf file not found!")
+        return False
+
+    try:
+        with open(elfPath, "rb") as f:
+            sect_mainElf = bytearray(f.read())
+            EncryptBuffer(sect_mainElf)
+            sect_mainElfSize = len(sect_mainElf)
+
+    except Exception as e:
+        print("Error {}".format(e))
+        return False
+
+    print("  Loaded main elf")
+    print("  Size: {:,} / {} bytes".format(sect_mainElfSize,
+          hex(sect_mainElfSize)))
+
+    return True
+
+
 def DeleteFileNoError(absPath, label):
     # type: (Path, str)->None
 
@@ -241,6 +300,35 @@ def DeleteFileNoError(absPath, label):
 
     except Exception as e:
         print("  Couldn't remove {} (non fatal error)".format(label))
+        print("  Exception: {}".format(e))
+
+
+# the IDF generates a firmware by default as well as your app
+# this will be unusable on its own, so to avoid confusion, let's delete it
+# note: this is not the minimal yourfile.app.elf, it's yourfile.elf
+
+def RemoveUnwantedBuildFiles(absProjectDir, elfNameNoExt):
+    # type: (str, str, str)->None
+
+    print("Cleaning up unwanted build files")
+
+    try:
+        # "your_game_name" -> "build/your_game_name.elf"
+        delElf = os.path.join(absProjectDir, "build", elfNameNoExt + ".elf")
+        delElf = Path(delElf).resolve()
+        DeleteFileNoError(delElf, "auto built firmware (elf)")
+
+        # "your_game_name" -> "build/your_game_name.bin"
+        delBin = os.path.join(absProjectDir, "build", elfNameNoExt + ".bin")
+        delBin = Path(delBin).resolve()
+        DeleteFileNoError(delBin, "auto built fiwmare (bin)")
+
+        # delete the old output file (if it exists)
+        absPrevBuild = GetOutputFilenameAbs(absProjectDir, elfNameNoExt)
+        DeleteFileNoError(absPrevBuild, "previous build (vmupack)")
+
+    except Exception as e:
+        print("  Couldn't remove auto built firmware elf (non fatal error)")
         print("  Exception: {}".format(e))
 
 
@@ -278,6 +366,8 @@ def AddIcon(absProjectDir, absIconPath, transparentBit):
         if (width != 76 or height != 76):
             print("Error, expecting a 76x76px icon")
             return False
+
+        # numPixels = width * height
 
         # add width, height, trans bit and a dummy field
         sect_icon.extend(b'ICON')
@@ -483,6 +573,30 @@ def ValidateMetadata(inJsonData, absMetaFileName, absProjectDir):
     return True
 
 
+def BuildLuaCodeBundle(luaFiles):
+    # type: (List[Tuple[str, bytes]]) -> bytearray
+    """
+    Build a Lua code bundle in the binary format expected by the device.
+    Format: [file_count:4][path_len:4][path:N][content_len:4][content:M]...
+    All integers are little-endian uint32.
+    """
+    bundle = bytearray()
+
+    # File count
+    bundle.extend(struct.pack("<I", len(luaFiles)))
+
+    for relativePath, data in luaFiles:
+        pathBytes = relativePath.encode("utf-8")
+        # Path length + path
+        bundle.extend(struct.pack("<I", len(pathBytes)))
+        bundle.extend(pathBytes)
+        # Content length + content
+        bundle.extend(struct.pack("<I", len(data)))
+        bundle.extend(data)
+
+    return bundle
+
+
 def ParseResources(inJsonData, absMetaFileName, absProjectDir):
     # type: (Dict[str,any], str, str) -> bool
 
@@ -491,6 +605,8 @@ def ParseResources(inJsonData, absMetaFileName, absProjectDir):
     global sect_allResources
     # individual resources offsets
     global resourceNameOffsetKeyVals
+    global sect_luaCodeBundle
+    global storeFormat
 
     print("  Parsing metadata resources...")
 
@@ -500,33 +616,62 @@ def ParseResources(inJsonData, absMetaFileName, absProjectDir):
 
     inJsonResArray = inJsonData["resources"]
     outMetaJSON["resources"] = []
-    outMetaJSON["resource_index"] = []  # New: index of all files with metadata
 
-    allFiles = []  # Collect all files from resources (including folders)
-
-    # Process each resource entry (can be file or folder)
     for r in inJsonResArray:
-        print("    Processing resource entry: {}".format(r))
+        print("    Reading resource {}".format(r))
 
         absResPath = absProjectDir / r
-        absResPath = Path(absResPath).resolve()
+        absResPath = Path(absResPath)
+        absResPath = absResPath.resolve()
 
-        if os.path.isfile(absResPath):
-            # Single file
-            allFiles.append((r, absResPath))
-            print("      Added file: {}".format(r))
-        elif os.path.isdir(absResPath):
-            # Folder - recursively scan for all files
-            print("      Scanning folder: {}".format(r))
-            folderFiles = ScanFolderRecursive(absProjectDir, r)
-            allFiles.extend(folderFiles)
-            print("      Found {} files in folder".format(len(folderFiles)))
-        else:
-            print("      ERROR: Resource {} is neither file nor folder at {}".format(r, absResPath))
+        if not os.path.isfile(absResPath):
+            print("      Couldn't locate resource {} from base path: {} and tail: {}".format(
+                absResPath, absProjectDir, r))
             return False
 
-    # Process all collected files
-    for relativePath, absResPath in allFiles:
+    # In store format, separate .lua files from non-lua assets
+    luaCodeFiles = []   # (relativePath, data) for Lua code bundle
+    assetFiles = []     # (relativePath, absPath) for resource section
+
+    if storeFormat:
+        for relativePath, absResPath in allFiles:
+            if relativePath.lower().endswith(".lua"):
+                # Read Lua file now for the code bundle
+                try:
+                    with open(absResPath, "rb") as f:
+                        data = f.read()
+                    luaCodeFiles.append((relativePath, data))
+                    print("    [STORE] Lua code file: {} ({} bytes)".format(relativePath, len(data)))
+                except Exception as e:
+                    print("Failed to read Lua file @ {}".format(absResPath))
+                    print("Exception: {}".format(e))
+                    return False
+            else:
+                assetFiles.append((relativePath, absResPath))
+                print("    [STORE] Asset file: {}".format(relativePath))
+
+        # Build the Lua code bundle for the ELF section
+        if luaCodeFiles:
+            sect_luaCodeBundle = BuildLuaCodeBundle(luaCodeFiles)
+            print("    [STORE] Built Lua code bundle: {} bytes, {} files".format(
+                len(sect_luaCodeBundle), len(luaCodeFiles)))
+
+            if debugOutput:
+                absFilePath = PrepDebugDir(absProjectDir, "lua_code_bundle.bin")
+                with open(absFilePath, "wb") as f:
+                    f.write(sect_luaCodeBundle)
+                print("    DEBUG: Wrote {}".format(absFilePath))
+        else:
+            print("    [STORE] WARNING: No .lua files found in resources!")
+
+        # Only pack non-lua assets into the resource section
+        filesToPack = assetFiles
+    else:
+        # Standard format: all files go into resource section
+        filesToPack = allFiles
+
+    # Process files for the resource section
+    for relativePath, absResPath in filesToPack:
         print("    Packing file: {}".format(relativePath))
         print("      Located @: {}".format(absResPath))
 
@@ -534,36 +679,26 @@ def ParseResources(inJsonData, absMetaFileName, absProjectDir):
             with open(absResPath, "rb") as f:
                 data = bytearray(f.read())
                 dataLen = len(data)
+                # append to the master list
                 print("      Read {} / {} bytes".format(dataLen, hex(dataLen)))
 
-                # Record file metadata
+                # name and location
+                # mything.png : 200
                 startOffset = len(sect_allResources)
-
-                # Legacy format for backward compatibility
-                kvp = (relativePath, startOffset)
+                kvp = (r, startOffset)
                 resourceNameOffsetKeyVals.append(kvp)
-                outMetaJSON["resources"].append(kvp)
 
-                # New detailed resource index
-                fileInfo = {
-                    "path": relativePath,
-                    "offset": startOffset,
-                    "size": dataLen,
-                    "padded_size": 0  # Will be filled after padding
-                }
+                # Add the key value pair to the output json
+                outMetaJSON["resources"].append(kvp)
 
                 # Add the file to the blob
                 sect_allResources.extend(data)
 
-                print("      Data starts at {} / {} bytes".format(startOffset, hex(startOffset)))
+                print(
+                    "      Data starts at {} / {} bytes".format(startOffset, hex(startOffset)))
 
-                # Pad the data out to 512 byte boundaries for much faster SD access
+                # pad the data out to 512 byte boundaries for much faster SD access
                 paddingLength = PadByteArray(sect_allResources, 512)
-                fileInfo["padded_size"] = dataLen + paddingLength
-
-                # Add to resource index
-                outMetaJSON["resource_index"].append(fileInfo)
-
                 print("      Padding data end by {} bytes to 512 boundary @ {}".format(
                     paddingLength, hex(len(sect_allResources))))
 
@@ -588,48 +723,27 @@ def ParseResources(inJsonData, absMetaFileName, absProjectDir):
     return True
 
 
-def ScanFolderRecursive(baseDir, folderPath):
-    # type: (Path, str) -> List[Tuple[str, Path]]
-    """
-    Recursively scan a folder and return all files with their relative paths
-    Returns list of (relative_path, absolute_path) tuples
-    """
+#
+# Enforcced:
+#   Native Apps:
+#     Signing: Required
+#     Encryption: Optional
+#   LUA:
+#     Signing: Optional
+#     Encryption: Optional
+#
 
-    files = []
-    absFolderPath = baseDir / folderPath
-    absFolderPath = Path(absFolderPath).resolve()
-
-    print("        Scanning folder: {}".format(absFolderPath))
-
-    try:
-        for root, _, filenames in os.walk(absFolderPath):
-            for filename in filenames:
-                absFilePath = Path(root) / filename
-
-                # Calculate relative path from base project directory
-                relativeFromBase = absFilePath.relative_to(baseDir.resolve())
-                relativePath = str(relativeFromBase).replace('\\', '/')  # Normalize path separators
-
-                files.append((relativePath, absFilePath))
-                print("          Found: {}".format(relativePath))
-
-    except Exception as e:
-        print("        Error scanning folder {}: {}".format(absFolderPath, e))
-
-    return files
 
 # Placeholder for now
 # 00-04: reserved0
 # 04-08: reserved1
 # 08-0C: reserved2
 # 0C-0F: reserved3
+
 def AddBinding():
     # type: () -> bool
 
     global sect_binding
-
-    print("  Adding dummy binding")
-
     sect_binding = bytearray(16)
 
     return True
@@ -660,6 +774,7 @@ def PrintSectionSizes(printVal):
     global sect_icon
     global sect_outMeta
     global sect_binding
+    global sect_mainElf
 
     if not debugOutput:
         return
@@ -669,17 +784,88 @@ def PrintSectionSizes(printVal):
     print("  Icon     : {} / {}".format(len(sect_icon), hex(len(sect_icon))))
     print("  MetaData : {} / {}".format(len(sect_outMeta), hex(len(sect_outMeta))))
     print("  Binding  : {} / {}".format(len(sect_binding), hex(len(sect_binding))))
-    print("  LUA Resources : {} / {}".format(len(sect_allResources), hex(len(sect_allResources))))
+    print("  Elf      : {} / {}".format(len(sect_mainElf), hex(len(sect_mainElf))))
+
+
+def SignPackage():
+
+    global doSign
+    global finalBinary
+
+    if not doSign:
+        print("""WARNING: BINARY IS NOT SIGNED""")
+        return
+
+    signedHash = crypto.CryptoSign(finalBinary)
+
+    sect_signing = bytearray()
+
+    # 0x00 - 0x10: header
+    signHdr = b"SIGN"
+
+    verHdr = struct.pack("<I", 0)
+
+    byteLen = len(signedHash)
+    lenHdr = struct.pack("<I", byteLen)
+
+    reserved3 = struct.pack("<I", 0)
+
+    sect_signing.extend(signHdr)
+    sect_signing.extend(verHdr)
+    sect_signing.extend(lenHdr)
+    sect_signing.extend(reserved3)
+
+    # 0x10 - 0xXX: RSA-signed SHA256 signature
+    sect_signing.extend(signedHash)
+
+    PadByteArray(sect_signing, 512)
+
+    # and finally pop that on the end of the entire .vmupack
+    finalBinary.extend(sect_signing)
+
+
+def ValidateSignature(absFilePath):
+
+    global doSign
+
+    # If we're not signing, it can't really fail
+    if not doSign:
+        return True
+
+    # import crypto
+
+    with open(absFilePath, "rb") as vmuPack:
+
+        # Read the whole thing in
+        # let the crypto function handle the header, size, etc
+        fileBytes = vmuPack.read()
+
+        success = crypto.CryptoTestSign(fileBytes)
+        if not success:
+            raise Exception("Failed to validate signed package")
+        else:
+            print("Signature validation success!")
+            return True
+
+
+# adds to the header in the final binary
+# not the header stub
+def AddToArray(targ, pos, val):
+    # type: (bytearray, int,int)->int
+
+    global finalBinary
+
+    bVal = struct.pack("<I", val)
+    targ[pos:pos+4] = bVal
+
+    return 4
 
     # 00-08: uint8_t magic[8] = "VMUPACK\0"
     # 08-0C: uint8_t vmuPackVersion = 1
     #        uint8_t targetDevice = 0
     #        uint8_t productBindingVersion
     #        uint8_t deviceBindingVersion
-    # 0C-10: uint8_t sdkVersionMajor
-    #        uint8_t sdkVersionMinor
-    #        uint8_t sdkVersionPatch
-    #        uint8_t reserved
+    # 0C-10: uint32_t reserved
     #
     # 10-30: uint8_t appName[32] = "My awesome app\0"
     #
@@ -707,29 +893,22 @@ def PrintSectionSizes(printVal):
     #
     # padded to 512 bytes
 
-# adds to the header in the final binary
-# not the header stub
-def AddToArray(targ, pos, val):
-    # type: (bytearray, int,int)->int
+# TODO: we'll put this in an actual struct once the file format and requirements have settled a bit
+def CreateHeader(absProjectDir, relElfNameNoExt):
+    # type: (str, str) -> bool
 
-    global finalBinary
-
-    bVal = struct.pack("<I", val)
-    targ[pos:pos+4] = bVal
-
-    return 4
-
-
-def CreateHeader(absProjectDir, appName, sdkVersion):
-    # type: (str, str, Tuple[int, int, int]) -> bool
+    global headerVersion
     #
     global sect_header
     global sect_icon
     global sect_outMeta
     global sect_binding
     global sect_allResources
+    global sect_luaCodeBundle
+    global storeFormat
     #
     global finalBinary
+    global doSign
 
     # 0-8: magic
     magic = b"VMUPACK\0"
@@ -737,33 +916,29 @@ def CreateHeader(absProjectDir, appName, sdkVersion):
 
     # Add the values we know immediately
 
-    # 8-C: version, targ device,
+    # 8-C: version, targ device, 
     vmuPackVersion = 1
     sect_header.extend(vmuPackVersion.to_bytes(1, 'little'))
     targDevice = 0
     sect_header.extend(targDevice.to_bytes(1,'little'))
-    prodBindingVersion = 0
+    prodBindingVersion = 1 if doProductKey else 0
     sect_header.extend(prodBindingVersion.to_bytes(1,'little'))
-    devBindingversion = 0
+    devBindingversion = 1 if doDeviceKey else 0
     sect_header.extend(devBindingversion.to_bytes(1,'little'))
 
-    # C-10: SDK version (major.minor.patch) + 1 reserved byte
-    print("  Writing SDK version {}.{}.{} to header".format(
-        sdkVersion[0], sdkVersion[1], sdkVersion[2]))
-    sect_header.extend(sdkVersion[0].to_bytes(1, 'little'))  # Major
-    sect_header.extend(sdkVersion[1].to_bytes(1, 'little'))  # Minor
-    sect_header.extend(sdkVersion[2].to_bytes(1, 'little'))  # Patch
-    sect_header.extend((0).to_bytes(1, 'little'))            # Reserved
+    # C-10: reserved
+    reserved0 = 0    
+    sect_header.extend(reserved0.to_bytes(4, 'little'))
 
     # 10-30 - mini header identifier
-    appNameHeader = outMetaJSON["app_name"]
-    appNameHeader = bytearray(appNameHeader, "ascii")
+    appName = outMetaJSON["app_name"]
+    appName = bytearray(appName, "ascii")
     # clamp it at 31 chars
-    if (len(appNameHeader) > 31):
-        appNameHeader = appNameHeader[:31]
+    if (len(appName) > 31):
+        appName = appName[:31]
     # pad it to exactly 32 chars
-    PadByteArray(appNameHeader, 32)
-    sect_header.extend(appNameHeader)
+    PadByteArray(appName, 32)
+    sect_header.extend(appName)
 
     # 30-34 - app mode
     # 0 = AUTO (not applicable for ext apps)
@@ -801,12 +976,16 @@ def CreateHeader(absProjectDir, appName, sdkVersion):
     # Pad out some byte arrays and then let's start piecing them together
     #
 
-    PrintSectionSizes("Section sizes:")
+    # save a little extra work
+    unpaddedElfSize = len(sect_mainElf)
+    PrintSectionSizes("Section sizes: (padded)")
     PadByteArray(sect_header, 512)
     PadByteArray(sect_icon, 512)
     PadByteArray(sect_outMeta, 512)
     PadByteArray(sect_binding, 512)
     PadByteArray(sect_allResources, 512)
+    if storeFormat and len(sect_luaCodeBundle) > 0:
+        PadByteArray(sect_luaCodeBundle, 512)
     PrintSectionSizes("Padded section sizes:")
 
     #
@@ -815,7 +994,7 @@ def CreateHeader(absProjectDir, appName, sdkVersion):
     #
 
     finalBinary.extend(sect_header)
-    
+
     iconStart = len(finalBinary)
     headerFieldPos += AddToArray(finalBinary, headerFieldPos, iconStart)
     headerFieldPos += AddToArray(finalBinary, headerFieldPos, len(sect_icon))
@@ -836,7 +1015,7 @@ def CreateHeader(absProjectDir, appName, sdkVersion):
     headerFieldPos += AddToArray(finalBinary,
                                  headerFieldPos, len(sect_allResources))
     finalBinary.extend(sect_allResources)
-    print("  Wrote LUA resources at pos {} size {}".format(
+    print("  Wrote resources at pos {} size {}".format(
         hex(resStart), hex(len(sect_allResources))))
 
     bindingStart = len(finalBinary)
@@ -847,17 +1026,24 @@ def CreateHeader(absProjectDir, appName, sdkVersion):
     print("  Wrote binding at pos {} size {}".format(
         hex(bindingStart), hex(len(sect_binding))))
 
-    # For LUA apps, we don't have ELF data, so write empty section
-    luaStart = len(finalBinary)
-    headerFieldPos += AddToArray(finalBinary, headerFieldPos, luaStart)
-    headerFieldPos += AddToArray(finalBinary, headerFieldPos, 0)  # Zero length
-    print("  Wrote LUA section (empty) at pos {} size 0".format(hex(luaStart)))
+    # ELF section: empty for standard LUA apps, Lua code bundle for store format
+    elfStart = len(finalBinary)
+    if storeFormat and len(sect_luaCodeBundle) > 0:
+        headerFieldPos += AddToArray(finalBinary, headerFieldPos, elfStart)
+        headerFieldPos += AddToArray(finalBinary, headerFieldPos, len(sect_luaCodeBundle))
+        finalBinary.extend(sect_luaCodeBundle)
+        print("  Wrote ELF section (Lua code bundle) at pos {} size {}".format(
+            hex(elfStart), hex(len(sect_luaCodeBundle))))
+    else:
+        headerFieldPos += AddToArray(finalBinary, headerFieldPos, elfStart)
+        headerFieldPos += AddToArray(finalBinary, headerFieldPos, 0)  # Zero length
+        print("  Wrote ELF section (empty) at pos {} size 0".format(hex(elfStart)))
 
     sect_finalBinarySize = len(finalBinary)
     print("Final binary size: {} / {}".format(
         sect_finalBinarySize, hex(sect_finalBinarySize)))
 
-    absOutPath = GetOutputFilenameAbs(absProjectDir, appName)
+    absOutPath = GetOutputFilenameAbs(absProjectDir, relElfNameNoExt)
     try:
         with open(absOutPath, "wb") as f:
             f.write(finalBinary)
@@ -868,6 +1054,10 @@ def CreateHeader(absProjectDir, appName, sdkVersion):
         return False
 
     print("Write file to: {}".format(absOutPath))
+
+    valid = ValidateSignature(absOutPath)
+    if not valid:
+        raise Exception("Signature validation failed")
 
     return True
 

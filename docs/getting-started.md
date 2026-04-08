@@ -1,4 +1,4 @@
-# Getting Started
+# Getting Started with LUA
 
 This guide will help you set up your development environment and create your first VMU Pro LUA application.
 

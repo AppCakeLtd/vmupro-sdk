@@ -1,6 +1,6 @@
 {
-  "title": "VMU Pro LUA SDK",
-  "description": "Comprehensive LUA SDK for VMU Pro Applications",
+  "title": "VMU Pro SDK",
+  "description": "Comprehensive SDK for VMU Pro Applications (LUA & C/C++)",
   "author": "8BitMods",
   "language": "en",
   "gitbook": ">=3.0.0",

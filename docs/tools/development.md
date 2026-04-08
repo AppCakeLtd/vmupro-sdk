@@ -16,7 +16,8 @@ Your project structure will look like:
 ```
 my_vmupro_project/
 ├── vmupro-sdk/              # Git submodule
-│   ├── sdk/api/            # API type definitions
+│   ├── sdk/lua/api/        # LUA API type definitions
+│   ├── sdk/c/include/      # C SDK headers
 │   ├── tools/              # Build tools (packer, send)
 │   └── docs/               # Documentation
 ├── src/                    # Your application source
@@ -85,7 +86,7 @@ Create `.vscode/settings.json` in your project root:
 ```json
 {
     "lua.workspace.library": [
-        "${workspaceFolder}/vmupro-sdk/sdk/api"
+        "${workspaceFolder}/vmupro-sdk/sdk/lua/api"
     ],
     "lua.diagnostics.globals": [
         "vmupro", "import"
