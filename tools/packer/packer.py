@@ -21,8 +21,9 @@ from pathlib import Path
 # (set via args)
 debugOutput = False
 
-# Binary section
-sect_mainElf = bytearray()
+# Store format: separate .lua code into ELF section as a code bundle
+# Non-lua assets remain in resource section
+storeFormat = False
 
 # Icon section
 sect_icon = bytearray()
@@ -40,6 +41,9 @@ resourceNameOffsetKeyVals = []
 
 # Device binding
 sect_binding = bytearray()
+
+# Lua code bundle (store format only — goes into ELF section)
+sect_luaCodeBundle = bytearray()
 
 sect_header = bytearray()
 
@@ -62,6 +66,7 @@ class PathException(Exception):
 def main():
 
     global debugOutput
+    global storeFormat
 
     global doSign
     global absPublisherPrivateKeyPath
@@ -94,11 +99,17 @@ def main():
                         help="Relative path to a 76x76 icon from projectdir")
     parser.add_argument("--debug", required=False,
                         help="true = Save the raw binary for each section to a file in the 'debug' folder")
+    parser.add_argument("--store-format", required=False, action="store_true",
+                        help="Separate .lua code into ELF section as a code bundle (for store encryption)")
 
     args = parser.parse_args()
 
     if args.debug:
         debugOutput = True
+
+    if args.store_format:
+        storeFormat = True
+        print("Store format enabled: .lua files will be packed into ELF section")
 
     #
     # Validate paths
@@ -562,6 +573,30 @@ def ValidateMetadata(inJsonData, absMetaFileName, absProjectDir):
     return True
 
 
+def BuildLuaCodeBundle(luaFiles):
+    # type: (List[Tuple[str, bytes]]) -> bytearray
+    """
+    Build a Lua code bundle in the binary format expected by the device.
+    Format: [file_count:4][path_len:4][path:N][content_len:4][content:M]...
+    All integers are little-endian uint32.
+    """
+    bundle = bytearray()
+
+    # File count
+    bundle.extend(struct.pack("<I", len(luaFiles)))
+
+    for relativePath, data in luaFiles:
+        pathBytes = relativePath.encode("utf-8")
+        # Path length + path
+        bundle.extend(struct.pack("<I", len(pathBytes)))
+        bundle.extend(pathBytes)
+        # Content length + content
+        bundle.extend(struct.pack("<I", len(data)))
+        bundle.extend(data)
+
+    return bundle
+
+
 def ParseResources(inJsonData, absMetaFileName, absProjectDir):
     # type: (Dict[str,any], str, str) -> bool
 
@@ -570,6 +605,8 @@ def ParseResources(inJsonData, absMetaFileName, absProjectDir):
     global sect_allResources
     # individual resources offsets
     global resourceNameOffsetKeyVals
+    global sect_luaCodeBundle
+    global storeFormat
 
     print("  Parsing metadata resources...")
 
@@ -592,6 +629,50 @@ def ParseResources(inJsonData, absMetaFileName, absProjectDir):
                 absResPath, absProjectDir, r))
             return False
 
+    # In store format, separate .lua files from non-lua assets
+    luaCodeFiles = []   # (relativePath, data) for Lua code bundle
+    assetFiles = []     # (relativePath, absPath) for resource section
+
+    if storeFormat:
+        for relativePath, absResPath in allFiles:
+            if relativePath.lower().endswith(".lua"):
+                # Read Lua file now for the code bundle
+                try:
+                    with open(absResPath, "rb") as f:
+                        data = f.read()
+                    luaCodeFiles.append((relativePath, data))
+                    print("    [STORE] Lua code file: {} ({} bytes)".format(relativePath, len(data)))
+                except Exception as e:
+                    print("Failed to read Lua file @ {}".format(absResPath))
+                    print("Exception: {}".format(e))
+                    return False
+            else:
+                assetFiles.append((relativePath, absResPath))
+                print("    [STORE] Asset file: {}".format(relativePath))
+
+        # Build the Lua code bundle for the ELF section
+        if luaCodeFiles:
+            sect_luaCodeBundle = BuildLuaCodeBundle(luaCodeFiles)
+            print("    [STORE] Built Lua code bundle: {} bytes, {} files".format(
+                len(sect_luaCodeBundle), len(luaCodeFiles)))
+
+            if debugOutput:
+                absFilePath = PrepDebugDir(absProjectDir, "lua_code_bundle.bin")
+                with open(absFilePath, "wb") as f:
+                    f.write(sect_luaCodeBundle)
+                print("    DEBUG: Wrote {}".format(absFilePath))
+        else:
+            print("    [STORE] WARNING: No .lua files found in resources!")
+
+        # Only pack non-lua assets into the resource section
+        filesToPack = assetFiles
+    else:
+        # Standard format: all files go into resource section
+        filesToPack = allFiles
+
+    # Process files for the resource section
+    for relativePath, absResPath in filesToPack:
+        print("    Packing file: {}".format(relativePath))
         print("      Located @: {}".format(absResPath))
 
         try:
@@ -822,7 +903,9 @@ def CreateHeader(absProjectDir, relElfNameNoExt):
     global sect_icon
     global sect_outMeta
     global sect_binding
-    global sect_mainElf
+    global sect_allResources
+    global sect_luaCodeBundle
+    global storeFormat
     #
     global finalBinary
     global doSign
@@ -900,8 +983,11 @@ def CreateHeader(absProjectDir, relElfNameNoExt):
     PadByteArray(sect_icon, 512)
     PadByteArray(sect_outMeta, 512)
     PadByteArray(sect_binding, 512)
-    PadByteArray(sect_mainElf, 512)
-    
+    PadByteArray(sect_allResources, 512)
+    if storeFormat and len(sect_luaCodeBundle) > 0:
+        PadByteArray(sect_luaCodeBundle, 512)
+    PrintSectionSizes("Padded section sizes:")
+
     #
     # Write Header int the final binary
     # Update header fields as we append new sections
@@ -940,22 +1026,18 @@ def CreateHeader(absProjectDir, relElfNameNoExt):
     print("  Wrote binding at pos {} size {}".format(
         hex(bindingStart), hex(len(sect_binding))))
 
+    # ELF section: empty for standard LUA apps, Lua code bundle for store format
     elfStart = len(finalBinary)
-    headerFieldPos += AddToArray(finalBinary, headerFieldPos, elfStart)
-    headerFieldPos += AddToArray(finalBinary,
-                                 headerFieldPos, unpaddedElfSize)
-    finalBinary.extend(sect_mainElf)
-    print("  Wrote elf at pos {} size {} ({})".format(
-        hex(elfStart), hex(len(sect_mainElf)), hex(unpaddedElfSize) ))
-
-    # Pad it to 512 for fast SD access
-    PadByteArray(finalBinary, 512)
-
-    # and set the main file size in bytes before appending the signing data
-    AddToArray(finalBinary, 0x3C, len(finalBinary))
-
-    # and finally, sign it
-    SignPackage()
+    if storeFormat and len(sect_luaCodeBundle) > 0:
+        headerFieldPos += AddToArray(finalBinary, headerFieldPos, elfStart)
+        headerFieldPos += AddToArray(finalBinary, headerFieldPos, len(sect_luaCodeBundle))
+        finalBinary.extend(sect_luaCodeBundle)
+        print("  Wrote ELF section (Lua code bundle) at pos {} size {}".format(
+            hex(elfStart), hex(len(sect_luaCodeBundle))))
+    else:
+        headerFieldPos += AddToArray(finalBinary, headerFieldPos, elfStart)
+        headerFieldPos += AddToArray(finalBinary, headerFieldPos, 0)  # Zero length
+        print("  Wrote ELF section (empty) at pos {} size 0".format(hex(elfStart)))
 
     sect_finalBinarySize = len(finalBinary)
     print("Final binary size: {} / {}".format(
