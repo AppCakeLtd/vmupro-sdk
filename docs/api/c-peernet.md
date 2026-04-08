@@ -1,6 +1,6 @@
 # PeerNet API (C)
 
-The PeerNet API provides peer-to-peer wireless communication between VMU Pro devices using ESP-NOW. This API is currently only available in the C SDK.
+The PeerNet API provides peer-to-peer wireless communication between VMU Pro devices using a P2P 2.4G connection. This API is currently only available in the C SDK.
 
 ## Constants
 
@@ -59,11 +59,11 @@ bool vmupro_peernet_send(const uint8_t *mac, const uint8_t *data, uint8_t len);
 
 Sends data to a peer device.
 
-| Parameter | Description |
-|-----------|-------------|
-| `mac` | Destination MAC address (6 bytes), or `NULL` for broadcast |
-| `data` | Payload buffer |
-| `len` | Payload length (max 250 bytes) |
+| Parameter | Description                                                |
+| --------- | ---------------------------------------------------------- |
+| `mac`     | Destination MAC address (6 bytes), or `NULL` for broadcast |
+| `data`    | Payload buffer                                             |
+| `len`     | Payload length (max 250 bytes)                             |
 
 Returns `true` on success.
 

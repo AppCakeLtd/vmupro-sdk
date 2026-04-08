@@ -5,7 +5,9 @@ The VMU Pro C/C++ SDK allows you to build native applications for the VMU Pro de
 ## API Categories
 
 ### Graphics & Display API
+
 Complete 2D graphics rendering capabilities:
+
 - Frame buffer management (single and double-buffered)
 - Drawing primitives (lines, rectangles, circles, ellipses, polygons)
 - Text rendering with 15 predefined bitmap fonts
@@ -18,7 +20,9 @@ Complete 2D graphics rendering capabilities:
 - RGB565 color format with predefined color constants
 
 ### Audio API
+
 Real-time audio streaming:
+
 - 44.1kHz, 16-bit mono and stereo support
 - Ring buffer-based sample streaming
 - Global volume control (0-100)
@@ -26,7 +30,9 @@ Real-time audio streaming:
 - Buffer fill state monitoring for latency tuning
 
 ### Input API
+
 User input handling:
+
 - D-pad directional buttons (Up, Down, Left, Right)
 - Face buttons (A, B)
 - System buttons (Mode, Power, Bottom)
@@ -34,21 +40,27 @@ User input handling:
 - User-configurable confirm/dismiss abstraction
 
 ### Font Rendering API
+
 Text rendering with multiple fonts:
+
 - 15 predefined bitmap fonts (6x8 through 32x37 pixels)
 - Text measurement for layout calculations
 - Font info queries (width, height)
 - Named aliases: SMALL, MEDIUM, LARGE, DEFAULT
 
 ### File System API
+
 File operations on the device:
+
 - VMUPro-native file functions
 - Standard C file I/O (fopen, fread, fwrite, etc.)
 - Directory operations
 - Access restricted to `/sdcard`
 
 ### System Utilities API
+
 System-level functionality:
+
 - Timing functions (microsecond precision)
 - Sleep and delay functions
 - String formatting (snprintf)
@@ -56,8 +68,10 @@ System-level functionality:
 - Multi-level logging (DEBUG, INFO, WARNING, ERROR)
 
 ### PeerNet API
+
 Peer-to-peer wireless networking:
-- ESP-NOW based direct device connections
+
+- 2.4G based direct device connections
 - Broadcast and targeted messaging
 - Lock-free ring buffer for received packets (8 slots, 250 bytes max)
 - MAC address management
@@ -66,7 +80,9 @@ Peer-to-peer wireless networking:
 ## Development Workflow
 
 ### 1. Application Structure
+
 C applications follow the ESP-IDF component structure:
+
 ```
 my_app/
 ├── CMakeLists.txt       # Project configuration
@@ -82,13 +98,16 @@ my_app/
 ```
 
 ### 2. Application Lifecycle
+
 1. **Entry Point**: Implement `void app_main(void)` as your application entry
 2. **Initialization**: Set up display, audio, and resources
 3. **Main Loop**: Handle input, update state, render graphics
 4. **Cleanup**: Stop renderers and release resources
 
 ### 3. Build, Package, and Deploy
+
 Applications are built with ESP-IDF, then packaged into `.vmupack` files:
+
 - Build with `idf.py build` to produce an ELF binary
 - Package with the packer tool to create `.vmupack`
 - Deploy via SD card or serial upload
@@ -96,17 +115,20 @@ Applications are built with ESP-IDF, then packaged into `.vmupack` files:
 ## Performance Considerations
 
 ### Native Performance
+
 - C applications run as native ELF binaries on the ESP32-S3
 - Direct access to hardware APIs with minimal overhead
 - Full C standard library available (see [Standard Library Functions](stdlib-functions.md))
 - POSIX threads support for concurrent operations
 
 ### Memory Management
+
 - Direct memory allocation with `malloc`/`free`
 - No garbage collector overhead
 - Use `vmupro_snprintf()` for safe string formatting
 
 ### Frame Rate
+
 - Target 60 FPS with 16ms frame time
 - Use `vmupro_sleep_ms()` or `vmupro_delay_ms()` for timing control
 - Use double buffering for smooth rendering
