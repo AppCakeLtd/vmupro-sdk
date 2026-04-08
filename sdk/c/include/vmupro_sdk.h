@@ -6,7 +6,7 @@
  * interface for developing applications for the VMUPro device.
  *
  * @author 8BitMods
- * @version 1.0.0
+ * @version 2.0.0
  * @date 2025-06-17
  * @copyright Copyright (c) 2025 APPCAKE Limited. Distributed under the MIT License.
  */

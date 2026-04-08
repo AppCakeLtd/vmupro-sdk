@@ -1,7 +1,7 @@
 --- @file audio.lua
 --- @brief VMU Pro LUA SDK - Audio Functions
 --- @author 8BitMods
---- @version 1.0.0
+--- @version 2.0.0
 --- @date 2025-12-14
 --- @copyright Copyright (c) 2025 8BitMods. All rights reserved.
 ---

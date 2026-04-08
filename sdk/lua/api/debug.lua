@@ -1,7 +1,7 @@
 --- @file debug.lua
 --- @brief VMU Pro LUA SDK - Debug API
 --- @author 8BitMods
---- @version 1.0.0
+--- @version 2.0.0
 --- @date 2026-01-09
 --- @copyright Copyright (c) 2026 8BitMods. All rights reserved.
 ---

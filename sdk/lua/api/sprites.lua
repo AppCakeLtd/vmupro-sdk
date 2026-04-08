@@ -1,7 +1,7 @@
 --- @file sprites.lua
 --- @brief VMU Pro LUA SDK - Sprite Functions
 --- @author 8BitMods
---- @version 1.0.0
+--- @version 2.0.0
 --- @date 2025-11-10
 --- @copyright Copyright (c) 2025 8BitMods. All rights reserved.
 ---

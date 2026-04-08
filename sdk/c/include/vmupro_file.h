@@ -7,7 +7,7 @@
  * reading files, getting file information, and data integrity functions.
  *
  * @author 8BitMods
- * @version 1.0.0
+ * @version 2.0.0
  * @date 2025-06-29
  * @copyright Copyright (c) 2025 APPCAKE Limited. Distributed under the MIT License.
  */
