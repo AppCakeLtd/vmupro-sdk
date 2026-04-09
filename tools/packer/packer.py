@@ -715,6 +715,7 @@ def ParseResources(inJsonData, absMetaFileName, absProjectDir):
 
     inJsonResArray = inJsonData["resources"]
     outMetaJSON["resources"] = []
+    outMetaJSON["resource_index"] = []
 
     allFiles = []  # Collect all files from resources (including folders)
 
@@ -790,13 +791,20 @@ def ParseResources(inJsonData, absMetaFileName, absProjectDir):
                 print("      Read {} / {} bytes".format(dataLen, hex(dataLen)))
 
                 # name and location
-                # mything.png : 200
                 startOffset = len(sect_allResources)
                 kvp = (relativePath, startOffset)
                 resourceNameOffsetKeyVals.append(kvp)
 
-                # Add the key value pair to the output json
+                # Add the key value pair to the output json (legacy format)
                 outMetaJSON["resources"].append(kvp)
+
+                # Detailed resource index
+                fileInfo = {
+                    "path": relativePath,
+                    "offset": startOffset,
+                    "size": dataLen,
+                    "padded_size": 0
+                }
 
                 # Add the file to the blob
                 sect_allResources.extend(data)
@@ -806,6 +814,9 @@ def ParseResources(inJsonData, absMetaFileName, absProjectDir):
 
                 # pad the data out to 512 byte boundaries for much faster SD access
                 paddingLength = PadByteArray(sect_allResources, 512)
+                fileInfo["padded_size"] = dataLen + paddingLength
+                outMetaJSON["resource_index"].append(fileInfo)
+
                 print("      Padding data end by {} bytes to 512 boundary @ {}".format(
                     paddingLength, hex(len(sect_allResources))))
 
