@@ -243,6 +243,7 @@ def main():
     res = ParseMetadata(absMetaPath, absProjectDir)
     if not res:
         print("Failed to prepare the metadata, see previous errors")
+        sys.exit(1)
 
     #
     # Read or create the icon
@@ -261,7 +262,11 @@ def main():
         print("Failed to add device bindings, see previous errors")
         sys.exit(1)
 
-    res = CreateHeader(absProjectDir, relElfNameNoExt)
+    # Parse SDK version into tuple
+    sdkVerParts = args.sdkversion.split(".")
+    sdkVersion = (int(sdkVerParts[0]), int(sdkVerParts[1]), int(sdkVerParts[2]))
+
+    res = CreateHeader(absProjectDir, relElfNameNoExt, sdkVersion)
     if not res:
         print("Failed to create header, see previous errors")
         sys.exit(1)
@@ -963,7 +968,7 @@ def AddToArray(targ, pos, val):
     # padded to 512 bytes
 
 # TODO: we'll put this in an actual struct once the file format and requirements have settled a bit
-def CreateHeader(absProjectDir, relElfNameNoExt):
+def CreateHeader(absProjectDir, relElfNameNoExt, sdkVersion):
     # type: (str, str) -> bool
 
     global headerVersion
@@ -995,9 +1000,13 @@ def CreateHeader(absProjectDir, relElfNameNoExt):
     devBindingversion = 1 if doDeviceKey else 0
     sect_header.extend(devBindingversion.to_bytes(1,'little'))
 
-    # C-10: reserved
-    reserved0 = 0    
-    sect_header.extend(reserved0.to_bytes(4, 'little'))
+    # C-10: SDK version (major.minor.patch) + 1 reserved byte
+    print("  Writing SDK version {}.{}.{} to header".format(
+        sdkVersion[0], sdkVersion[1], sdkVersion[2]))
+    sect_header.extend(sdkVersion[0].to_bytes(1, 'little'))
+    sect_header.extend(sdkVersion[1].to_bytes(1, 'little'))
+    sect_header.extend(sdkVersion[2].to_bytes(1, 'little'))
+    sect_header.extend((0).to_bytes(1, 'little'))
 
     # 10-30 - mini header identifier
     appName = outMetaJSON["app_name"]
