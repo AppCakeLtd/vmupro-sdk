@@ -4,13 +4,8 @@
   "app_author": "8BitMods",
   "app_version": "1.0.0",
   "app_entry_point": "app.lua",
-  "app_mode": 1,
+  "app_mode": 2,
   "app_environment": "lua",
   "icon_transparency": false,
-  "resources": [
-    "app.lua",
-    "libraries",
-    "pages",
-    "assets"
-  ]
+  "resources": ["app.lua", "libraries", "pages", "assets"]
 }
