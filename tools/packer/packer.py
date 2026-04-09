@@ -1148,17 +1148,27 @@ def CreateHeader(absProjectDir, relElfNameNoExt, sdkVersion):
     print("  Wrote binding at pos {} size {}".format(
         hex(bindingStart), hex(len(sect_binding))))
 
-    # ELF section: empty for standard LUA apps, Lua code bundle for store format
+    # ELF section
     elfStart = len(finalBinary)
-    if storeFormat and len(sect_luaCodeBundle) > 0:
+    if len(sect_mainElf) > 0:
+        # Native app: write the actual ELF binary
+        PadByteArray(sect_mainElf, 512)
+        headerFieldPos += AddToArray(finalBinary, headerFieldPos, elfStart)
+        headerFieldPos += AddToArray(finalBinary, headerFieldPos, unpaddedElfSize)
+        finalBinary.extend(sect_mainElf)
+        print("  Wrote ELF section at pos {} size {} (unpadded {})".format(
+            hex(elfStart), hex(len(sect_mainElf)), hex(unpaddedElfSize)))
+    elif storeFormat and len(sect_luaCodeBundle) > 0:
+        # Store format LUA app: write lua code bundle in ELF section
         headerFieldPos += AddToArray(finalBinary, headerFieldPos, elfStart)
         headerFieldPos += AddToArray(finalBinary, headerFieldPos, len(sect_luaCodeBundle))
         finalBinary.extend(sect_luaCodeBundle)
         print("  Wrote ELF section (Lua code bundle) at pos {} size {}".format(
             hex(elfStart), hex(len(sect_luaCodeBundle))))
     else:
+        # Standard LUA app: no ELF
         headerFieldPos += AddToArray(finalBinary, headerFieldPos, elfStart)
-        headerFieldPos += AddToArray(finalBinary, headerFieldPos, 0)  # Zero length
+        headerFieldPos += AddToArray(finalBinary, headerFieldPos, 0)
         print("  Wrote ELF section (empty) at pos {} size 0".format(hex(elfStart)))
 
     sect_finalBinarySize = len(finalBinary)
