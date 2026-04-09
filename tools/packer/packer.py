@@ -792,7 +792,7 @@ def ParseResources(inJsonData, absMetaFileName, absProjectDir):
                 # name and location
                 # mything.png : 200
                 startOffset = len(sect_allResources)
-                kvp = (r, startOffset)
+                kvp = (relativePath, startOffset)
                 resourceNameOffsetKeyVals.append(kvp)
 
                 # Add the key value pair to the output json
