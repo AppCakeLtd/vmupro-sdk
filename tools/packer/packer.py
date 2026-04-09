@@ -291,6 +291,8 @@ def CheckKeys():
         spec.loader.exec_module(crypto)
 
         doSign, doProductKey, doDeviceKey = crypto.ValidateSigningLogic()
+    else:
+        doSign = False
 
 
 def GetOutputFilenameAbs(absProjectDir, relElfNameNoExt):
