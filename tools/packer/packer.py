@@ -1,5 +1,5 @@
 # 8BM Copyright/License notice
-# For use with ESP IDF Python 3.10.x
+# VMU Pro unified packer for LUA and C/C++ (native) applications
 # Note: suggested use with Python 3.6 or later due to handling of Path.resolve
 
 import sys
@@ -13,7 +13,8 @@ from PIL import Image
 from pathlib import Path
 
 # Rough outline
-# - load the .elf into ram
+# - For native (C) apps: load the .elf into ram
+# - For LUA apps: load scripts and resources (no ELF)
 # - parse the json metadata (name, author, icon trans)
 # - load and encode the icon
 
@@ -39,6 +40,9 @@ sect_allResources = bytearray()
 # (names and offsets within the master resources data blob)
 resourceNameOffsetKeyVals = []
 
+# Main ELF binary (native apps only, empty for LUA apps)
+sect_mainElf = bytearray()
+
 # Device binding
 sect_binding = bytearray()
 
@@ -63,6 +67,47 @@ class PathException(Exception):
     pass
 
 
+def ReadSDKVersion():
+    """
+    Read the SDK version from the VERSION file in the SDK root directory.
+    Returns a tuple of (major, minor, patch) as integers.
+    """
+    scriptDir = Path(__file__).resolve().parent
+    sdkRoot = scriptDir.parent.parent
+    versionFile = sdkRoot / "VERSION"
+
+    if not os.path.isfile(versionFile):
+        return None
+
+    try:
+        with open(versionFile, "r") as f:
+            versionStr = f.read().strip()
+            parts = versionStr.split(".")
+            if len(parts) != 3:
+                return None
+            major = int(parts[0])
+            minor = int(parts[1])
+            patch = int(parts[2])
+            if major < 0 or major > 255 or minor < 0 or minor > 255 or patch < 0 or patch > 255:
+                return None
+            return (major, minor, patch)
+    except Exception:
+        return None
+
+
+def DetectAppEnvironment(absMetaPath):
+    """
+    Peek at metadata.json to determine app_environment before full parsing.
+    Returns 'lua' or 'native'.
+    """
+    try:
+        with open(absMetaPath, "r") as f:
+            meta = json.load(f)
+            return meta.get("app_environment", "native")
+    except Exception:
+        return "native"
+
+
 def main():
 
     global debugOutput
@@ -74,7 +119,7 @@ def main():
 
     print("\n")
     print("8BM VMUPro Packer")
-    print("Run py packer.py-h for help or a full list of supported arguments")
+    print("Run py packer.py -h for help or a full list of supported arguments")
     print("\n")
 
     print("Executing command line args:")
@@ -86,15 +131,15 @@ def main():
     #
 
     parser = argparse.ArgumentParser(
-        description="Pack a VMUPro binary with optional icon")
+        description="Pack a VMUPro application (LUA or native C/C++) with optional icon")
     parser.add_argument("--projectdir", required=True,
-                        help="Root folder, one beneath build")
+                        help="Root folder containing your app project")
     parser.add_argument("--appname", required=True,
-                        help="In projectdir/build, e.g. 'vmupro_minimal' for 'build/vmupro_minimal.app.elf'")
+                        help="Application name for the output .vmupack file. For native apps, also used to locate build/<appname>.app.elf")
     parser.add_argument("--meta", required=True,
                         help="Relative path .JSON metadata for your package: metadata.json from projectdir")
-    parser.add_argument("--sdkversion", required=True,
-                        help="In the format format: x.x.x")
+    parser.add_argument("--sdkversion", required=False,
+                        help="SDK version in x.x.x format (auto-read from VERSION file if not provided)")
     parser.add_argument("--icon", required=True,
                         help="Relative path to a 76x76 icon from projectdir")
     parser.add_argument("--debug", required=False,
@@ -130,16 +175,9 @@ def main():
         print("  Can't confirm absolute path to base dir {}".format(absProjectDir))
         sys.exit(1)
 
-    # e.g. "my_lovely_game" as part of "<projectDir>/build/my_lovely_game.app.elf"
-    # which will become "<projectDir>/my_lovely_game.vmupack"
     relElfNameNoExt = args.appname
 
     try:
-        # "vmupro_minimal" -> "build/vmupro_minimal.app.elf"
-        elfPart = os.path.join("build", relElfNameNoExt + ".app.elf")
-        absElfPath = ValidatePath(absProjectDir, elfPart)
-        print("  Using abs elf path: {}".format(absElfPath))
-
         absMetaPath = ValidatePath(absProjectDir, args.meta)
         print("  Using abs metadata path: {}".format(absMetaPath))
 
@@ -149,25 +187,54 @@ def main():
     except Exception as e:
         print("  Exception: {}".format(e))
         print("  Failed to combine paths, see above errors")
-        print("\n  Hint: check <yourelfname>.app.elf exists in the `build` folder\n")
-        sys.exit(1)
-
-    CheckKeys()
-
-    #
-    # Read and validate the .elf file
-    #
-    res = PrepareElf(absElfPath)
-
-    if not res:
-        print("Failed to prepare the binary, see previous errors")
         sys.exit(1)
 
     #
-    # We've validated that the .elf exists
-    # good time to remove some auto built firmwares
+    # Detect app type from metadata before full parsing
     #
-    RemoveUnwantedBuildFiles(absProjectDir, relElfNameNoExt)
+    appEnv = DetectAppEnvironment(str(absMetaPath))
+    isNativeApp = (appEnv == "native")
+    print("  App environment: {} ({})".format(appEnv, "native C/C++" if isNativeApp else "LUA scripted"))
+
+    #
+    # Resolve SDK version: from --sdkversion arg, or from VERSION file
+    #
+    if args.sdkversion:
+        print("  SDK version (from args): {}".format(args.sdkversion))
+    else:
+        sdkVer = ReadSDKVersion()
+        if sdkVer:
+            args.sdkversion = "{}.{}.{}".format(sdkVer[0], sdkVer[1], sdkVer[2])
+            print("  SDK version (from VERSION file): {}".format(args.sdkversion))
+        else:
+            print("  Warning: No --sdkversion provided and VERSION file not found. Using 0.0.0")
+            args.sdkversion = "0.0.0"
+
+    #
+    # For native apps: validate and load the ELF
+    #
+    absElfPath = None
+    if isNativeApp:
+        try:
+            elfPart = os.path.join("build", relElfNameNoExt + ".app.elf")
+            absElfPath = ValidatePath(absProjectDir, elfPart)
+            print("  Using abs elf path: {}".format(absElfPath))
+        except Exception as e:
+            print("  Exception: {}".format(e))
+            print("\n  Hint: check <yourelfname>.app.elf exists in the `build` folder\n")
+            sys.exit(1)
+
+        CheckKeys()
+
+        res = PrepareElf(absElfPath)
+        if not res:
+            print("Failed to prepare the binary, see previous errors")
+            sys.exit(1)
+
+        RemoveUnwantedBuildFiles(absProjectDir, relElfNameNoExt)
+    else:
+        print("  LUA app: skipping ELF loading")
+        CheckKeys()
 
     #
     # Read and validate the metadata.json
