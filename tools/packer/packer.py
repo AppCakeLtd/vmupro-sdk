@@ -671,6 +671,31 @@ def BuildLuaCodeBundle(luaFiles):
     return bundle
 
 
+def ScanFolderRecursive(baseDir, folderPath):
+    """
+    Recursively scan a folder and return all files with their relative paths.
+    Returns list of (relative_path, absolute_path) tuples.
+    """
+    files = []
+    absFolderPath = baseDir / folderPath
+    absFolderPath = Path(absFolderPath).resolve()
+
+    print("        Scanning folder: {}".format(absFolderPath))
+
+    try:
+        for root, _, filenames in os.walk(absFolderPath):
+            for filename in filenames:
+                absFilePath = Path(root) / filename
+                relativeFromBase = absFilePath.relative_to(baseDir.resolve())
+                relativePath = str(relativeFromBase).replace('\\', '/')
+                files.append((relativePath, absFilePath))
+                print("          Found: {}".format(relativePath))
+    except Exception as e:
+        print("        ERROR scanning folder: {}".format(e))
+
+    return files
+
+
 def ParseResources(inJsonData, absMetaFileName, absProjectDir):
     # type: (Dict[str,any], str, str) -> bool
 
@@ -691,16 +716,24 @@ def ParseResources(inJsonData, absMetaFileName, absProjectDir):
     inJsonResArray = inJsonData["resources"]
     outMetaJSON["resources"] = []
 
+    allFiles = []  # Collect all files from resources (including folders)
+
     for r in inJsonResArray:
-        print("    Reading resource {}".format(r))
+        print("    Processing resource entry: {}".format(r))
 
         absResPath = absProjectDir / r
-        absResPath = Path(absResPath)
-        absResPath = absResPath.resolve()
+        absResPath = Path(absResPath).resolve()
 
-        if not os.path.isfile(absResPath):
-            print("      Couldn't locate resource {} from base path: {} and tail: {}".format(
-                absResPath, absProjectDir, r))
+        if os.path.isfile(absResPath):
+            allFiles.append((r, absResPath))
+            print("      Added file: {}".format(r))
+        elif os.path.isdir(absResPath):
+            print("      Scanning folder: {}".format(r))
+            folderFiles = ScanFolderRecursive(absProjectDir, r)
+            allFiles.extend(folderFiles)
+            print("      Found {} files in folder".format(len(folderFiles)))
+        else:
+            print("      ERROR: Resource {} is neither file nor folder at {}".format(r, absResPath))
             return False
 
     # In store format, separate .lua files from non-lua assets
