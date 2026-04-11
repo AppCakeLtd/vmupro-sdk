@@ -55,70 +55,36 @@ C:\idfvmusdk\export.ps1
 
 > **Note:** The leading dot (`.`) on Linux/macOS is required for proper environment setup.
 
-### 3. Clone the VMU Pro SDK
+### 3. Download and Install the VMU Pro SDK
 
-```bash
-git clone https://github.com/appcakeltd/vmupro-sdk.git
-cd vmupro-sdk
-```
+Download the SDK installer for your operating system from the [SDK Downloads](https://developer.vmu.pro/downloads/) page, and run the installer.
 
-### 4. Install Python Dependencies
+### 4. Install the VSCode Plugin
 
-```bash
-pip install -r tools/packer/requirements.txt
-```
-
-### 5. Verify Tools Installation
-
-Test the packer tool:
-
-```bash
-python tools/packer/packer.py --help
-```
+Download the VMU Pro VSCode plugin from the same [SDK Downloads](https://developer.vmu.pro/downloads/) page and install it. The plugin provides build, deploy, and project management features directly from the editor.
 
 ## Your First Application
 
-Let's build and run the included minimal example.
+### 1. Connect Your VMU Pro
 
-### 1. Build the Minimal Example
+Connect your VMU Pro device to your computer with a USB cable, then enable **Developer Mode** in the device's Settings menu.
 
-```bash
-cd examples/minimal
-idf.py set-target esp32s3
-idf.py build
+### 2. Update the SDK Path
+
+Open `CMakeLists.txt` in the example project and update the `EXTRA_COMPONENT_DIRS` path to point to your VMU Pro SDK installation:
+
+```cmake
+set(EXTRA_COMPONENT_DIRS ~/Developer/VMUPro-SDK/sdk/c)
 ```
 
-This produces a `vmupro_minimal.app.elf` file in the `build/` directory.
+> **Note:** The default SDK installation path is `~/Developer/VMUPro-SDK` on macOS/Linux and `%USERPROFILE%\Developer\VMUPro-SDK` on Windows.
 
-### 2. Package the Application
+### 3. Build and Run the Minimal Example
 
-**Linux/macOS:**
-```bash
-./pack.sh
-```
+Open the `examples/minimal` folder in VSCode. With the VMU Pro plugin installed:
 
-**Windows:**
-```powershell
-.\pack.ps1
-```
-
-This creates a `.vmupack` file ready for deployment.
-
-### 3. Deploy to VMU Pro
-
-Copy the generated `.vmupack` file to your VMU Pro's SD card:
-
-1. Remove the SD card from your VMU Pro device
-2. Insert the SD card into your computer
-3. Copy the `.vmupack` file to the `apps/` folder on the SD card
-4. Safely eject the SD card and insert it back into your VMU Pro
-5. Navigate to the app on your VMU Pro and launch it
-
-Alternatively, deploy via serial:
-
-```bash
-python ../../tools/packer/send.py --func send --localfile app.vmupack --remotefile apps/app.vmupack --comport /dev/ttyUSB0
-```
+- Use **Build** to compile the project and produce a `.vmupack` file
+- Use **Build & Deploy** to compile and send the app directly to your connected VMU Pro device
 
 ## Understanding the Code
 
@@ -187,7 +153,7 @@ my_app/
 ```cmake
 cmake_minimum_required(VERSION 3.16)
 
-set(EXTRA_COMPONENT_DIRS ${CMAKE_CURRENT_LIST_DIR}/../../sdk/c)
+set(EXTRA_COMPONENT_DIRS ~/Developer/VMUPro-SDK/sdk/c)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(vmupro_myapp)
@@ -222,6 +188,13 @@ target_compile_options(${COMPONENT_LIB} PRIVATE -nostartfiles -nostdlib -fno-bui
     "resources": []
 }
 ```
+
+### Build and Deploy
+
+Use the VMU Pro VSCode plugin to build and deploy your app:
+
+- **Build**: Compiles your project and produces a `.vmupack` file
+- **Build & Deploy**: Compiles and sends the `.vmupack` directly to your connected VMU Pro device
 
 ## Key Concepts
 
@@ -286,3 +259,8 @@ C applications must be signed to run on the VMU Pro device. The packer tool hand
 - Ensure the app is signed (the packer handles this automatically)
 - Check that `app_entry_point` in metadata.json is set to `"app_main"`
 - Use `vmupro_log(VMUPRO_LOG_DEBUG, "tag", "message")` for debugging
+
+**Device not detected:**
+
+- Ensure the VMU Pro is connected via USB and Developer Mode is enabled in Settings
+- Check that the correct COM port / serial device is selected
