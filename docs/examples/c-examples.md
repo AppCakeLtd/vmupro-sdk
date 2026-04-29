@@ -80,6 +80,54 @@ idf.py build
 ./pack.sh    # or .\pack.ps1 on Windows
 ```
 
+## Network Example
+
+**Location:** `examples/network/`
+
+Demonstrates how to fetch data from the internet using the BSD socket API. Assumes WiFi is already connected.
+
+### Features Demonstrated
+
+- DNS resolution with `getaddrinfo()`
+- TCP socket creation with `socket()`
+- Connection with `connect()`
+- Sending an HTTP GET request with `send()`
+- Reading the response with `recv()`
+- Displaying connection status and response preview on screen
+
+### Key Code
+
+```c
+#include <sys/socket.h>
+#include <netdb.h>
+
+struct addrinfo hints = { .ai_family = AF_INET, .ai_socktype = SOCK_STREAM };
+struct addrinfo *res;
+getaddrinfo("example.com", "80", &hints, &res);
+
+int sock = socket(res->ai_family, res->ai_socktype, 0);
+connect(sock, res->ai_addr, res->ai_addrlen);
+
+const char *req = "GET / HTTP/1.0\r\nHost: example.com\r\nConnection: close\r\n\r\n";
+send(sock, req, strlen(req), 0);
+
+char buf[4096];
+int n = recv(sock, buf, sizeof(buf) - 1, 0);
+
+close(sock);
+freeaddrinfo(res);
+```
+
+### Controls
+
+- **A**: Trigger an HTTP request
+- **B**: Exit the app
+
+### Notes
+
+- The example uses plain HTTP (port 80). TLS/HTTPS is not used.
+- WiFi must already be connected before launching the app.
+
 ## Creating Your Own Example
 
 To create a new C application, use the minimal example as a template:
